@@ -1,0 +1,410 @@
+# LeanToPython
+
+A Lean 4 library that generates runnable, idiomatic Python code from Lean definitions.
+
+## Project Structure
+
+```
+LeanToPython/
+├── LeanToPython.lean   # Main library (~1000 lines)
+├── Test.lean           # Basic usage example
+├── TestSuite.lean      # Comprehensive test suite (~40 functions)
+├── lakefile.toml       # Lake build configuration
+├── lean-toolchain      # Lean version (4.12.0)
+├── CLAUDE.md           # Development documentation (this file)
+└── README.md           # User-facing documentation
+```
+
+## Building
+
+```bash
+lake build
+```
+
+## Testing
+
+```bash
+# Run basic test
+lake env lean Test.lean
+
+# Run comprehensive test suite
+lake env lean TestSuite.lean > test.py
+python3 test.py
+```
+
+To verify generated Python works:
+```bash
+lake env lean TestSuite.lean > test.py
+python3 -c "
+exec(open('test.py').read())
+assert factorial(5) == 120
+assert fib(10) == 55
+print('Tests passed!')
+"
+```
+
+## Usage
+
+```lean
+import LeanToPython
+
+open Lean LeanToPython
+
+def myFunction (x y : Nat) : Nat := x + y
+
+#eval show CoreM Unit from do
+  let code ← emitPythonForNames `MyModule [`myFunction]
+  IO.println code
+```
+
+Output:
+```python
+def my_function(x: int, y: int) -> int:
+    _x_4 = x + y
+    return _x_4
+```
+
+## Architecture
+
+The library works by:
+1. Using `toDecl` to compile Lean definitions to LCNF (Lean Compiler Normal Form)
+2. Traversing the LCNF AST and emitting corresponding Python code
+3. Recognizing type class instance patterns and inlining operations
+4. Converting common operations to Python operators
+5. Handling partial application patterns from LCNF
+6. Emitting custom inductive types as Python dataclasses
+
+### Key Files
+
+- `LeanToPython.lean` - Main library (~1000 lines)
+- `Test.lean` - Example usage with tests
+- `TestSuite.lean` - Comprehensive test suite
+
+### Main Entry Points
+
+- `emitPythonForNames` - Compile specific declarations by name and emit Python (recommended)
+- `emitPythonForDecls` - Emit Python from pre-compiled LCNF declarations
+
+### Type Class Instance Handling
+
+Type class instances (like `instHAdd`, `instHMul`, `instBEq`) are recognized and their operations are inlined:
+- `instHAdd` / `instAddNat` → `+`
+- `instHSub` / `instSubNat` → `-`
+- `instHMul` / `instMulNat` → `*`
+- `instHDiv` → `//`
+- `instHMod` → `%`
+- `instHPow` → `**`
+- `instBEq*` → `==`
+- `instNeg*` → `-` (unary)
+- `instHAppend*` / `instAppend*` → `+` (string concatenation)
+
+The pattern recognition:
+1. `const instHAdd` → tracked as instance, not emitted
+2. `proj HAdd.0` → tracked as extracted op
+3. `fvar _extracted_op (x, y)` → emitted as `x + y`
+
+### Comparison Handling
+
+Decidable comparisons are converted to Python operators:
+- `Nat.decLt` / `Int.decLt` → `<`
+- `Nat.decLe` / `Int.decLe` → `<=`
+- `Decidable.decide` → alias to comparison result
+
+### Literal Handling
+
+`instOfNat*` patterns are recognized to properly inline numeric literals:
+- `const instOfNatNat` after a literal → tracked
+- `proj OfNat.0` from it → the literal value is inlined
+
+### Custom Inductive Types
+
+Custom inductive types are automatically emitted as Python dataclasses:
+```lean
+inductive Color where
+  | red | green | blue
+```
+becomes:
+```python
+@dataclass
+class red:
+    pass
+
+@dataclass
+class green:
+    pass
+
+@dataclass
+class blue:
+    pass
+
+Color = red | green | blue
+```
+
+### Python Type Mappings
+
+| Lean Type | Python Type |
+|-----------|-------------|
+| `Nat`, `Int`, `UInt*` | `int` |
+| `String` | `str` |
+| `Bool` | `bool` |
+| `Float` | `float` |
+| `Unit`, `PUnit` | skipped |
+| `List α` | `list[T]` |
+| `Array α` | `list[T]` |
+| `Option α` | `T \| None` |
+| `α × β` | `tuple[A, B]` |
+| `α → β` | `Callable[[A], B]` |
+| Custom inductive | `@dataclass` |
+
+### Special Case Handling
+
+- **Nat pattern matching**: `match n with | 0 => ... | k+1 => ...` becomes `if n == 0: ... else: k = n - 1; ...`
+- **Bool pattern matching**: Becomes `if discr: true_case else: false_case`
+- **Bool constructors**: `Bool.true` → `True`, `Bool.false` → `False`
+- **Unit values**: Skipped entirely (both in params and args)
+- **Partial application**: LCNF thunks are translated to Python function references
+- **Option matching**: `if opt is None: ... else: val = opt; ...`
+- **List matching**: `if len(xs) == 0: ... else: head = xs[0]; tail = xs[1:]; ...`
+- **Tuple access**: `p.1` → `p[0]`, `p.2` → `p[1]`
+- **Tuple construction**: `(a, b)` → `(a, b)`
+
+## Example Output
+
+Input (Lean):
+```lean
+def factorial (n : Nat) : Nat :=
+  match n with
+  | 0 => 1
+  | k + 1 => (k + 1) * factorial k
+```
+
+Output (Python):
+```python
+def factorial(n: int) -> int:
+    def _f_116():
+        _x_113 = 1
+        return 1
+    _alt_117 = _f_116
+    def _f_130(k: int):
+        _x_127 = k + 1
+        _x_128 = factorial(k)
+        _x_129 = _x_127 * _x_128
+        return _x_129
+    _alt_131 = _f_130
+    if n == 0:
+        _x_133 = _alt_117()
+        return _x_133
+    else:
+        n_134 = n - 1
+        _x_135 = _alt_131(n_134)
+        return _x_135
+```
+
+## Extending
+
+To add support for more builtin operations, modify:
+- `natBinOp?` - Direct Nat/Int binary operations
+- `hOpToPyOp?` - Operations through type class instances
+- `isInstanceCtor` - Instance names to recognize and skip
+- `builtinFn?` - Builtin functions like `len`, `not`
+
+## Known Limitations
+
+1. Pattern matching generates verbose code with inner functions (LCNF structure)
+2. Some unused intermediate variables may be emitted
+3. Variable names have numeric suffixes for uniqueness
+4. Generic type parameters are erased to `Any`
+5. No IO monad support (pure functions only)
+6. Some type class projections (e.g., `Max`, `Xor`) emit incorrect code
+
+## Future Work: Mathlib Integration
+
+Adding Mathlib to the corpus would provide a much larger test suite:
+
+### Steps to Add Mathlib
+
+1. **Update Lean toolchain** - Mathlib requires specific Lean versions
+2. **Add Mathlib dependency** to lakefile.toml:
+   ```toml
+   [[require]]
+   name = "mathlib"
+   scope = "leanprover-community"
+   rev = "master"
+   ```
+3. **Create Mathlib corpus module** extracting key functions:
+   - `Nat.factorial`, `Nat.choose`
+   - `List.sum`, `List.prod`
+   - `Finset` operations
+   - Basic algebra operations
+
+### Expected Challenges
+
+- Mathlib uses heavy type class machinery
+- Many definitions are noncomputable
+- Universe polymorphism complications
+- Large import graph increases compile times
+
+### Recommended Approach
+
+1. Start with Mathlib's `Init` and `Data.List.Basic`
+2. Focus on computable definitions first
+3. Add special handlers for Mathlib-specific patterns
+4. Track extraction quality separately from core corpus
+
+## Development Process for High-Quality Extractors
+
+The LeanToPython extractor is developed using an iterative, feedback-driven process:
+
+### 1. Corpus-Based Development
+
+Build a comprehensive corpus of Lean functions to test extraction quality:
+
+```
+Corpus/
+├── Algorithms.lean   # Sorting, searching, numeric algorithms
+├── DataStructures.lean  # Stack, Queue, Tree, Graph, Trie
+├── Math.lean         # Number theory, combinatorics
+├── Functional.lean   # Higher-order functions, Option, Either
+├── Strings.lean      # String manipulation
+├── Games.lean        # Game logic (TicTacToe, Nim, Blackjack)
+└── Parsers.lean      # Parser combinators
+```
+
+The corpus should include:
+- Simple arithmetic and recursion
+- Pattern matching on various types (Nat, Bool, Option, List, custom inductives)
+- Higher-order functions (map, filter, fold)
+- Type class usage (comparison, arithmetic)
+- Complex data structures
+
+### 2. Automated Quality Analysis
+
+After each extraction, run automated checks:
+
+```bash
+# Generate Python from corpus
+lake env lean --run Corpus/CorpusTestCombined.lean 2>/dev/null > corpus.py
+
+# Check for errors with ruff
+ruff check corpus.py 2>&1 | grep -E "^F821|^F811|^E731"
+
+# F821 = Undefined name (critical bugs)
+# F811 = Redefinition (name collisions)
+# E731 = Lambda assignment (style)
+```
+
+Track progress by counting errors over time:
+
+| Date | F821 | F811 | E731 | Notes |
+|------|------|------|------|-------|
+| Start | ~4860 | ? | ? | Initial corpus |
+| Session 1 | 188 | 32 | 9 | After basic fixes |
+| Current | **12** | **0** | **9** | After namespace fixes |
+
+### 3. Traceability
+
+Every emitted function includes a comment tracing back to Lean:
+
+```python
+# Lean: Corpus.Algorithms.fibonacci
+def algorithms_fibonacci(n: int) -> int:
+    ...
+```
+
+This makes it easy to find the source of extraction errors.
+
+### 4. Fix Categories
+
+Address issues in priority order:
+
+**Critical (F821 - Undefined names):**
+- Missing type definitions → emit dataclasses
+- Missing stdlib functions → add explicit handlers
+- Name collisions → add namespace prefixes
+- Type class projection failures → improve instance tracking
+
+**Medium (F811 - Redefinitions):**
+- Same function name in different modules → module prefix
+- Same helper name in different functions → grandparent prefix
+
+**Low Priority (E731 - Style):**
+- Lambda assignments → could convert to def
+- Verbose thunks → could inline simple cases
+
+### 5. Common Patterns to Handle
+
+Each pattern requires specific handling:
+
+| Pattern | Example | Solution |
+|---------|---------|----------|
+| List comprehensions | `List.map`, `List.filter` | `[f(x) for x in xs]` |
+| Safe indexing | `GetElem?` | `lambda xs, i: xs[i] if 0 <= i < len(xs) else None` |
+| Tuple construction | `Prod.mk a b` | `(a, b)` |
+| String from chars | `String.mk cs` | `''.join(cs)` |
+| Successor | `Nat.succ n` | `n + 1` |
+| Name collisions | Multiple `empty` | Module prefix: `stack_empty`, `queue_empty` |
+| Helper collisions | Multiple `fibonacci.go` | Grandparent prefix: `algorithms_fibonacci_go` |
+
+### 6. Verification
+
+After fixes, verify working functions:
+
+```python
+# In Python
+assert algorithms_fibonacci(10) == 55
+assert algorithms_gcd(48, 18) == 6
+assert algorithms_is_prime(17) == True
+assert insertion_sort([3,1,4,1,5]) == [1, 1, 3, 4, 5]
+```
+
+### 7. Documentation
+
+Maintain EXTRACTION_ISSUES.md documenting:
+- Current error counts
+- Working functions
+- Fixed issues
+- Remaining issues
+- Suggested priorities
+
+## Development Notes
+
+### Adding New Operators
+
+To support a new builtin operation:
+
+1. **Direct operations** (like `Nat.add`): Add to `natBinOp?`
+2. **Type class operations** (like `HAdd`): Add to `hOpToPyOp?`
+3. **Instance constructors** to skip: Update `isInstanceCtor`
+4. **Builtin functions** (like `len`): Add to `builtinFn?`
+
+### Debugging LCNF
+
+To see what LCNF is generated for a function:
+
+```lean
+import LeanToPython
+open Lean Lean.Compiler.LCNF
+
+def myFn (x : Nat) : Nat := x + 1
+
+partial def dumpCode (c : Code) : CompilerM Unit := do
+  match c with
+  | .let decl k =>
+    IO.println s!"let {decl.binderName} = ..."
+    dumpCode k
+  | .return fv => IO.println s!"return {fv.name}"
+  | _ => pure ()
+
+#eval Lean.Compiler.LCNF.CompilerM.run do
+  let decl ← toDecl `myFn
+  dumpCode decl.value
+```
+
+### Key State Fields
+
+- `instanceVars`: Maps FVarId to instance name (for skipping)
+- `extractedOps`: Maps FVarId to (instance, field index) for inlining
+- `literalVars`: Maps FVarId to literal value (for OfNat inlining)
+- `varAliases`: Maps FVarId to FVarId (for decide patterns)
+- `boolVars`: Tracks variables holding True/False
+- `unitVars`: Tracks unit values (skipped in calls)

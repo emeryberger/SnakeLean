@@ -1,0 +1,10 @@
+name = "LeanToPython"
+version = "0.1.0"
+defaultTargets = ["LeanToPython"]
+
+[[lean_lib]]
+name = "LeanToPython"
+
+[[lean_lib]]
+name = "Corpus"
+roots = ["Corpus"]
