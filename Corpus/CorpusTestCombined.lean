@@ -16,6 +16,7 @@ import Corpus.Geometry
 import Corpus.Combinatorics
 import Corpus.Sequences
 import Corpus.Sorting
+import Corpus.Production
 
 open Lean LeanToPython
 
@@ -443,7 +444,55 @@ open Lean LeanToPython
     `Corpus.Sorting.median,
     `Corpus.Sorting.mode,
     `Corpus.Sorting.unique,
-    `Corpus.Sorting.removeDupsSorted
+    `Corpus.Sorting.removeDupsSorted,
+
+    -- Production algorithms
+    -- Red-Black Tree
+    `Corpus.Production.RBTree.singleton,
+    `Corpus.Production.RBTree.member,
+    `Corpus.Production.RBTree.balance,
+    `Corpus.Production.RBTree.insertAux,
+    `Corpus.Production.RBTree.makeBlack,
+    `Corpus.Production.RBTree.insert,
+    `Corpus.Production.RBTree.toList,
+    `Corpus.Production.RBTree.fromList,
+    `Corpus.Production.RBTree.size,
+    `Corpus.Production.RBTree.height,
+    `Corpus.Production.RBTree.blackHeight,
+
+    -- Union-Find
+    `Corpus.Production.UnionFind.empty,
+    `Corpus.Production.UnionFind.size,
+    `Corpus.Production.UnionFind.push,
+    `Corpus.Production.UnionFind.findWithPath,
+    `Corpus.Production.UnionFind.findRoot,
+    `Corpus.Production.UnionFind.connected,
+    `Corpus.Production.UnionFind.union,
+    `Corpus.Production.UnionFind.numComponents,
+    `Corpus.Production.UnionFind.ofSize,
+
+    -- Quicksort
+    `Corpus.Production.lomutoPartition,
+    `Corpus.Production.quicksortAux,
+    `Corpus.Production.quicksort,
+
+    -- String Matching
+    `Corpus.Production.naiveStringMatch,
+    `Corpus.Production.naiveStringMatchAll,
+    `Corpus.Production.computeZArray,
+
+    -- Dynamic Programming
+    `Corpus.Production.lcsLength,
+    `Corpus.Production.lcs,
+    `Corpus.Production.editDistance,
+    `Corpus.Production.intervalScheduling,
+    `Corpus.Production.knapsack01,
+    `Corpus.Production.coinChange,
+    `Corpus.Production.matrixChainOrder,
+    `Corpus.Production.lisLength,
+    `Corpus.Production.lis,
+    `Corpus.Production.maxSubarraySum,
+    `Corpus.Production.countInversions
   ]
   let code ← emitPythonForNames `Corpus names
   IO.println code

@@ -27,7 +27,7 @@ The transpiler achieves **100% accuracy** on a test suite of 27 functions (132 t
 
 ## Corpus
 
-The extraction corpus includes 472 functions (9,400+ lines) covering:
+The extraction corpus includes **536 functions** (12,400+ lines) covering:
 
 - **Algorithms** - Sorting, searching, numeric algorithms
 - **Math** - Arithmetic, number theory, combinatorics
@@ -39,6 +39,7 @@ The extraction corpus includes 472 functions (9,400+ lines) covering:
 - **Geometry** - 2D/3D points, distances, areas, intersections
 - **Combinatorics** - Permutations, combinations, Stirling numbers
 - **Sequences** - Fibonacci variants, figurate numbers
+- **Production** - Red-Black Trees, Union-Find with path compression, Dynamic Programming (LCS, Edit Distance, Knapsack, Coin Change, Matrix Chain, LIS)
 
 ## Usage
 
@@ -121,7 +122,7 @@ def safe_div(x: int, y: int) -> int | None:
 ```
 LeanToPython/
 ├── LeanToPython.lean      # Main extraction logic
-├── Corpus/                # Lean source corpus
+├── Corpus/                # Lean source corpus (14 modules)
 │   ├── Algorithms.lean
 │   ├── Math.lean
 │   ├── DataStructures.lean
@@ -135,9 +136,10 @@ LeanToPython/
 │   ├── Sorting.lean
 │   ├── Advanced.lean
 │   ├── Parsers.lean
+│   ├── Production.lean    # Red-Black Trees, Union-Find, DP
 │   └── CorpusTestCombined.lean
 ├── extracted/             # Generated Python output
-│   ├── lcnf_corpus.py
+│   ├── lcnf_corpus.py     # 12,465 lines, 536 functions
 │   └── llm_corpus.py
 ├── evaluate_correctness.py
 └── CORRECTNESS_REPORT.md

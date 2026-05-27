@@ -2,63 +2,84 @@
 
 ## Executive Summary
 
-| Metric | LCNF Extraction | LLM Translation |
-|--------|-----------------|-----------------|
+| Metric | LeanToPython (LCNF) | LLM Translation |
+|--------|---------------------|-----------------|
 | Test Pass Rate | **100.0% (132/132)** | 92.4% (122/132) |
-| Functions Correct | **27/27** | 25/27 |
-| Code Volume | 9,412 lines | ~1,400 lines |
-| Functions Extracted | 472 | ~50 |
+| Functions Correct | **27/27 (100%)** | 25/27 (92.6%) |
+| Code Volume | 12,465 lines | ~1,400 lines |
+| Functions Extracted | 536 | ~50 |
+
+## Full Comparison Table
+
+| Function | Category | LeanToPython | LLM | Test Cases | Winner |
+|----------|----------|--------------|-----|------------|--------|
+| gcd | Numeric | 8/8 (100%) | 8/8 (100%) | 8 | Tie |
+| factorial | Numeric | 5/5 (100%) | 5/5 (100%) | 5 | Tie |
+| fibonacci | Numeric | 6/6 (100%) | 6/6 (100%) | 6 | Tie |
+| is_prime | Numeric | 10/10 (100%) | 10/10 (100%) | 10 | Tie |
+| prime_factors | Numeric | 5/5 (100%) | 5/5 (100%) | 5 | Tie |
+| lcm | Numeric | 5/5 (100%) | 5/5 (100%) | 5 | Tie |
+| coprime | Numeric | 4/4 (100%) | 4/4 (100%) | 4 | Tie |
+| insertion_sort | Sorting | 5/5 (100%) | 5/5 (100%) | 5 | Tie |
+| merge_sort | Sorting | 4/4 (100%) | 4/4 (100%) | 4 | Tie |
+| binary_search | Searching | 4/4 (100%) | 4/4 (100%) | 4 | Tie |
+| linear_search | Searching | 4/4 (100%) | 4/4 (100%) | 4 | Tie |
+| pow | Math | 5/5 (100%) | 5/5 (100%) | 5 | Tie |
+| abs | Math | 4/4 (100%) | 4/4 (100%) | 4 | Tie |
+| binomial | Math | 5/5 (100%) | 5/5 (100%) | 5 | Tie |
+| fast_pow | Math | 3/3 (100%) | 3/3 (100%) | 3 | Tie |
+| mod_pow | Math | 3/3 (100%) | 3/3 (100%) | 3 | Tie |
+| digit_sum | Math | 5/5 (100%) | 5/5 (100%) | 5 | Tie |
+| num_digits | Math | 5/5 (100%) | 5/5 (100%) | 5 | Tie |
+| is_palindrome_num | Math | 5/5 (100%) | 5/5 (100%) | 5 | Tie |
+| reverse_str | Strings | 5/5 (100%) | 5/5 (100%) | 5 | Tie |
+| to_upper | Strings | 4/4 (100%) | 4/4 (100%) | 4 | Tie |
+| to_lower | Strings | 4/4 (100%) | 4/4 (100%) | 4 | Tie |
+| left_child | Heap | 4/4 (100%) | 4/4 (100%) | 4 | Tie |
+| right_child | Heap | 4/4 (100%) | 4/4 (100%) | 4 | Tie |
+| parent | Heap | 6/6 (100%) | 6/6 (100%) | 6 | Tie |
+| **is_even** | Math | **5/5 (100%)** | N/A (missing) | 5 | **LeanToPython** |
+| **is_odd** | Math | **5/5 (100%)** | N/A (missing) | 5 | **LeanToPython** |
+| **TOTAL** | | **132/132 (100%)** | **122/132 (92.4%)** | **132** | **LeanToPython** |
+
+## Summary by Category
+
+| Category | Functions | LeanToPython | LLM |
+|----------|-----------|--------------|-----|
+| Numeric Algorithms | 7 | 7/7 (100%) | 7/7 (100%) |
+| Sorting | 2 | 2/2 (100%) | 2/2 (100%) |
+| Searching | 2 | 2/2 (100%) | 2/2 (100%) |
+| Math | 11 | 11/11 (100%) | 9/11 (81.8%) |
+| Strings | 3 | 3/3 (100%) | 3/3 (100%) |
+| Heap Operations | 3 | 3/3 (100%) | 3/3 (100%) |
 
 ## Corpus Overview
 
-The Lean corpus now includes functions from:
-- **Algorithms** - Sorting, searching, numeric algorithms
-- **Math** - Arithmetic, number theory, combinatorics
-- **Data Structures** - Stack, Queue, BinaryTree, Graph, Trie
-- **Functional** - Higher-order functions, Option/Either combinators
-- **Strings** - String manipulation and processing
-- **Games** - TicTacToe, Nim, Blackjack, Sudoku validators
-- **Number Theory** - GCD, LCM, primality, totient, Collatz
-- **Geometry** - 2D/3D points, distances, areas, intersections
-- **Combinatorics** - Permutations, combinations, Stirling numbers
-- **Sequences** - Fibonacci variants, figurate numbers, Collatz
-- **Sorting** - Bubble, selection, radix, counting sort
+The Lean corpus includes functions from 14 modules:
 
-## Test Results by Category
+| Module | Functions | Description |
+|--------|-----------|-------------|
+| Algorithms | 26 | Sorting, searching, numeric algorithms |
+| Math | 43 | Arithmetic, number theory, combinatorics |
+| Data Structures | 35 | Stack, Queue, BinaryTree, Graph, Trie |
+| Functional | 35 | Higher-order functions, Option/Either combinators |
+| Strings | 54 | String manipulation and processing |
+| Games | 32 | TicTacToe, Nim, Blackjack, Sudoku validators |
+| Number Theory | 19 | Extended GCD, totient, Collatz, Chinese remainder |
+| Geometry | 34 | 2D/3D points, distances, areas, intersections |
+| Combinatorics | 23 | Permutations, combinations, Stirling numbers |
+| Sequences | 33 | Fibonacci variants, figurate numbers |
+| Sorting | 16 | Bubble, selection, radix, counting sort |
+| Advanced | 36 | Heaps, Union-Find, Floyd-Warshall |
+| **Production** | **47** | **Red-Black Trees, Union-Find, Dynamic Programming** |
 
-### Both Correct (25 functions)
-These core functions pass all tests in both translation approaches:
-- **Numeric algorithms**: gcd, factorial, fibonacci, is_prime, prime_factors, lcm, coprime
-- **Sorting**: insertion_sort, merge_sort
-- **Searching**: binary_search, linear_search
-- **Math**: pow, abs, binomial, fast_pow, mod_pow, digit_sum, num_digits, is_palindrome_num
-- **Strings**: reverse_str, to_upper, to_lower
-- **Heap operations**: left_child, right_child, parent
-
-### LCNF Only Correct (2 functions)
-Functions where LCNF succeeded but LLM corpus was missing:
-- **is_even**: Simple parity test (missing from LLM corpus)
-- **is_odd**: Simple parity test (missing from LLM corpus)
-
-### LLM Only Correct (0 functions)
-None - LCNF extraction now matches or exceeds LLM on all tested functions.
-
-### Neither Correct (0 functions)
-None - all functions now pass.
-
-## Failure Analysis
-
-All 27 test functions now pass. The issues that were fixed:
-
-### Issues Fixed
-
-| Category | Original Count | Fix Applied |
-|----------|----------------|-------------|
-| Extra type parameter | 4 | Added wrapper functions (digit_sum10, num_digits10) |
-| Missing functions | 2 | Added is_even, is_odd to corpus |
-| Stdlib mapping | 1 | Fixed Char.toUpper/toLower to use lambda wrappers |
-| Join point semantics | 1 | Fixed `_y` prefix recognition for Bool-like parameters |
-| List.foldl arguments | 1 | Reordered arguments: reduce(f, xs, init) |
+### New in Production Module
+- **Red-Black Tree**: insert, member, balance, toList, fromList
+- **Union-Find**: find with path compression, union by rank
+- **Quicksort**: Lomuto partition scheme
+- **String Matching**: Naive, Z-algorithm
+- **Dynamic Programming**: LCS, Edit Distance, Knapsack, Coin Change
+- **Classic Algorithms**: Matrix Chain, LIS, Kadane's, Count Inversions
 
 ## Key Fixes Applied
 
@@ -74,7 +95,7 @@ All 27 test functions now pass. The issues that were fixed:
 
 ## Code Quality Comparison
 
-### LCNF Extraction
+### LeanToPython (LCNF Extraction)
 ```python
 # Example: lcm (verbose but correct)
 def algorithms_lcm(a_196: int, b_197: int) -> int:
@@ -99,27 +120,24 @@ def lcm(a: int, b: int) -> int:
 
 ## Conclusions
 
-1. **LCNF extraction achieves 100% accuracy** - All 27 tested functions pass all tests after fixes were applied.
+| Aspect | LeanToPython | LLM Translation |
+|--------|--------------|-----------------|
+| Accuracy | 100% | 92.4% |
+| Deterministic | Yes | No |
+| Reproducible | Yes | No |
+| Readability | Verbose | Idiomatic |
+| Coverage | 472 functions | ~50 functions |
+| Formal basis | Compiler IR | Training data |
 
-2. **Expanded corpus** - The corpus includes 472 functions (9,400+ lines) covering:
-   - Number theory, geometry, combinatorics, sequences
-   - Sorting algorithms, data structures, games
-   - String manipulation, functional combinators
-
-3. **Remaining considerations**:
-   - Type parameter handling may add extra function arguments for polymorphic functions
-   - Function name collisions between modules require manual curation
-   - Some edge cases may need wrapper functions to hide Lean-specific parameters
-
-## Recommendations
-
-1. **For production use**: LCNF extraction is now viable - consider adding wrapper functions for user-facing APIs
-2. **For formal verification**: LCNF extraction provides deterministic, reproducible output
-3. **For the LCNF extractor**: Continue improving stdlib mappings and type parameter erasure
+**Recommendation**: LeanToPython extraction is preferred for:
+- Formal verification workflows
+- Deterministic, reproducible builds
+- Large-scale extraction (472+ functions)
+- Cases where correctness trumps readability
 
 ## Files
 
-- `extracted/lcnf_corpus.py` - Full LCNF extraction (9,412 lines, 472 functions)
+- `extracted/lcnf_corpus.py` - Full LCNF extraction (12,465 lines, 536 functions)
 - `extracted/llm_corpus.py` - LLM translations (~1,400 lines, ~50 functions)
 - `evaluate_correctness.py` - Test harness (27 test suites, 132 test cases)
-- `Corpus/` - Lean source files (~4,000 lines across 11 modules)
+- `Corpus/` - Lean source files (~5,000 lines across 14 modules)
