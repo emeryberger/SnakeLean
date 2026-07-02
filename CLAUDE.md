@@ -167,6 +167,35 @@ Color = red | green | blue
 - **List matching**: `if len(xs) == 0: ... else: head = xs[0]; tail = xs[1:]; ...`
 - **Tuple access**: `p.1` → `p[0]`, `p.2` → `p[1]`
 - **Tuple construction**: `(a, b)` → `(a, b)`
+- **Lambda inlining into comprehensions**: `xs.map (fun x => x + 1)` → `[x + 1 for x in xs]` rather than a helper `def`. See below.
+- **Set comprehensions**: `List.eraseDups` / `.toFinset` / `.toSet` → a Python set comprehension `{x for x in xs}`. If the argument was itself a `map`/`filter` comprehension, the two fuse into one set comprehension (`{f(x) for x in xs}`) and the now-dead intermediate line is removed.
+
+### Lambda Inlining Architecture
+
+In LCNF, `xs.map (fun x => x + 1)` lowers the lambda to a local `def _f(x): ...`
+(a let-chain ending in `return`) that the combinator references by name — which
+naively yields `[_f(x) for x in xs]`. To inline it:
+
+1. `emitLocalFun` detects a single-(non-unit-)parameter lambda and attempts to
+   render its body as one Python expression via `renderExprCode` /
+   `renderLetValueExpr` (string-returning analogues of `emitLetValue`). On
+   success it **defers** the lambda — recording `(paramName, bodyExpr)` in
+   `deferredLambdas` and emitting no `def`. On failure it rolls back all
+   render-time state mutations (via a `State` snapshot) and emits a normal `def`.
+2. Comprehension-producing combinators (`List.map`/`filter`/`filterMap`/`bind`/
+   `any`/`all`/`find?`/`findSome?`) call `fnCompParts`, which inlines a deferred
+   lambda's body with its own binder, or falls back to `f(x)` for a named
+   function argument.
+3. A deferred lambda used as a plain value (e.g. a match-arm thunk, or passed to
+   an un-inlined function) is materialized back into `(lambda p: body)` at the
+   use site (`emitArg` and the `.fvar` call path).
+
+The renderer is deliberately **conservative**: it inlines only arithmetic,
+comparison, string append, `Nat.succ`, tuple projection, extracted-instance
+operators, `Char.*`-style stdlib callables (`isConstFnSafeToInline`), and calls
+to already-known local functions. Anything else (constructors like `List.cons`,
+`OfNat`, `bne`, `List.contains`, nested `cases`/`fun`) returns `none` so the
+lambda falls back to a correct `def` — never a call to an undefined name.
 
 ## Example Output
 
@@ -337,7 +366,8 @@ Each pattern requires specific handling:
 
 | Pattern | Example | Solution |
 |---------|---------|----------|
-| List comprehensions | `List.map`, `List.filter` | `[f(x) for x in xs]` |
+| List comprehensions | `List.map (fun x => x+1)` | `[x + 1 for x in xs]` (lambda body inlined) |
+| Set comprehensions | `List.eraseDups`, `.toFinset`, `.toSet` | `{x for x in xs}` (fuses upstream map/filter) |
 | Safe indexing | `GetElem?` | `lambda xs, i: xs[i] if 0 <= i < len(xs) else None` |
 | Tuple construction | `Prod.mk a b` | `(a, b)` |
 | String from chars | `String.mk cs` | `''.join(cs)` |

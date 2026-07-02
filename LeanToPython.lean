@@ -51,6 +51,24 @@ structure State where
   varAliases : Std.HashMap FVarId FVarId := {}
   /-- Track the last comparison result variable (for decide pattern) -/
   lastCompareVar : Option FVarId := none
+  /-- Rendered Python expression strings for let-bound fvars inside a lambda
+      body that is being inlined into a comprehension. -/
+  exprVars : Std.HashMap FVarId String := {}
+  /-- Single-parameter lambdas that were deferred (not emitted as a `def`)
+      because their body renders as a simple expression. Maps the lambda's
+      fvar to (paramName, bodyExpr). Consumed inline by comprehensions; any
+      other use is materialized as a Python `(lambda p: e)`. -/
+  deferredLambdas : Std.HashMap FVarId (String × String) := {}
+  /-- For a let-fvar bound to a list comprehension we emitted (map/filter/…),
+      the comprehension's inner text without the surrounding brackets, e.g.
+      "(x + 1) for x in xs". Lets a downstream `toFinset`/`toSet`/`eraseDups`
+      fuse into a set comprehension `{...}` instead of wrapping a list. -/
+  listCompInner : Std.HashMap FVarId String := {}
+  /-- The most recently emitted list-comprehension statement, as
+      (fvar, bufStart, bufEnd). If a set-comprehension fuses this exact fvar as
+      the immediately following statement (buffer unchanged since), the dead
+      intermediate line is truncated away. -/
+  lastListComp : Option (FVarId × Nat × Nat) := none
   nextTmpIdx : Nat := 0
 
 abbrev EmitM := ReaderT Context StateRefT State CompilerM
@@ -504,6 +522,12 @@ def emitLitValue (lit : LitValue) : EmitM Unit := do
   | .natVal n => emit (toString n)
   | .strVal s => emit (quotePyString s)
 
+/-- Pure string form of a literal value (for expression-mode rendering). -/
+def litValueStr (lit : LitValue) : String :=
+  match lit with
+  | .natVal n => toString n
+  | .strVal s => quotePyString s
+
 /-! ## Argument Emission -/
 
 def emitArg (arg : Arg) : EmitM Unit := do
@@ -515,6 +539,11 @@ def emitArg (arg : Arg) : EmitM Unit := do
       emitLitValue lit
     else if let some b := (← get).boolVars[fvarId]? then
       emit (if b then "True" else "False")
+    else if let some e := (← get).exprVars[fvarId]? then
+      emit e
+    else if let some (param, body) := (← get).deferredLambdas[fvarId]? then
+      -- A deferred lambda used as a plain value: materialize it.
+      emit s!"(lambda {param}: {body})"
     else
       emit (← getVarName fvarId)
   | .erased => emit "None"
@@ -606,6 +635,199 @@ def tryEmitInlinedOp (varName : String) (fnVar : FVarId) (args : Array Arg) : Em
         emit "\n"
         return true
   return false
+
+/-! ## Expression-mode rendering (for inlining lambda bodies into comprehensions)
+
+`renderExprCode` attempts to render a lambda body — an LCNF let-chain ending in
+`return` — as a single Python expression string, e.g. `x + 1` or `x % 2 == 0`.
+It returns `none` for anything that is not a simple expression (nested
+functions, pattern matches, projections we don't understand), in which case the
+caller falls back to emitting a real `def`. It deliberately mirrors the subset
+of `emitLetValue` that produces pure expressions. -/
+
+/-- String form of an argument, resolving literals / bools / already-rendered
+    expression vars / deferred lambdas / plain variable names. -/
+def renderArg (arg : Arg) : EmitM String := do
+  match arg with
+  | .fvar fvarId =>
+    let fvarId ← resolveAlias fvarId
+    let st ← get
+    if let some lit := st.literalVars[fvarId]? then
+      return litValueStr lit
+    else if let some b := st.boolVars[fvarId]? then
+      return (if b then "True" else "False")
+    else if let some e := st.exprVars[fvarId]? then
+      return e
+    else if let some (param, body) := st.deferredLambdas[fvarId]? then
+      return s!"(lambda {param}: {body})"
+    else
+      return (← getVarName fvarId)
+  | .erased => return "None"
+  | .type _ => return "None"
+
+/-- Render the (possibly filtered) argument list of a call as `a, b, c`,
+    skipping unit fvars, exactly like `emitArgs`. -/
+def renderArgs (args : Array Arg) : EmitM String := do
+  let mut parts : Array String := #[]
+  for arg in args do
+    if let .fvar fvarId := arg then
+      if (← get).unitVars.contains fvarId then
+        continue
+    parts := parts.push (← renderArg arg)
+  return ", ".intercalate parts.toList
+
+/-- True when a `.const` call can be safely inlined as `pyName(args)` in
+    expression position: it maps through `stdlibFnToPython?` to a self-contained
+    Python callable (no `{}` format placeholder, no `lambda`/paren wrapper that
+    would need special call handling). This deliberately excludes constructors
+    and specially-handled ops (`List.cons`, `bne`, `OfNat`, `List.contains`, …)
+    so those lambdas fall back to a real `def` instead of an undefined name. -/
+def isConstFnSafeToInline (declName : Name) : Bool :=
+  match stdlibFnToPython? declName with
+  | some py => !(containsSubstr py "{}") && !(containsSubstr py "(") && !(containsSubstr py " ")
+  | none => false
+
+/-- Try to render a `let`-bound value as a Python expression string. Returns
+    `none` if the value isn't a simple expression we can inline. Mutating
+    side-effects (literal/instance/op tracking) mirror `emitLetValue`. -/
+partial def renderLetValueExpr (decl : LetDecl) : EmitM (Option String) := do
+  match decl.value with
+  | .value v =>
+    recordLiteral v
+    return some (litValueStr v)
+  | .erased => return none
+  | .const declName _ args =>
+    let constNameStr := declName.toString (escape := false)
+    if constNameStr == "Ordering.lt" then return some "-1"
+    if constNameStr == "Ordering.eq" then return some "0"
+    if constNameStr == "Ordering.gt" then return some "1"
+    if declName == ``Nat.succ then
+      if args.size >= 1 then
+        return some s!"({← renderArg args[args.size - 1]!} + 1)"
+    if let some op := natBinOp? declName then
+      if args.size == 2 then
+        return some s!"({← renderArg args[0]!} {op} {← renderArg args[1]!})"
+    if let some fn := builtinFn? declName then
+      if args.size >= 1 then
+        let a ← renderArg args[args.size - 1]!
+        if fn == "not" then return some s!"(not {a})"
+        else if fn == "-" then return some s!"(-{a})"
+        else return some s!"{fn}({a})"
+    if isStringAppend declName then
+      if args.size >= 2 then
+        return some s!"({← renderArg args[args.size - 2]!} + {← renderArg args[args.size - 1]!})"
+    if isBEqOp declName then
+      if args.size >= 2 then
+        modify fun s => { s with lastCompareVar := some decl.fvarId }
+        return some s!"({← renderArg args[args.size - 2]!} == {← renderArg args[args.size - 1]!})"
+    if let some op := isDecidableCompare declName then
+      if args.size >= 2 then
+        modify fun s => { s with lastCompareVar := some decl.fvarId }
+        return some s!"({← renderArg args[args.size - 2]!} {op} {← renderArg args[args.size - 1]!})"
+    if isDecide declName then
+      -- decide wraps its decidable arg; alias to it and expose no new expr.
+      for arg in args do
+        if let .fvar fv := arg then
+          aliasVar decl.fvarId fv
+          return some ""  -- sentinel: aliased, nothing to bind
+      return none
+    -- A user/library function we recognize as a plain Python callable name and
+    -- that takes no special-cased argument shape: `stdlibFnToPython?` entries
+    -- with no `{}` format string, plus locally-defined declarations. Anything
+    -- else (constructors like `List.cons`, `OfNat`, `bne`, `List.contains`, …
+    -- which `emitLetValue` handles specially) we conservatively decline, so the
+    -- lambda falls back to a proper `def` rather than calling an undefined name.
+    if let some py := stdlibFnToPython? declName then
+      if isConstFnSafeToInline declName then
+        return some s!"{py}({← renderArgs args})"
+    return none
+  | .fvar fnVar args =>
+    -- Extracted instance operation inlined as an operator.
+    let st ← get
+    if let some (instName, _) := st.extractedOps[fnVar]? then
+      if let some op := hOpToPyOp? instName then
+        if op == "unary-" && args.size == 1 then
+          return some s!"(-{← renderArg args[0]!})"
+        if args.size == 2 then
+          return some s!"({← renderArg args[0]!} {op} {← renderArg args[1]!})"
+    -- Call of a (possibly deferred-lambda) function variable.
+    if args.size == 0 then
+      -- Value alias.
+      aliasVar decl.fvarId fnVar
+      return some ""
+    -- Only inline a call to a locally-known function or a deferred lambda; a
+    -- bare unknown fvar call is safe (it maps to a Python name), so allow it.
+    return some s!"{← getVarName fnVar}({← renderArgs args})"
+  | .proj typeName idx structFvar =>
+    -- Only tuple projections are safe to inline as expressions.
+    if typeName == ``Prod then
+      return some s!"{← getVarName structFvar}[{idx}]"
+    return none
+
+/-- Render a lambda body (`Code`) as a single Python expression, or `none`. -/
+partial def renderExprCode (code : Code) : EmitM (Option String) := do
+  match code with
+  | .let decl k =>
+    let _ ← registerVar decl.fvarId decl.binderName
+    markBoolTyped decl.fvarId decl.type
+    if ← shouldSkipLetDecl decl then
+      return (← renderExprCode k)
+    match ← renderLetValueExpr decl with
+    | none => return none
+    | some e =>
+      -- "" is the alias sentinel (decide / value alias): bind nothing.
+      if e != "" then
+        modify fun s => { s with exprVars := s.exprVars.insert decl.fvarId e }
+      renderExprCode k
+  | .return fvarId =>
+    let fvarId ← resolveAlias fvarId
+    let st ← get
+    if let some lit := st.literalVars[fvarId]? then
+      return some (litValueStr lit)
+    else if let some b := st.boolVars[fvarId]? then
+      return some (if b then "True" else "False")
+    else if let some e := st.exprVars[fvarId]? then
+      return some e
+    else if let some (param, body) := st.deferredLambdas[fvarId]? then
+      return some s!"(lambda {param}: {body})"
+    else
+      return some (← getVarName fvarId)
+  -- Anything else (nested funs, cases, jumps) is not a simple expression.
+  | _ => return none
+
+/-- For a function argument to a comprehension-producing combinator, return the
+    `(binder, body)` pair to splice into the comprehension. If the argument is a
+    deferred single-param lambda, its body is inlined and its own parameter name
+    is used as the binder (`[x + 1 for x in xs]`). Otherwise we fall back to
+    applying the function to a fresh binder (`[f(x) for x in xs]`). -/
+def fnCompParts (fnArg : Arg) (fallbackBinder : String) : EmitM (String × String) := do
+  if let .fvar fv := fnArg then
+    let fv ← resolveAlias fv
+    if let some (param, body) := (← get).deferredLambdas[fv]? then
+      return (param, body)
+  let f ← renderArg fnArg
+  return (fallbackBinder, s!"{f}({fallbackBinder})")
+
+/-- Render a "dedup / to-set" operation on a list argument as a Python set
+    comprehension. If the argument was itself produced by a `map`/`filter`
+    comprehension (recorded in `listCompInner`), fuse into a single set
+    comprehension `{f(x) for x in xs}`; otherwise emit `{v for v in xs}`. -/
+def setCompFromArg (listArg : Arg) : EmitM String := do
+  let lbrace := "{"
+  let rbrace := "}"
+  if let .fvar fv := listArg then
+    let fv ← resolveAlias fv
+    if let some inner := (← get).listCompInner[fv]? then
+      -- If the list comprehension we're fusing was the immediately preceding
+      -- statement (buffer untouched since), drop that now-dead line.
+      match (← get).lastListComp with
+      | some (lastFv, start, stop) =>
+        if lastFv == fv && stop == (← get).buf.length then
+          modify fun s => { s with buf := s.buf.take start, lastListComp := none }
+      | none => pure ()
+      return lbrace ++ inner ++ rbrace
+  let xs ← renderArg listArg
+  return lbrace ++ s!"_v for _v in {xs}" ++ rbrace
 
 partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
   -- Register the variable with its binder name
@@ -844,41 +1066,44 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
     -- Special handling for List.map and List.filter - use idiomatic list comprehensions
     if declName == ``List.map then
       if args.size >= 2 then
+        let (binder, body) ← fnCompParts args[args.size - 2]! "x"
+        let xs ← renderArg args[args.size - 1]!
+        let inner := s!"{body} for {binder} in {xs}"
+        let start := (← get).buf.length
         emitIndent
-        emit s!"{varName} = ["
-        emitArg args[args.size - 2]!  -- function
-        emit "(x) for x in "
-        emitArg args[args.size - 1]!  -- list
-        emit "]\n"
+        emit s!"{varName} = [{inner}]\n"
+        modify fun s => { s with
+          listCompInner := s.listCompInner.insert decl.fvarId inner
+          lastListComp := some (decl.fvarId, start, s.buf.length) }
         return
     if declName == ``List.filter then
       if args.size >= 2 then
+        let (binder, body) ← fnCompParts args[args.size - 2]! "x"
+        let xs ← renderArg args[args.size - 1]!
+        let inner := s!"{binder} for {binder} in {xs} if {body}"
+        let start := (← get).buf.length
         emitIndent
-        emit s!"{varName} = [x for x in "
-        emitArg args[args.size - 1]!  -- list
-        emit " if "
-        emitArg args[args.size - 2]!  -- predicate
-        emit "(x)]\n"
+        emit s!"{varName} = [{inner}]\n"
+        modify fun s => { s with
+          listCompInner := s.listCompInner.insert decl.fvarId inner
+          lastListComp := some (decl.fvarId, start, s.buf.length) }
         return
     -- List.filterMap - filter + map in one: [y for x in xs if (y := f(x)) is not None]
     if declName == ``List.filterMap then
       if args.size >= 2 then
+        let (binder, body) ← fnCompParts args[args.size - 2]! "x"
+        let xs ← renderArg args[args.size - 1]!
         emitIndent
-        emit s!"{varName} = [y for x in "
-        emitArg args[args.size - 1]!  -- list
-        emit " if (y := "
-        emitArg args[args.size - 2]!  -- function
-        emit "(x)) is not None]\n"
+        emit s!"{varName} = [_y for {binder} in {xs} if (_y := {body}) is not None]\n"
         return
     -- List.bind (flatMap): [y for x in xs for y in f(x)]
     if declName == ``List.bind then
       if args.size >= 2 then
+        -- bind's function returns a sublist; inline it as the inner iterable.
+        let (binder, body) ← fnCompParts args[args.size - 1]! "x"
+        let xs ← renderArg args[args.size - 2]!
         emitIndent
-        emit s!"{varName} = [y for x in "
-        emitArg args[args.size - 2]!  -- list
-        emit " for y in "
-        emitArg args[args.size - 1]!  -- function
-        emit "(x)]\n"
+        emit s!"{varName} = [_y for {binder} in {xs} for _y in {body}]\n"
         return
     -- List.range - generate range of numbers
     if declName == ``List.range then
@@ -919,21 +1144,17 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
     -- List.all / List.any - check if all/any elements satisfy predicate
     if declName == ``List.all then
       if args.size >= 2 then
+        let (binder, body) ← fnCompParts args[args.size - 1]! "x"
+        let xs ← renderArg args[args.size - 2]!
         emitIndent
-        emit s!"{varName} = all("
-        emitArg args[args.size - 1]!  -- predicate
-        emit "(x) for x in "
-        emitArg args[args.size - 2]!  -- list
-        emit ")\n"
+        emit s!"{varName} = all({body} for {binder} in {xs})\n"
         return
     if declName == ``List.any then
       if args.size >= 2 then
+        let (binder, body) ← fnCompParts args[args.size - 1]! "x"
+        let xs ← renderArg args[args.size - 2]!
         emitIndent
-        emit s!"{varName} = any("
-        emitArg args[args.size - 1]!  -- predicate
-        emit "(x) for x in "
-        emitArg args[args.size - 2]!  -- list
-        emit ")\n"
+        emit s!"{varName} = any({body} for {binder} in {xs})\n"
         return
     -- List.reverse needs the list argument
     if declName == ``List.reverse then
@@ -1019,30 +1240,31 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
     -- List.find? - find first element matching predicate
     if declName == ``List.find? then
       if args.size >= 2 then
+        let (binder, body) ← fnCompParts args[args.size - 2]! "x"
+        let xs ← renderArg args[args.size - 1]!
         emitIndent
-        emit s!"{varName} = next((x for x in "
-        emitArg args[args.size - 1]!  -- list
-        emit " if "
-        emitArg args[args.size - 2]!  -- predicate
-        emit "(x)), None)\n"
+        emit s!"{varName} = next(({binder} for {binder} in {xs} if {body}), None)\n"
         return
     -- List.findSome? - find first Some result of f
     if declName == ``List.findSome? then
       if args.size >= 2 then
+        let (binder, body) ← fnCompParts args[args.size - 2]! "x"
+        let xs ← renderArg args[args.size - 1]!
         emitIndent
-        emit s!"{varName} = next((y for x in "
-        emitArg args[args.size - 1]!  -- list
-        emit " if (y := "
-        emitArg args[args.size - 2]!  -- function
-        emit "(x)) is not None), None)\n"
+        emit s!"{varName} = next((_y for {binder} in {xs} if (_y := {body}) is not None), None)\n"
         return
-    -- List.eraseDups - remove duplicates preserving order
-    if declName == ``List.eraseDups then
+    -- List.eraseDups / List.toFinset / List.toSet - dedup as a Python set
+    -- comprehension, fusing an upstream map/filter comprehension when present.
+    -- (eraseDups is a List in Lean; per configuration we model it as set
+    -- semantics, so the result is an unordered Python set.)
+    let declStr := declName.toString (escape := false)
+    if declName == ``List.eraseDups ||
+       declStr.endsWith ".toFinset" || declStr.endsWith ".toSet" ||
+       declStr == "List.toFinset" || declStr == "List.toSet" then
       if args.size >= 1 then
+        let setComp ← setCompFromArg args[args.size - 1]!
         emitIndent
-        emit s!"{varName} = list(dict.fromkeys("
-        emitArg args[args.size - 1]!
-        emit "))\n"
+        emit s!"{varName} = {setComp}\n"
         return
     -- List.qsort / List.mergeSort / Array.qsort - sort
     if declName == ``List.mergeSort then
@@ -1164,6 +1386,17 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
       | .fvar fv => if !st.unitVars.contains fv then nonUnitArgs := nonUnitArgs + 1
       | .erased => pure ()
       | .type _ => pure ()
+    -- A deferred single-param lambda referenced as a value (not inlined by a
+    -- comprehension): materialize it as a Python `lambda`.
+    if let some (param, body) := st.deferredLambdas[fnVar]? then
+      emitIndent
+      emit s!"{varName} = (lambda {param}: {body})"
+      if args.size > 0 then
+        emit "("
+        emitArgs args
+        emit ")"
+      emit "\n"
+      return
     -- Check for partial application or value assignment
     if let some (_, totalParams) := st.localFnArities[fnVar]? then
       -- If calling with fewer args than total params, it's a partial application
@@ -1266,10 +1499,30 @@ partial def emitCode (code : Code) : EmitM Unit := do
     emit "raise RuntimeError(\"unreachable\")\n"
 
 partial def emitLocalFun (decl : FunDecl) : EmitM Unit := do
-  let fnName ← registerVar decl.fvarId decl.binderName
   -- Count non-unit params for arity tracking
   let nonUnitParams := decl.params.foldl (fun acc p => if isUnitType p.type then acc else acc + 1) 0
   let totalParams := decl.params.size
+  -- Try to defer a single-parameter lambda whose body is a simple expression,
+  -- so a consuming comprehension can inline it (e.g. `[x + 1 for x in xs]`
+  -- rather than a helper `def`). We only do this for exactly one non-unit
+  -- parameter — the comprehension binder — and require the body to render.
+  if nonUnitParams == 1 && totalParams == 1 then
+    let param := decl.params[0]!
+    if !isUnitType param.type then
+      -- Snapshot state so a failed render attempt leaves nothing behind.
+      let snapshot ← get
+      let paramName ← registerVar param.fvarId param.binderName
+      markBoolTyped param.fvarId param.type
+      match ← renderExprCode decl.value with
+      | some body =>
+        modify fun s => { s with
+          localFnArities := s.localFnArities.insert decl.fvarId (nonUnitParams, totalParams)
+          deferredLambdas := s.deferredLambdas.insert decl.fvarId (paramName, body) }
+        return
+      | none =>
+        -- Roll back render-time mutations, then fall through to a real def.
+        set snapshot
+  let fnName ← registerVar decl.fvarId decl.binderName
   -- Track both for partial application detection
   modify fun s => { s with localFnArities := s.localFnArities.insert decl.fvarId (nonUnitParams, totalParams) }
   emitIndent
