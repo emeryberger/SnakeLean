@@ -29,6 +29,11 @@ jobs:
           lake env lean Comprehensions.lean > Comprehensions_out.py
           python3 Comprehensions_test.py
 
+      - name: Tail-call regression tests
+        run: |
+          lake env lean TailCalls.lean > TailCalls_out.py
+          python3 TailCalls_test.py
+
       - name: Bool-branch / min-max regression tests
         run: |
           lake env lean RegressionFixes.lean > RegressionFixes_out.py

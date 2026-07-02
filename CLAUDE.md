@@ -169,6 +169,43 @@ Color = red | green | blue
 - **Tuple construction**: `(a, b)` → `(a, b)`
 - **Lambda inlining into comprehensions**: `xs.map (fun x => x + 1)` → `[x + 1 for x in xs]` rather than a helper `def`. See below.
 - **Set comprehensions**: `List.eraseDups` / `.toFinset` / `.toSet` → a Python set comprehension `{x for x in xs}`. If the argument was itself a `map`/`filter` comprehension, the two fuse into one set comprehension (`{f(x) for x in xs}`) and the now-dead intermediate line is removed.
+- **Tail-call elimination**: a function whose self-recursive calls are all in tail position is rewritten into a `while True:` loop (parallel parameter rebind + `continue`) so deep recursion does not overflow the Python stack. See below.
+
+### Tail-Call Elimination Architecture
+
+Lean performs TCO; Python does not, so a naively-translated tail-recursive Lean
+function overflows the Python stack (`RecursionError`, ~900 deep) where Lean
+runs in constant stack. (Non-tail recursion — e.g. `factorial` — is O(n) stack
+in *both* Lean and Python, so it is deliberately left recursive; matching Lean
+means only self-*tail* recursion is optimized. Mutual recursion is likewise
+left as-is.)
+
+Detection (`isSelfTailRecursive`) is pure LCNF analysis and deliberately
+**sound** — it only fires when it can prove the rewrite is safe:
+1. `scanSelfCalls` walks the `Code` tree tracking a `tailCtx` flag. A self-call
+   (`const declName`) counts as tail iff it is in tail context and its result
+   fvar is immediately returned. The flag is propagated through tail-calls to
+   local continuation thunks (`_alt`) and join-point jumps, resolving zero-arg
+   fvar aliases (`_alt := _f`) via `collectFunAliases`. Any self-call reached
+   in non-tail context fails the check.
+2. `recursionThunksSingleUse` requires every recursion-carrying continuation
+   thunk to be called from at most one site (LCNF's usual single-use
+   continuation). A multiply-called thunk would have its body duplicated when
+   inlined, so such functions fall back to plain recursive emission.
+
+Emission (in `emitDecl` + `emitCode`, gated by `tailLoop` state):
+- The body is wrapped in `while True:` and the (non-unit) parameter names are
+  recorded in `tailLoop`.
+- A tail self-call becomes `emitTailStep`: a parallel tuple rebind of the loop
+  parameters (`n, acc = <arg1>, <arg2>`) followed by `continue`. Parallel
+  assignment is essential — it matches Lean's simultaneous parameter update
+  (e.g. `gcd`'s `a, b = b, a % b`).
+- LCNF buries most tail calls inside single-use `_alt` continuation thunks
+  (nested `def`s), where Python's `continue` would be illegal. Those thunks are
+  detected (`codeHasSelfCall`), suppressed at their definition site, and
+  inlined at their tail-call site via `emitInlinedThunk` (binding the thunk's
+  params to the call args) so the `continue` lands in the enclosing loop.
+- Base-case thunks that don't carry recursion stay as ordinary nested `def`s.
 
 ### Lambda Inlining Architecture
 
@@ -245,6 +282,10 @@ To add support for more builtin operations, modify:
 4. Generic type parameters are erased to `Any`
 5. No IO monad support (pure functions only)
 6. Some type class projections (e.g., `Max`, `Xor`) emit incorrect code
+7. Only *self*-tail recursion is loop-optimized. Non-tail recursion is left
+   recursive (Lean overflows it too, so this matches Lean); mutual tail
+   recursion is not yet optimized. Deep cases of these can still overflow the
+   Python stack.
 
 ## Future Work: Mathlib Integration
 

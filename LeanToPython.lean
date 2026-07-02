@@ -69,6 +69,17 @@ structure State where
       the immediately following statement (buffer unchanged since), the dead
       intermediate line is truncated away. -/
   lastListComp : Option (FVarId × Nat × Nat) := none
+  /-- When emitting a self-tail-recursive function as a `while True:` loop, this
+      holds `(declName, pyParamNames)` for the current function. A tail
+      self-call to `declName` is then emitted as a parallel rebind of these
+      parameters followed by `continue`, instead of a recursive call. `none`
+      when not in a tail-loop. -/
+  tailLoop : Option (Name × Array String) := none
+  /-- Local continuation thunks (`_alt`) that we inline in tail-loop mode:
+      maps the thunk's fvar to its FunDecl so a tail-jump/call to it emits the
+      body inline (allowing `continue` to reach the enclosing loop) rather than
+      calling a nested `def`. -/
+  inlineThunks : Std.HashMap FVarId FunDecl := {}
   nextTmpIdx : Nat := 0
 
 abbrev EmitM := ReaderT Context StateRefT State CompilerM
@@ -1461,6 +1472,192 @@ def isUnitType (e : Expr) : Bool :=
   | .const ``Unit _ => true
   | _ => false
 
+/-! ## Tail-call analysis
+
+Lean performs tail-call optimization; Python does not. A Lean function whose
+self-recursive calls are all in tail position runs in constant stack, but the
+naive Python translation recurses and overflows the stack (`RecursionError`)
+on deep inputs. We detect such functions here so `emitDecl` can rewrite them
+into a `while True:` loop.
+
+The analysis is *inlining-aware*: LCNF lowers `match` arms into single-use
+continuation thunks (local `.fun`s bound to `_alt`) and loops into join points
+(`.jp`/`.jmp`), so a genuinely tail self-call often sits inside a thunk that is
+itself tail-called. We propagate a `tailCtx` flag through tail-calls to those
+local functions/join points, mirroring what the emitter will do by inlining
+them. The check is deliberately *sound* (a self-call reached in non-tail
+context fails the check) at the cost of missing exotic shapes. -/
+
+/-- Collect every local function / join-point declaration in a `Code` tree,
+    keyed by the fvar it is bound to. -/
+partial def collectLocalFuns (c : Code) (acc : Std.HashMap FVarId FunDecl) : Std.HashMap FVarId FunDecl :=
+  match c with
+  | .let _ k => collectLocalFuns k acc
+  | .fun d k => collectLocalFuns k (collectLocalFuns d.value (acc.insert d.fvarId d))
+  | .jp d k => collectLocalFuns k (collectLocalFuns d.value (acc.insert d.fvarId d))
+  | .cases cs => cs.alts.foldl (fun a alt =>
+      match alt with
+      | .alt _ _ code => collectLocalFuns code a
+      | .default code => collectLocalFuns code a) acc
+  | _ => acc
+
+/-- Collect zero-argument fvar aliases (`let x := fvar f`) throughout a `Code`
+    tree. LCNF binds match-arm continuation thunks as `_alt := _f`, so a later
+    call to `_alt` must resolve to `_f` to find its body. -/
+partial def collectFunAliases (c : Code) (acc : Std.HashMap FVarId FVarId) : Std.HashMap FVarId FVarId :=
+  match c with
+  | .let decl k =>
+    let acc := match decl.value with
+      | .fvar f args => if args.isEmpty then acc.insert decl.fvarId f else acc
+      | _ => acc
+    collectFunAliases k acc
+  | .fun d k => collectFunAliases k (collectFunAliases d.value acc)
+  | .jp d k => collectFunAliases k (collectFunAliases d.value acc)
+  | .cases cs => cs.alts.foldl (fun a alt =>
+      match alt with
+      | .alt _ _ code => collectFunAliases code a
+      | .default code => collectFunAliases code a) acc
+  | _ => acc
+
+/-- Resolve an fvar through the zero-arg alias map (bounded to avoid cycles). -/
+partial def resolveFunAlias (aliases : Std.HashMap FVarId FVarId) (f : FVarId) (fuel : Nat) : FVarId :=
+  if fuel == 0 then f
+  else match aliases[f]? with
+    | some g => resolveFunAlias aliases g (fuel - 1)
+    | none => f
+
+/-- Is `k` exactly `return fv`? (used to decide whether a call's result is
+    immediately returned, i.e. the call is in tail position). -/
+def isReturnOf (fv : FVarId) (k : Code) : Bool :=
+  match k with
+  | .return r => r == fv
+  | _ => false
+
+/-- Walk a `Code` tree looking for self-recursive calls to `declName`.
+    Returns `(foundNonTailSelfCall, foundAnySelfCall)`. `tailCtx` is true when
+    this code is in tail position of the top-level function (propagated through
+    tail-calls to local funs / join-point jumps). `visited` breaks cycles among
+    local functions. `fuel` bounds recursion defensively. -/
+partial def scanSelfCalls (declName : Name) (funs : Std.HashMap FVarId FunDecl)
+    (aliases : Std.HashMap FVarId FVarId)
+    (visited : Std.HashSet FVarId) (fuel : Nat) (tailCtx : Bool) (c : Code) : Bool × Bool :=
+  if fuel == 0 then (true, true)  -- give up conservatively: treat as non-tail
+  else
+  let fuel := fuel - 1
+  let orPair := fun (a b : Bool × Bool) => (a.1 || b.1, a.2 || b.2)
+  let recur := scanSelfCalls declName funs aliases
+  match c with
+  | .return _ | .unreach _ => (false, false)
+  | .jmp f args =>
+    let _ := args
+    -- A jump is a tail jump; inline the join point's body in the same context.
+    let f := resolveFunAlias aliases f 1000
+    if funs.contains f && !visited.contains f then
+      recur (visited.insert f) fuel tailCtx (funs[f]!).value
+    else (false, false)
+  | .cases cs =>
+    cs.alts.foldl (fun acc alt =>
+      let code := match alt with | .alt _ _ code => code | .default code => code
+      orPair acc (recur visited fuel tailCtx code)) (false, false)
+  | .fun _ k | .jp _ k =>
+    -- Definition site: its body is analyzed at the (tail-aware) call site.
+    recur visited fuel tailCtx k
+  | .let decl k =>
+    match decl.value with
+    | .const n _ _ =>
+      if n == declName then
+        -- A self-recursive call. It is a tail call iff we're in tail context
+        -- and its result is immediately returned.
+        let isTail := tailCtx && isReturnOf decl.fvarId k
+        orPair (!isTail, true) (recur visited fuel tailCtx k)
+      else
+        recur visited fuel tailCtx k
+    | .fvar f args =>
+      -- A zero-argument fvar binding is an *alias* (`_alt := _f`), not a call;
+      -- it's already recorded in `aliases`, so don't scan the target's body
+      -- here (doing so would visit it in non-tail context and mask a genuine
+      -- tail call). Only an application (args > 0) invokes the function.
+      if args.isEmpty then
+        recur visited fuel tailCtx k
+      else
+        -- A call to a local function. If it's tail-called, analyze its body in
+        -- tail context (the emitter will inline it); otherwise non-tail context.
+        let f := resolveFunAlias aliases f 1000
+        let calledTail := tailCtx && isReturnOf decl.fvarId k
+        let inFun :=
+          if funs.contains f && !visited.contains f then
+            recur (visited.insert f) fuel calledTail (funs[f]!).value
+          else (false, false)
+        orPair inFun (recur visited fuel tailCtx k)
+    | _ => recur visited fuel tailCtx k
+
+/-- Does this `Code` contain a self-recursive call to `declName` anywhere?
+    Used in loop mode to decide whether a local continuation thunk carries the
+    recursion (and so must be inlined for `continue` to reach the loop) or is a
+    genuine helper that can stay a nested `def`. -/
+partial def codeHasSelfCall (declName : Name) (c : Code) : Bool :=
+  match c with
+  | .let decl k =>
+    (match decl.value with | .const n _ _ => n == declName | _ => false)
+      || codeHasSelfCall declName k
+  | .fun d k | .jp d k => codeHasSelfCall declName d.value || codeHasSelfCall declName k
+  | .cases cs => cs.alts.any (fun alt =>
+      match alt with | .alt _ _ code => codeHasSelfCall declName code | .default code => codeHasSelfCall declName code)
+  | _ => false
+
+/-- Count call sites (`_x := f args` with args, or `jmp f`) targeting each
+    local function, resolving through the zero-arg alias map so `_alt := _f`
+    chains attribute the call to `_f`. -/
+partial def countCallSites (aliases : Std.HashMap FVarId FVarId) (c : Code)
+    (acc : Std.HashMap FVarId Nat) : Std.HashMap FVarId Nat :=
+  let bump := fun (m : Std.HashMap FVarId Nat) (f : FVarId) =>
+    let f := resolveFunAlias aliases f 1000
+    m.insert f (m.getD f 0 + 1)
+  match c with
+  | .let decl k =>
+    let acc := match decl.value with
+      | .fvar f args => if args.isEmpty then acc else bump acc f
+      | _ => acc
+    countCallSites aliases k acc
+  | .fun d k | .jp d k => countCallSites aliases k (countCallSites aliases d.value acc)
+  | .jmp f _ => bump acc f
+  | .cases cs => cs.alts.foldl (fun a alt =>
+      match alt with
+      | .alt _ _ code => countCallSites aliases code a
+      | .default code => countCallSites aliases code a) acc
+  | _ => acc
+
+/-- True iff every local function that *carries a self-recursive call* is
+    called from at most one site. Such thunks are inlined by the emitter; a
+    multiply-called one would have its body (and the recursion) duplicated, so
+    if any exists we decline the loop rewrite (and fall back to plain, correct
+    recursive emission). -/
+partial def recursionThunksSingleUse (declName : Name) (aliases : Std.HashMap FVarId FVarId)
+    (callSites : Std.HashMap FVarId Nat) (c : Code) : Bool :=
+  match c with
+  | .let _ k => recursionThunksSingleUse declName aliases callSites k
+  | .fun d k | .jp d k =>
+    let ok := if codeHasSelfCall declName d.value then callSites.getD d.fvarId 0 ≤ 1 else true
+    ok && recursionThunksSingleUse declName aliases callSites d.value
+       && recursionThunksSingleUse declName aliases callSites k
+  | .cases cs => cs.alts.all (fun alt =>
+      match alt with
+      | .alt _ _ code => recursionThunksSingleUse declName aliases callSites code
+      | .default code => recursionThunksSingleUse declName aliases callSites code)
+  | _ => true
+
+/-- True iff `declName`'s body has at least one self-recursive call, every
+    self-recursive call is in tail position, and every recursion-carrying
+    continuation thunk is single-use (so the emitter can inline it without
+    duplicating the body). Such functions are rewritten into a `while True:`
+    loop by `emitDecl` to avoid Python stack overflow. -/
+def isSelfTailRecursive (declName : Name) (body : Code) : Bool :=
+  let funs := collectLocalFuns body {}
+  let aliases := collectFunAliases body {}
+  let (nonTail, anySelf) := scanSelfCalls declName funs aliases {} 100000 true body
+  let callSites := countCallSites aliases body {}
+  anySelf && !nonTail && recursionThunksSingleUse declName aliases callSites body
+
 /-! ## Code Emission -/
 
 mutual
@@ -1468,15 +1665,61 @@ mutual
 partial def emitCode (code : Code) : EmitM Unit := do
   match code with
   | .let decl k =>
+    -- Tail-loop rewrites (only when emitting a self-tail-recursive function).
+    if let some (declName, params) := (← get).tailLoop then
+      match decl.value with
+      | .const n _ args =>
+        -- A tail self-call: rebind the loop parameters in parallel and
+        -- `continue`, instead of recursing. Guarded by isReturnOf so we only
+        -- fire in genuine tail position (detection already proved all are).
+        if n == declName && isReturnOf decl.fvarId k then
+          emitTailStep params args
+          return
+      | .fvar f args =>
+        let f ← resolveAlias f
+        if args.isEmpty then
+          -- Alias to a local fun. If that fun carries the recursion, propagate
+          -- the inline marking to this alias and emit nothing for the binding
+          -- itself — but still emit the continuation.
+          if let some fd := (← get).inlineThunks[f]? then
+            modify fun s => { s with inlineThunks := s.inlineThunks.insert decl.fvarId fd }
+            emitCode k
+            return
+        else
+          -- Tail-call to an inlined continuation thunk: bind its params to the
+          -- args and emit its body inline, so any `continue` reaches the loop.
+          if let some fd := (← get).inlineThunks[f]? then
+            if isReturnOf decl.fvarId k then
+              emitInlinedThunk fd args
+              return
+      | _ => pure ()
     emitLetValue decl
     emitCode k
   | .fun decl k =>
+    -- In loop mode, defer emitting a `def` for a continuation thunk that
+    -- carries the recursion; it will be inlined at its tail-call site.
+    if let some (declName, _) := (← get).tailLoop then
+      if codeHasSelfCall declName decl.value then
+        modify fun s => { s with inlineThunks := s.inlineThunks.insert decl.fvarId decl }
+        emitCode k
+        return
     emitLocalFun decl
     emitCode k
   | .jp decl k =>
+    if let some (declName, _) := (← get).tailLoop then
+      if codeHasSelfCall declName decl.value then
+        modify fun s => { s with inlineThunks := s.inlineThunks.insert decl.fvarId decl }
+        emitCode k
+        return
     emitJoinPoint decl
     emitCode k
   | .jmp fvarId args =>
+    -- Tail-jump to an inlined join point: emit its body inline.
+    if (← get).tailLoop.isSome then
+      let f ← resolveAlias fvarId
+      if let some fd := (← get).inlineThunks[f]? then
+        emitInlinedThunk fd args
+        return
     emitIndent
     emit s!"return {← getVarName fvarId}("
     emitArgs args
@@ -1540,6 +1783,66 @@ partial def emitJoinPoint (decl : FunDecl) : EmitM Unit := do
   emit "):\n"
   withIndent do
     emitCode decl.value
+
+/-- Emit one iteration of a tail-recursive loop: rebind the loop parameters to
+    the self-call's arguments (in parallel, via a tuple assignment to avoid
+    aliasing hazards) and `continue`. `args` is the full LCNF argument list of
+    the self-call; we drop type/erased/unit args so the remaining value args
+    align positionally with `params` (the Python parameter names). -/
+partial def emitTailStep (params : Array String) (args : Array Arg) : EmitM Unit := do
+  -- Keep only value arguments, matching how emitArgs filters for the call.
+  let mut valArgs : Array Arg := #[]
+  for arg in args do
+    match arg with
+    | .fvar fv => if !(← get).unitVars.contains fv then valArgs := valArgs.push arg
+    | .erased | .type _ => pure ()
+  let declName := match (← get).tailLoop with | some (n, _) => n | none => .anonymous
+  if valArgs.size != params.size then
+    -- Arg/param mismatch (shouldn't happen for a direct self-call): fall back
+    -- to a plain recursive call so we never emit wrong code (correct, just not
+    -- stack-optimized).
+    emitIndent
+    emit s!"return {toPyFnName declName}("
+    emitArgs args
+    emit ")\n"
+    return
+  -- Render each argument value first (they reference the *current* params).
+  let mut rhs : Array String := #[]
+  for arg in valArgs do
+    rhs := rhs.push (← renderArg arg)
+  emitIndent
+  if params.size == 1 then
+    emit s!"{params[0]!} = {rhs[0]!}\n"
+  else
+    emit s!"{", ".intercalate params.toList} = {", ".intercalate rhs.toList}\n"
+  emitIndent
+  emit "continue\n"
+
+/-- Emit an inlined continuation thunk body: bind the thunk's parameters to the
+    call arguments, then emit its body inline (so any tail self-call inside it
+    can `continue` the enclosing loop). -/
+partial def emitInlinedThunk (decl : FunDecl) (args : Array Arg) : EmitM Unit := do
+  -- Bind non-unit params positionally to the value args.
+  let mut valArgs : Array Arg := #[]
+  for arg in args do
+    match arg with
+    | .fvar fv => if !(← get).unitVars.contains fv then valArgs := valArgs.push arg
+    | .erased | .type _ => pure ()
+  let mut vi := 0
+  for p in decl.params do
+    if isUnitType p.type then
+      let _ ← registerVar p.fvarId p.binderName
+      modify fun s => { s with unitVars := s.unitVars.insert p.fvarId }
+    else
+      let pname ← registerVar p.fvarId p.binderName
+      if vi < valArgs.size then
+        let rhs ← renderArg valArgs[vi]!
+        -- Avoid a pointless `x = x` self-binding.
+        if rhs != pname then
+          emitIndent
+          emit s!"{pname} = {rhs}\n"
+        vi := vi + 1
+  emitCode decl.value
 
 partial def emitCases (cases : Cases) : EmitM Unit := do
   let discr ← getVarName cases.discr
@@ -1832,8 +2135,28 @@ def emitDecl (decl : Decl) : EmitM Unit := do
   -- The decl.type is the *result* type after all parameters are applied
   let retType ← toPyTypeHint (getReturnType decl.type)
   emit s!" -> {retType}:\n"
-  withIndent do
-    emitCode decl.value
+  -- Lean does TCO; Python does not. If every self-recursive call is a tail
+  -- call, rewrite the body into a `while True:` loop so deep recursion does not
+  -- overflow the Python stack. Detection is sound (see isSelfTailRecursive).
+  if isSelfTailRecursive decl.name decl.value then
+    -- Collect the Python names of the (non-unit) parameters, in order — these
+    -- are what a tail self-call rebinds. emitFunParams already registered them.
+    let mut pyParams : Array String := #[]
+    for p in decl.params do
+      if !isUnitType p.type then
+        pyParams := pyParams.push (← getVarName p.fvarId)
+    withIndent do
+      emitLn "while True:"
+      -- Save/restore loop state so nested decls don't inherit it.
+      let saved := (← get).tailLoop
+      let savedThunks := (← get).inlineThunks
+      modify fun s => { s with tailLoop := some (decl.name, pyParams), inlineThunks := {} }
+      withIndent do
+        emitCode decl.value
+      modify fun s => { s with tailLoop := saved, inlineThunks := savedThunks }
+  else
+    withIndent do
+      emitCode decl.value
   emitBlankLine
 
 /-! ## File Structure Emission -/
