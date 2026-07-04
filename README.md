@@ -102,11 +102,12 @@ python3 -c "import ast, sys; ast.parse(open('/tmp/corpus.py').read()); print('sy
 definitions from a small typed grammar (over `Nat` / `Bool` / `List Nat` /
 `Nat × Nat`, exercising `if`/`match`, `let`, tuples, arithmetic incl. truncated
 `Nat` subtraction, list combinators, `DecidableEq`, and fuel-bounded recursion).
-Each generated program is run through the same **Lean-as-oracle** pipeline as
-layer 3; any parse error, runtime exception, or Python/Lean value mismatch is a
-transpilation bug. Failures are automatically **shrunk** to a minimal reproducer
-saved under `fuzz/repro/`, and seeds are deterministic so a failure reproduces
-exactly.
+Generation is **coverage-guided** (it prefers grammar productions not yet
+exercised — see [5] below). Each generated program is run through the same
+**Lean-as-oracle** pipeline as layer 3; any parse error, runtime exception, or
+Python/Lean value mismatch is a transpilation bug. Failures are automatically
+**shrunk** to a minimal reproducer saved under `fuzz/repro/`, and seeds are
+deterministic so a failure reproduces exactly.
 
 ```bash
 python3 fuzz/fuzz.py --seeds 200            # broad sweep
@@ -130,19 +131,24 @@ The design draws on the grammar-fuzzing literature:
   test.
 - **Automatic reduction** of a failing input to a minimal reproducer is delta
   debugging [4]; `fuzz.py` uses a simple size-shrinking form.
+- **Grammar production coverage** [5] — every grammatical choice is a labeled
+  production, and the generator *prefers not-yet-covered productions* within
+  each file rather than sampling uniformly. `fuzz.py` aggregates which
+  productions were exercised across the sweep and prints a coverage line (e.g.
+  `36/36 (100%)`), so "did we actually exercise construct X?" is a measurement,
+  not a matter of chance. Coverage guidance is scoped per file (per seed) so
+  generation stays a pure function of the seed — the reproducibility the
+  shrinker depends on.
 
-Techniques from this literature that would further strengthen the fuzzer (not
+Further techniques from this literature that could strengthen the fuzzer (not
 yet implemented):
 
-- **Grammar/production coverage** — systematically covering every grammar
-  production, and k-path (context-sensitive) coverage of production
-  combinations, rather than pure random sampling [5]; this bounds the "did we
-  actually exercise construct X?" question the current uniform sampler leaves to
-  chance.
-- **Probabilistic / coverage-guided grammars** — biasing production
-  probabilities toward rare or newly-covered constructs, e.g. reusing real code
-  fragments as in LangFuzz [6], to spend generation budget where bugs are more
-  likely.
+- **k-path (context-sensitive) coverage** [5] — covering *combinations* of
+  productions along the derivation (e.g. a `match` inside a `map` inside a
+  `let`), a stronger target than covering each production once.
+- **Probabilistic / fragment-reuse grammars** — biasing production
+  probabilities toward rare constructs, or reusing real code fragments as in
+  LangFuzz [6], to spend generation budget where bugs are more likely.
 
 ## References
 

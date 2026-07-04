@@ -33,6 +33,13 @@ generated program through the same Lean-as-oracle pipeline and flags:
 - **exec / runtime** — a NameError/TypeError at import or call time,
 - **mismatch** — Python and Lean disagree on a value.
 
+Generation is **coverage-guided** (Havrikov & Zeller, ASE 2019): each grammar
+choice is a labeled production and the generator prefers productions not yet
+covered *within a file*, so a short sweep exercises every construct rather than
+relying on uniform sampling. `fuzz.py` reports aggregate production coverage
+(e.g. `36/36`). Guidance is per-seed, so output stays a pure function of the
+seed.
+
 On failure it **shrinks** to the smallest `(defs, inputs)` that still fails and
 saves a reproducer under `fuzz/repro/`. Seeds are deterministic, so a failing
 seed reproduces exactly. Run:
