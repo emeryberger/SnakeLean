@@ -16,13 +16,19 @@ Any of these is a transpilation bug and stops the run with the offending seed:
 On failure we minimize: re-generate with the same seed but fewer defs / inputs
 to isolate the smallest reproducer, and save the Lean + Python to fuzz/repro/.
 
+Seeds are checked in parallel across CPU cores (each seed's Lean elaboration is
+the bottleneck and is independent), so a sweep uses a process pool.
+
 Usage:
   python3 fuzz/fuzz.py [--seeds N] [--start S] [--defs D] [--inputs I]
+                       [--emi P] [--jobs J]
 """
 import argparse
 import os
 import subprocess
 import sys
+import tempfile
+from concurrent.futures import ProcessPoolExecutor, as_completed
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -31,14 +37,34 @@ import run_oracle  # noqa: E402  (reuse load/normalize/call)
 import gen  # noqa: E402
 
 
+_LEAN_PATH = None  # captured once; avoids per-seed `lake env` overhead
+
+
+def _lean_env():
+    """Environment for invoking bare `lean` directly.  We capture `LEAN_PATH`
+    once via `lake env` and reuse it, because spawning `lake env lean` per seed
+    serializes on lake's startup and dominates the runtime — the single reason
+    the parallel pool wasn't scaling."""
+    global _LEAN_PATH
+    env = dict(os.environ)
+    env["PATH"] = os.path.expanduser("~/.elan/bin") + ":" + env.get("PATH", "")
+    if _LEAN_PATH is None:
+        # Inherited from the parent (set once in main) if present, else compute.
+        _LEAN_PATH = env.get("FUZZ_LEAN_PATH")
+    if _LEAN_PATH is None:
+        out = subprocess.run(["lake", "env", "printenv", "LEAN_PATH"],
+                             cwd=ROOT, capture_output=True, text=True, env=env)
+        _LEAN_PATH = out.stdout.strip()
+    env["LEAN_PATH"] = _LEAN_PATH
+    return env
+
+
 def lean_run(lean_src, tmp_path):
     with open(tmp_path, "w") as f:
         f.write(lean_src)
-    env = dict(os.environ)
-    env["PATH"] = os.path.expanduser("~/.elan/bin") + ":" + env.get("PATH", "")
     proc = subprocess.run(
-        ["lake", "env", "lean", tmp_path],
-        cwd=ROOT, capture_output=True, text=True, env=env,
+        ["lean", tmp_path],
+        cwd=ROOT, capture_output=True, text=True, env=_lean_env(),
     )
     return proc.returncode, proc.stdout, proc.stderr
 
@@ -104,17 +130,29 @@ def check_output(stdout):
             raise Failure("mismatch", f"{fn}{tuple(args)}: python={got!r} lean={expected!r}")
 
 
-def run_seed(seed, ndefs, ninputs, tmp_path, coverage=None):
+def run_seed(seed, ndefs, ninputs, tmp_path=None, coverage=None, emi=0.0):
     # Each file is coverage-guided *internally* (its own Gen prefers uncovered
     # productions), so a file depends only on its seed — reproducibility the
     # shrinker relies on.  We do NOT steer across seeds (that would make a file
     # depend on sweep history); instead we just aggregate which productions were
     # exercised, into `coverage`, to report grammar coverage over the whole run.
-    src = gen.emit_lean_file(seed, ndefs, ninputs)
+    src = gen.emit_lean_file(seed, ndefs, ninputs, emi=emi)
     if coverage is not None:
         coverage["offered"] |= gen.emit_lean_file.last_gen.all_prods
         coverage["hit"] |= gen.emit_lean_file.last_gen.covered
-    _rc, out, err = lean_run(src, tmp_path)
+    # A unique temp file per call so parallel workers never collide.
+    path = tmp_path
+    if path is None:
+        fd, path = tempfile.mkstemp(prefix=f"fuzz_{seed}_", suffix=".lean")
+        os.close(fd)
+    try:
+        _rc, out, err = lean_run(src, path)
+    finally:
+        if tmp_path is None:
+            try:
+                os.unlink(path)
+            except OSError:
+                pass
     # `lake env lean` prints elaboration errors to stdout (interleaved with the
     # `#eval` output) as well as stderr, so scan both.  A Lean error means the
     # GENERATOR produced ill-typed code (not a transpiler bug); skip such seeds.
@@ -124,17 +162,46 @@ def run_seed(seed, ndefs, ninputs, tmp_path, coverage=None):
     check_output(out)
 
 
-def minimize(seed, ndefs, ninputs, tmp_path):
+def check_seed(args):
+    """Pool worker: check one seed. Returns a picklable result tuple
+    (seed, status, detail, offered_prods, hit_prods).  `status` is
+    'ok' | 'lean-error' | a transpiler-bug kind."""
+    seed, ndefs, ninputs, emi = args
+    try:
+        run_seed(seed, ndefs, ninputs, emi=emi)
+        g = gen.emit_lean_file.last_gen
+        return (seed, "ok", "", frozenset(g.all_prods), frozenset(g.covered))
+    except Failure as f:
+        g = gen.emit_lean_file.last_gen
+        return (seed, f.kind, f.detail, frozenset(g.all_prods), frozenset(g.covered))
+
+
+def minimize(seed, ndefs, ninputs, emi=0.0):
     """Shrink to the smallest (defs, inputs) that still fails for this seed."""
     best = (ndefs, ninputs)
     for d in range(1, ndefs + 1):
         for i in range(1, ninputs + 1):
             try:
-                run_seed(seed, d, i, tmp_path)
+                run_seed(seed, d, i, emi=emi)
             except Failure as f:
                 if f.kind != "lean-error":
                     return (d, i), f
     return best, None
+
+
+def report_bug(seed, kind, detail, ndefs, ninputs, emi):
+    """Minimize a failing seed, save the reproducer, and exit(1)."""
+    print(f"\n*** TRANSPILER BUG — seed {seed} — kind={kind} ***")
+    print(f"  {detail}")
+    (md, mi), mf = minimize(seed, ndefs, ninputs, emi=emi)
+    os.makedirs(os.path.join(HERE, "repro"), exist_ok=True)
+    repro_lean = os.path.join(HERE, "repro", f"seed{seed}.lean")
+    with open(repro_lean, "w") as fh:
+        fh.write(gen.emit_lean_file(seed, md, mi, emi=emi))
+    print(f"  minimized to defs={md} inputs={mi}; saved {repro_lean}")
+    if mf:
+        print(f"  minimal failure: {mf.kind}: {mf.detail}")
+    sys.exit(1)
 
 
 def main():
@@ -143,43 +210,59 @@ def main():
     ap.add_argument("--start", type=int, default=0)
     ap.add_argument("--defs", type=int, default=8)
     ap.add_argument("--inputs", type=int, default=6)
+    ap.add_argument("--emi", type=float, default=0.3,
+                    help="EMI envelope probability per subterm (0 disables)")
+    ap.add_argument("--jobs", type=int, default=max(1, (os.cpu_count() or 2) - 1),
+                    help="parallel worker processes (default: cores - 1)")
     args = ap.parse_args()
 
-    tmp = "/tmp/fuzz_run.lean"
-    lean_errors = 0
-    checked = 0
-    coverage = {"offered": set(), "hit": set()}
-    for seed in range(args.start, args.start + args.seeds):
-        try:
-            run_seed(seed, args.defs, args.inputs, tmp, coverage=coverage)
-            checked += 1
-        except Failure as f:
-            if f.kind == "lean-error":
+    # Capture LEAN_PATH once and export it so every worker inherits it instead
+    # of each spawning its own (serializing) `lake env`.
+    os.environ["FUZZ_LEAN_PATH"] = _lean_env()["LEAN_PATH"]
+
+    seeds = list(range(args.start, args.start + args.seeds))
+    lean_errors = checked = done = 0
+    bugs = []  # (seed, kind, detail)
+    offered, hit = set(), set()
+
+    # Check seeds in parallel; each worker elaborates one Lean file (the
+    # bottleneck) independently.  We drain results as they complete, aggregate
+    # coverage, collect any bugs, then report the LOWEST-seed bug so the run's
+    # verdict is deterministic regardless of completion order.
+    with ProcessPoolExecutor(max_workers=args.jobs) as ex:
+        futures = {ex.submit(check_seed, (s, args.defs, args.inputs, args.emi)): s
+                   for s in seeds}
+        for fut in as_completed(futures):
+            seed, status, detail, off, ht = fut.result()
+            offered |= off
+            hit |= ht
+            done += 1
+            if status == "ok":
+                checked += 1
+            elif status == "lean-error":
                 lean_errors += 1
-                continue  # generator produced ill-typed code; not our bug
-            # A real transpiler bug.
-            print(f"\n*** TRANSPILER BUG — seed {seed} — kind={f.kind} ***")
-            print(f"  {f.detail}")
-            (md, mi), mf = minimize(seed, args.defs, args.inputs, tmp)
-            os.makedirs(os.path.join(HERE, "repro"), exist_ok=True)
-            repro_lean = os.path.join(HERE, "repro", f"seed{seed}.lean")
-            with open(repro_lean, "w") as fh:
-                fh.write(gen.emit_lean_file(seed, md, mi))
-            print(f"  minimized to defs={md} inputs={mi}; saved {repro_lean}")
-            if mf:
-                print(f"  minimal failure: {mf.kind}: {mf.detail}")
-            sys.exit(1)
-        if (seed - args.start + 1) % 25 == 0:
-            print(f"  ... {seed - args.start + 1} seeds ({checked} checked, "
-                  f"{lean_errors} skipped as ill-typed)")
-    print(f"\nNo transpiler bugs found in {args.seeds} seeds "
+            else:
+                bugs.append((seed, status, detail))
+            if done % 25 == 0:
+                print(f"  ... {done}/{len(seeds)} seeds ({checked} checked, "
+                      f"{lean_errors} skipped, {len(bugs)} bug(s) so far)")
+
+    if bugs:
+        bugs.sort()  # lowest seed first — deterministic verdict
+        seed, kind, detail = bugs[0]
+        if len(bugs) > 1:
+            print(f"\n{len(bugs)} seeds failed; reporting the lowest: "
+                  f"{sorted(s for s, _, _ in bugs)}")
+        report_bug(seed, kind, detail, args.defs, args.inputs, args.emi)
+
+    print(f"\nNo transpiler bugs found in {len(seeds)} seeds "
           f"({checked} checked, {lean_errors} skipped as ill-typed).")
     # Grammar production coverage over the whole sweep.
     universe = gen.ALL_PRODUCTIONS
-    hit = coverage["hit"] & universe
-    print(f"\nGrammar production coverage: {len(hit)}/{len(universe)} "
-          f"({100 * len(hit) // max(len(universe), 1)}%)")
-    missed = sorted(universe - hit)
+    hitp = hit & universe
+    print(f"\nGrammar production coverage: {len(hitp)}/{len(universe)} "
+          f"({100 * len(hitp) // max(len(universe), 1)}%)")
+    missed = sorted(universe - hitp)
     if missed:
         print(f"  never exercised: {', '.join(missed)}")
 
