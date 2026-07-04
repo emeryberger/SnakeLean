@@ -154,10 +154,10 @@ partial def lomutoPartition (arr : Array Nat) (lo hi : Nat) : Array Nat × Nat :
     let pivot := arr[hi]!
     let rec go (arr : Array Nat) (i j : Nat) : Array Nat × Nat :=
       if j >= hi then
-        let arr' := arr.swap! (i) hi
+        let arr' := arr.swapIfInBounds (i) hi
         (arr', i)
       else if arr[j]! < pivot then
-        let arr' := arr.swap! i j
+        let arr' := arr.swapIfInBounds i j
         go arr' (i + 1) (j + 1)
       else
         go arr i (j + 1)
@@ -221,7 +221,7 @@ partial def computeZArray (s : List Char) : Array Nat :=
   let n := s.length
   if n == 0 then #[]
   else
-    let z := Array.mkArray n 0
+    let z := Array.replicate n 0
     let z := z.set! 0 n
     let rec compute (z : Array Nat) (i l r : Nat) : Array Nat :=
       if i >= n then z
@@ -267,7 +267,7 @@ partial def lcsLength (xs ys : List Nat) : Nat :=
         else
           max (memo[(i - 1) * (n + 1) + j]!) (memo[i * (n + 1) + (j - 1)]!)
         fill i (j + 1) (memo.set! idx val)
-  let memo := Array.mkArray ((m + 1) * (n + 1)) 0
+  let memo := Array.replicate ((m + 1) * (n + 1)) 0
   let memo' := fill 0 0 memo
   memo'[m * (n + 1) + n]!
 
@@ -289,7 +289,7 @@ partial def lcs (xs ys : List Nat) : List Nat :=
         else
           max (memo[(i - 1) * (n + 1) + j]!) (memo[i * (n + 1) + (j - 1)]!)
         fill i (j + 1) (memo.set! idx val)
-  let memo := Array.mkArray ((m + 1) * (n + 1)) 0
+  let memo := Array.replicate ((m + 1) * (n + 1)) 0
   let memo' := fill 0 0 memo
   let rec backtrack (i j : Nat) (acc : List Nat) : List Nat :=
     if i == 0 || j == 0 then acc
@@ -325,7 +325,7 @@ partial def editDistance (xs ys : List Nat) : Nat :=
             (dp[i * (n + 1) + (j - 1)]! + 1))
             (dp[(i - 1) * (n + 1) + (j - 1)]! + cost)
       fill i (j + 1) (dp.set! idx val)
-  let dp := Array.mkArray ((m + 1) * (n + 1)) 0
+  let dp := Array.replicate ((m + 1) * (n + 1)) 0
   let dp' := fill 0 0 dp
   dp'[m * (n + 1) + n]!
 
@@ -364,7 +364,7 @@ partial def knapsack01 (capacity : Nat) (weights values : List Nat) : Nat :=
             max (dp[(i - 1) * (capacity + 1) + w]!)
                 (dp[(i - 1) * (capacity + 1) + (w - wi)]! + vi)
       fill i (w + 1) (dp.set! idx val)
-  let dp := Array.mkArray ((n + 1) * (capacity + 1)) 0
+  let dp := Array.replicate ((n + 1) * (capacity + 1)) 0
   let dp' := fill 0 0 dp
   dp'[n * (capacity + 1) + capacity]!
 
@@ -381,7 +381,7 @@ partial def coinChange (coins : List Nat) (amount : Nat) : Option Nat :=
         if c <= a && dp[a - c]! < inf then min acc (dp[a - c]! + 1)
         else acc) inf
       fill (a + 1) (dp.set! a minCoins)
-  let dp := Array.mkArray (amount + 1) inf
+  let dp := Array.replicate (amount + 1) inf
   let dp := dp.set! 0 0
   let dp' := fill 1 dp
   if dp'[amount]! >= inf then none else some dp'[amount]!
@@ -409,7 +409,7 @@ partial def matrixChainOrder (dims : List Nat) : Nat :=
                        dims[i]! * dims[k + 1]! * dims[j + 1]!
             min acc cost) inf
           fill len (i + 1) (dp.set! idx minCost)
-    let dp := Array.mkArray (n * n) inf
+    let dp := Array.replicate (n * n) inf
     let dp' := fill 1 0 dp
     dp'[n - 1]!
 
@@ -429,7 +429,7 @@ partial def lisLength (xs : List Nat) : Nat :=
           if xs[j]! < xi then max acc (dp[j]! + 1)
           else acc) 1
         fill (i + 1) (dp.set! i maxPrev)
-    let dp := Array.mkArray n 1
+    let dp := Array.replicate n 1
     let dp' := fill 0 dp
     dp'.foldl max 0
 
@@ -445,8 +445,8 @@ partial def lis (xs : List Nat) : List Nat :=
           if xs[j]! < xi && dp[j]! + 1 > acc then (dp[j]! + 1, j)
           else (acc, pj)) (1, n)
         fill (i + 1) (dp.set! i maxLen) (parent.set! i maxJ)
-    let dp := Array.mkArray n 1
-    let parent := Array.mkArray n n
+    let dp := Array.replicate n 1
+    let parent := Array.replicate n n
     let (dp', parent') := fill 0 dp parent
     let (_, maxIdx) := (List.range n).foldl (fun (maxVal, maxI) i =>
       if dp'[i]! > maxVal then (dp'[i]!, i) else (maxVal, maxI)) (0, 0)

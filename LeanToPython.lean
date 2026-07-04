@@ -2095,26 +2095,44 @@ partial def emitDecidableCases (discr : String) (discrFvar : FVarId) (alts : Arr
 partial def emitOptionCases (discr : String) (alts : Array Alt) : EmitM Unit := do
   emitIndent
   emit s!"if {discr} is None:\n"
-  -- Find none case
+  -- `none` branch: the explicit `Option.none` arm, or a `default` arm if the
+  -- match was compiled with one.  Handling `default` is required — otherwise
+  -- the branch body is dropped, leaving an empty `if:` block (SyntaxError).
+  let mut noneEmitted := false
   for alt in alts do
     match alt with
     | .alt ctorName _ code =>
-      if ctorName == ``Option.none then
+      if ctorName == ``Option.none && !noneEmitted then
+        noneEmitted := true
         withIndent do emitCode code
     | _ => pure ()
+  if !noneEmitted then
+    for alt in alts do
+      match alt with
+      | .default code => if !noneEmitted then noneEmitted := true; withIndent do emitCode code
+      | _ => pure ()
+  if !noneEmitted then withIndent do emitLn "pass"
   emitIndent
   emit "else:\n"
-  -- Find some case
+  -- `some` branch: the explicit `Option.some` arm, or a `default` arm.
+  let mut someEmitted := false
   for alt in alts do
     match alt with
     | .alt ctorName params code =>
-      if ctorName == ``Option.some then
+      if ctorName == ``Option.some && !someEmitted then
+        someEmitted := true
         withIndent do
           if params.size > 0 then
             let valName ← registerVar params[params.size - 1]!.fvarId params[params.size - 1]!.binderName
             emitLn s!"{valName} = {discr}"
           emitCode code
     | _ => pure ()
+  if !someEmitted then
+    for alt in alts do
+      match alt with
+      | .default code => if !someEmitted then someEmitted := true; withIndent do emitCode code
+      | _ => pure ()
+  if !someEmitted then withIndent do emitLn "pass"
 
 partial def emitListCases (discr : String) (alts : Array Alt) : EmitM Unit := do
   emitIndent
