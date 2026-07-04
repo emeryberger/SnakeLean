@@ -61,11 +61,17 @@ structure State where
   instanceVars : Std.HashMap FVarId Name := {}
   /-- Track variables that hold extracted operations from instances -/
   extractedOps : Std.HashMap FVarId (Name × Nat) := {}
-  /-- Instance / op fvars known to be `Nat` subtraction (truncated `Nat.sub`,
-      which saturates at 0).  Propagated `instSubNat` → the `instHSub` built
-      from it → the projected `.hSub` op, so the emission can wrap it as
-      `max(0, a - b)` rather than a plain `-` that would go negative. -/
-  natSubVars : Std.HashSet FVarId := {}
+  /-- Instance / op fvars whose arithmetic differs from the naive Python
+      operator, tagged by kind:
+        "natsub" — truncated `Nat` subtraction (saturates at 0): `max(0, a-b)`
+        "intdiv" — Euclidean `Int` division: `(a - a % abs b) // b`
+        "intmod" — Euclidean `Int` modulo:   `a % abs b`
+      The tag is propagated from the concrete instance (`instSubNat`,
+      `Int.instDiv`, `Int.instMod`) through the generic `instH*` wrapper built
+      from it, onto the projected `.hSub`/`.hDiv`/`.hMod` op, so the emission can
+      wrap it correctly rather than emitting a plain `-`/`//`/`%` that has the
+      wrong sign behaviour on `Nat`/negative `Int` operands. -/
+  arithKind : Std.HashMap FVarId String := {}
   /-- Track the last literal value seen (for OfNat pattern) -/
   lastLiteral : Option LitValue := none
   /-- Track variables that are just literals (from OfNat projections) -/
@@ -281,12 +287,13 @@ def markAsInstance (fvarId : FVarId) (instName : Name) : EmitM Unit :=
 def markAsExtractedOp (fvarId : FVarId) (instName : Name) (fieldIdx : Nat) : EmitM Unit :=
   modify fun s => { s with extractedOps := s.extractedOps.insert fvarId (instName, fieldIdx) }
 
-/-- Mark an fvar as a `Nat`-subtraction instance/op (truncated subtraction). -/
-def markNatSub (fvarId : FVarId) : EmitM Unit :=
-  modify fun s => { s with natSubVars := s.natSubVars.insert fvarId }
+/-- Tag an fvar with an arithmetic kind ("natsub" / "intdiv" / "intmod"). -/
+def markArith (fvarId : FVarId) (kind : String) : EmitM Unit :=
+  modify fun s => { s with arithKind := s.arithKind.insert fvarId kind }
 
-def isNatSubVar (fvarId : FVarId) : EmitM Bool := do
-  return (← get).natSubVars.contains fvarId
+/-- The arithmetic kind tag for an fvar, if any. -/
+def arithOf (fvarId : FVarId) : EmitM (Option String) := do
+  return (← get).arithKind[fvarId]?
 
 /-- Check if a variable is an instance or extracted op that should be skipped -/
 def isInstanceRelated (fvarId : FVarId) : EmitM Bool := do
@@ -544,6 +551,15 @@ def isIdentityCast (name : Name) : Bool :=
   || name == ``Eq.mp || name == ``Eq.rec || name == ``Eq.recOn
   || name == ``cast || name == ``Eq.subst
 
+/-- Numeric coercions that are the identity in Python (Nat and Int are both
+    `int`): the `Nat → Int` coercion `Nat.cast` / `NatCast.natCast` and its
+    `Int.ofNat` spelling.  Unlike the proof casts above, the carried value is
+    the LAST argument (these take `[type?, instance, value]`), so we alias to
+    the last fvar rather than the first-after-types. -/
+def isNumericCast (name : Name) : Bool :=
+  name == ``Nat.cast || name == ``NatCast.natCast || name == ``Int.ofNat
+  || name.toString.endsWith ".natCast"
+
 /-- Check if name looks like a decide call -/
 def isDecide (name : Name) : Bool :=
   name == ``decide || name == ``Decidable.decide || name.toString.startsWith "decide"
@@ -646,6 +662,25 @@ def emitArgs (args : Array Arg) (sep : String := ", ") : EmitM Unit := do
     first := false
     emitArg arg
 
+/-- Run an emitting action but capture what it appended to the buffer as a
+    string (leaving the buffer unchanged).  Lets statement-mode code obtain the
+    rendered form of an argument even though `renderArg` is defined later. -/
+def captureEmit (act : EmitM Unit) : EmitM String := do
+  let before := (← get).buf
+  act
+  let after := (← get).buf
+  modify fun s => { s with buf := before }
+  return (after.drop before.length).toString
+
+/-- Python expression for a binary op whose semantics differ from Lean's naive
+    operator, given the already-rendered operand strings. -/
+def emitArithBinary (kind a b : String) : String :=
+  match kind with
+  | "natsub" => s!"max(0, {a} - {b})"          -- truncated Nat subtraction
+  | "intmod" => s!"({a} % abs({b}))"           -- Euclidean Int modulo
+  | "intdiv" => s!"(({a} - {a} % abs({b})) // {b})"  -- Euclidean Int division
+  | _        => s!"({a} - {b})"
+
 /-! ## Expression Emission -/
 
 /-- Record a literal value -/
@@ -702,6 +737,16 @@ def shouldSkipLetDecl (decl : LetDecl) : EmitM Bool := do
             aliasVar decl.fvarId fv
             aliased := true
       return true
+    -- Numeric coercion (Nat → Int): identity in Python.  Alias to the LAST
+    -- fvar argument (the coerced value); the earlier fvar is the typeclass
+    -- instance, which must not be picked.
+    if isNumericCast name then
+      let mut last : Option FVarId := none
+      for arg in args do
+        if let .fvar fv := arg then last := some fv
+      if let some fv := last then
+        aliasVar decl.fvarId fv
+      return true
     -- `instDecidableNot` is the decision for `¬p` (e.g. the `≠` in `a ≠ b`).
     -- It must NOT be skipped/aliased to its inner decidable — that silently
     -- drops the negation and collapses `≠` to `=`.  Emit it so the const path
@@ -721,24 +766,36 @@ def shouldSkipLetDecl (decl : LetDecl) : EmitM Bool := do
       -- Skip all instance constructors - they are type class machinery
       -- GetElem instances will be inlined at projection site
       markAsInstance decl.fvarId name
-      -- An `instOfNatNat` carries its literal as its (only) fvar argument.
-      -- Capture THAT literal against the instance fvar, so the later
-      -- `OfNat.ofNat` projection recovers the correct value even if another
-      -- literal was bound in between (which would clobber `lastLiteral`).
-      if name == ``instOfNatNat then
+      -- An `OfNat` instance carries its literal among its fvar arguments
+      -- (`instOfNatNat` for `Nat`; `instOfNat` for `Int` and others, which may
+      -- wrap it via a nested OfNat instance).  Capture THAT literal against the
+      -- instance fvar, so the later `OfNat.ofNat` projection recovers the
+      -- correct value even if another literal was bound in between (which would
+      -- clobber the global `lastLiteral`).  Scanning all fvar args covers both
+      -- the direct-literal and nested-instance cases.
+      if name == ``instOfNatNat || nameStr.startsWith "instOfNat"
+         || containsSubstr nameStr ".instOfNat" then
         for arg in args do
           if let .fvar fv := arg then
             if let some lit := (← get).literalVars[fv]? then
               markAsLiteralVar decl.fvarId lit
-      -- Track Nat truncated subtraction so emission can wrap it as max(0, …).
-      -- `instSubNat` is the concrete Nat instance; the generic `instHSub` that
-      -- wraps it carries a `natSubVar` fvar among its args, so propagate.
-      if name == ``instSubNat then
-        markNatSub decl.fvarId
-      else if name == ``instHSub then
-        for arg in args do
-          if let .fvar fv := arg then
-            if ← isNatSubVar fv then markNatSub decl.fvarId
+      -- Track arithmetic whose Python operator differs from Lean's semantics:
+      -- Nat truncated subtraction, and Euclidean Int division/modulo.  The
+      -- concrete instance (`instSubNat` / `Int.instDiv` / `Int.instMod`) fixes
+      -- the kind; the generic `instH*` wrapper built from it carries that fvar
+      -- among its args, so propagate the tag through it.
+      let concreteKind : Option String :=
+        if name == ``instSubNat then some "natsub"
+        else if name == ``Int.instDiv then some "intdiv"
+        else if name == ``Int.instMod then some "intmod"
+        else none
+      match concreteKind with
+      | some k => markArith decl.fvarId k
+      | none =>
+        if name == ``instHSub || name == ``instHDiv || name == ``instHMod then
+          for arg in args do
+            if let .fvar fv := arg then
+              if let some k := ← arithOf fv then markArith decl.fvarId k
       return true
     return false
   | .proj _ idx fvarId =>
@@ -758,8 +815,8 @@ def shouldSkipLetDecl (decl : LetDecl) : EmitM Bool := do
       -- Check if this is a known arithmetic operator we can inline
       if hOpToPyOp? instName |>.isSome then
         markAsExtractedOp decl.fvarId instName idx
-        -- Propagate Nat-subtraction-ness from the instance to the projected op.
-        if ← isNatSubVar fvarId then markNatSub decl.fvarId
+        -- Propagate the arithmetic-kind tag from the instance to the projected op.
+        if let some k := ← arithOf fvarId then markArith decl.fvarId k
         return true
       -- For other instance projections (like GetElem?), don't skip
       -- We'll emit them as function calls
@@ -782,14 +839,13 @@ def tryEmitInlinedOp (varName : String) (fnVar : FVarId) (args : Array Arg) : Em
         return true
       -- Handle binary operations
       if args.size == 2 then
-        -- Nat truncated subtraction saturates at 0: emit max(0, a - b).
-        if op == "-" && (← isNatSubVar fnVar) then
+        -- Arithmetic whose Python operator differs from Lean's semantics
+        -- (Nat truncated subtraction; Euclidean Int division/modulo).
+        if let some kind := ← arithOf fnVar then
+          let a ← captureEmit (emitArg args[0]!)
+          let b ← captureEmit (emitArg args[1]!)
           emitIndent
-          emit s!"{varName} = max(0, "
-          emitArg args[0]!
-          emit " - "
-          emitArg args[1]!
-          emit ")\n"
+          emit s!"{varName} = {emitArithBinary kind a b}\n"
           return true
         emitIndent
         emit s!"{varName} = "
@@ -868,6 +924,10 @@ partial def renderLetValueExpr (decl : LetDecl) : EmitM (Option String) := do
     if declName == ``Nat.succ then
       if args.size >= 1 then
         return some s!"({← renderArg args[args.size - 1]!} + 1)"
+    -- `Int.toNat` clamps negatives to 0 (it is monus-like, not identity).
+    if declName == ``Int.toNat then
+      if args.size >= 1 then
+        return some s!"max(0, {← renderArg args[args.size - 1]!})"
     if let some op := natBinOp? declName then
       if args.size == 2 then
         -- `Nat.sub` is truncated subtraction (saturates at 0).
@@ -920,9 +980,9 @@ partial def renderLetValueExpr (decl : LetDecl) : EmitM (Option String) := do
         if op == "unary-" && args.size == 1 then
           return some s!"(-{← renderArg args[0]!})"
         if args.size == 2 then
-          -- Nat truncated subtraction saturates at 0.
-          if op == "-" && (← isNatSubVar fnVar) then
-            return some s!"max(0, {← renderArg args[0]!} - {← renderArg args[1]!})"
+          -- Arithmetic whose Python operator differs from Lean's semantics.
+          if let some kind := ← arithOf fnVar then
+            return some (emitArithBinary kind (← renderArg args[0]!) (← renderArg args[1]!))
           return some s!"({← renderArg args[0]!} {op} {← renderArg args[1]!})"
     -- Call of a (possibly deferred-lambda) function variable.
     if args.size == 0 then
@@ -1050,6 +1110,14 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
         emit s!"{varName} = "
         emitArg args[args.size - 1]!
         emit " + 1\n"
+        return
+    -- `Int.toNat` clamps negatives to 0.
+    if declName == ``Int.toNat then
+      if args.size >= 1 then
+        emitIndent
+        emit s!"{varName} = max(0, "
+        emitArg args[args.size - 1]!
+        emit ")\n"
         return
     -- Check for direct Nat/Int binary operations
     if let some op := natBinOp? declName then
@@ -1281,8 +1349,14 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
       return
     -- Check for stdlib function mappings
     if let some pyFn := stdlibFnToPython? declName then
-      -- Handle simple wrapper functions like len, list, etc.
-      if !containsSubstr pyFn "{}" then
+      -- Handle simple wrapper functions like len, list, etc.  A `pyFn` that is
+      -- a `(lambda …)` or paren/space expression is NOT a bare callable — it
+      -- must be emitted by a dedicated special-case below (e.g. take/drop/
+      -- reverse); treating it as a unary wrapper `fn(lastArg)` mis-applies it
+      -- (`(lambda n, xs: xs[n:])(xs)` — one arg for a two-arg lambda).
+      let isBareCallable := !(containsSubstr pyFn "{}")
+        && !(containsSubstr pyFn "(") && !(containsSubstr pyFn " ")
+      if isBareCallable then
         if args.size >= 1 then
           emitIndent
           emit s!"{varName} = {pyFn}("
@@ -1373,7 +1447,8 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
         emit ")\n"
         return
     -- List.foldr - foldl with reversed list and swapped function args
-    if declName == ``List.foldr then
+    -- (Lean 4.31 lowers `foldr` to the tail-recursive `List.foldrTR`.)
+    if declName == ``List.foldr || declName == ``List.foldrTR then
       -- Lean: List.foldr f init xs
       -- Python: functools.reduce(lambda a, b: f(b, a), reversed(xs), init)
       if args.size >= 3 then
@@ -1408,6 +1483,24 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
         emit s!"{varName} = list(reversed("
         emitArg args[args.size - 1]!
         emit "))\n"
+        return
+    -- List.take n xs -> xs[:n] / List.drop n xs -> xs[n:].  args: [type, n, xs].
+    -- (Lean 4.31 lowers `take` to the tail-recursive `List.takeTR`.)
+    if declName == ``List.take || declName == ``List.takeTR
+       || declName == ``List.drop then
+      if args.size >= 2 then
+        let sliceLo := declName == ``List.drop
+        emitIndent
+        emit s!"{varName} = "
+        emitArg args[args.size - 1]!  -- list
+        emit "["
+        if sliceLo then
+          emitArg args[args.size - 2]!  -- xs[n:]
+          emit ":"
+        else
+          emit ":"
+          emitArg args[args.size - 2]!  -- xs[:n]
+        emit "]\n"
         return
     -- getElem? (`l[i]?`) - safe indexing (Lean 4.31 removed `List.get?`;
     -- `l[i]?` now lowers through the generic `getElem?`)

@@ -115,10 +115,11 @@ def run_seed(seed, ndefs, ninputs, tmp_path, coverage=None):
         coverage["offered"] |= gen.emit_lean_file.last_gen.all_prods
         coverage["hit"] |= gen.emit_lean_file.last_gen.covered
     _rc, out, err = lean_run(src, tmp_path)
-    errs = real_errors(err)
+    # `lake env lean` prints elaboration errors to stdout (interleaved with the
+    # `#eval` output) as well as stderr, so scan both.  A Lean error means the
+    # GENERATOR produced ill-typed code (not a transpiler bug); skip such seeds.
+    errs = real_errors(err) + real_errors(out)
     if errs:
-        # A Lean elaboration error means the GENERATOR produced ill-typed code
-        # (not a transpiler bug). Skip such seeds but report them.
         raise Failure("lean-error", "\n".join(errs[:3]))
     check_output(out)
 
