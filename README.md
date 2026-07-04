@@ -13,7 +13,16 @@ LeanToPython converts Lean 4 functions into readable Python code by working dire
 
 ## Correctness
 
-The transpiler achieves **100% accuracy** on a test suite of 27 functions (132 test cases) covering:
+Faithful transpilation is checked at four complementary layers, from
+hand-written unit tests up to a differential oracle where **Lean itself is the
+ground truth**. Each layer catches a different class of bug; together they are
+the regression gate for changes to the transpiler.
+
+### 1. Unit test suite — `evaluate_correctness.py`
+
+Runs the transpiled Python for 27 representative functions against
+hand-written expected values (132 input/output cases). LCNF extraction passes
+**132/132 (100%)**. This is the quick end-to-end smoke test.
 
 | Category | Functions |
 |----------|-----------|
@@ -24,6 +33,64 @@ The transpiler achieves **100% accuracy** on a test suite of 27 functions (132 t
 | Strings | reverse_str, to_upper, to_lower |
 | Heap operations | left_child, right_child, parent |
 | Predicates | is_even, is_odd |
+
+```bash
+python3 evaluate_correctness.py
+```
+
+### 2. Structural regression tests — `*_test.py`
+
+`Comprehensions_test.py`, `TailCalls_test.py`, and `RegressionFixes_test.py`
+each `exec` the Python extracted from a paired `.lean` module and assert both
+*semantic* results and *structural* properties the semantics alone would not
+catch — e.g. that a lambda actually inlines into a comprehension, that a
+self-tail-recursive function becomes a `while True:` loop (constant stack), and
+that `Decidable`-cases branch order is not swapped. Each pins a specific
+transpiler behavior so a regression fails loudly.
+
+```bash
+lake env lean Comprehensions.lean > Comprehensions_out.py && python3 Comprehensions_test.py
+lake env lean TailCalls.lean      > TailCalls_out.py      && python3 TailCalls_test.py
+lake env lean RegressionFixes.lean > RegressionFixes_out.py && python3 RegressionFixes_test.py
+```
+
+### 3. Round-trip differential harness — `roundtrip/` (Lean as oracle)
+
+The strongest layer: rather than trusting hand-written expected values, it uses
+**Lean itself as the oracle**. Lean `#eval`s each corpus function on a battery
+of inputs and emits the result; the runner execs the transpiled Python on the
+same inputs and asserts equality. Two modes:
+
+- **Sampled** (`Oracle.lean`): a curated battery across 21 monomorphic corpus
+  functions — **112/112 agree**.
+- **Exhaustive** (`Exhaustive.lean`): the *entire* bounded input domain for 12
+  functions — all `n ∈ [0,60]` (unary) and all `(x,y) ∈ [0,25]²` (binary),
+  **3807/3807 agree** — so there is no untested input in range.
+
+```bash
+./roundtrip/run.sh
+```
+
+See [`roundtrip/README.md`](roundtrip/README.md) for how the oracle stays
+decoupled from the transpiler's naming and how polymorphic arguments are
+handled. This is empirical differential testing against an oracle (exhaustive
+*within the stated bounds*), not a proof of transpiler correctness — but it is
+exactly the kind of evidence that catches real bugs. Several were found and
+fixed this way: a dropped `default` arm in list/option matches, un-collected
+transitive callees, an unmapped `List.lengthTR`, and `Eq.ndrec`/`cast`
+proof-term leakage.
+
+### 4. Full-corpus extraction as a smoke test
+
+Transpiling the entire corpus (~550 functions) and parsing the result with
+Python's `ast` catches structural regressions — dropped match arms, malformed
+blocks, undefined names — across a much wider surface than the curated suites.
+
+```bash
+lake build Corpus
+lake env lean Corpus/CorpusTestCombined.lean > /tmp/corpus.py
+python3 -c "import ast, sys; ast.parse(open('/tmp/corpus.py').read()); print('syntax OK')"
+```
 
 ## Corpus
 
@@ -57,8 +124,12 @@ lake env lean Corpus/CorpusTestCombined.lean > extracted/lcnf_corpus.py
 
 ### Running Tests
 
+See [Correctness](#correctness) for the full four-layer testing story. The
+quickest check:
+
 ```bash
-python evaluate_correctness.py
+python3 evaluate_correctness.py        # unit suite (132 cases)
+./roundtrip/run.sh                     # Lean-as-oracle differential
 ```
 
 ## Quick Start
