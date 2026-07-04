@@ -14,9 +14,8 @@ Two complementary checks, both driven by `run.sh`:
 - **Option B — exhaustive** (`Exhaustive.lean` + `run_oracle.py`).
   For 12 functions with small finite domains, enumerates the *entire* bounded
   input space — all `n ∈ [0,60]` (unary) and all `(x,y) ∈ [0,25]²` (binary),
-  3807 points — so there is no untested input in range. This mirrors, for
-  ordinary functions, the exhaustive `1440/1440` check used for the
-  `SmashCoreConc` enum/record model in `../model/`.
+  3807 points — so there is no untested input in range: exhaustive agreement
+  within the bounds, not just a sample.
 
 ## Running
 
