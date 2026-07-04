@@ -262,4 +262,17 @@ After every fix the full matrix is re-run green:
 - `Comprehensions` / `TailCalls` / `RegressionFixes` structural suites
 - `roundtrip/run.sh` — sampled 112/112 + exhaustive 3807/3807
 - full-corpus extraction parses as valid Python
-- `fuzz/fuzz.py` — clean across a broad seed sweep
+- `fuzz/fuzz.py` — with all fixes in place, a **3000-seed EMI-amplified
+  parallel sweep** (run on a 192-core host at ~180-way parallelism) is clean:
+  2987 checked, 13 ill-typed generator seeds skipped, 0 transpiler bugs,
+  61/61 grammar-production coverage. Each seed carries stochastic EMI envelopes,
+  so this is far more than 3000 distinct code shapes.
+
+## Summary
+
+16 transpiler bugs found and fixed across this work — 4 by the round-trip
+differential harness (R1–R4), 11 by the grammar-based fuzzer (F1–F11), plus the
+upgrade-era set — of which **five were silent wrong-value bugs** (truncated
+`Nat` subtraction, Euclidean `Int` division and modulo, two `OfNat` literal
+collisions) that no crash-based check would ever catch. The differential oracle
+(Lean's `#eval`) is what makes those catchable.
