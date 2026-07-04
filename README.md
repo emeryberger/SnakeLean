@@ -18,6 +18,10 @@ hand-written unit tests up to a differential oracle where **Lean itself is the
 ground truth**. Each layer catches a different class of bug; together they are
 the regression gate for changes to the transpiler.
 
+See [`VERIFICATION.md`](VERIFICATION.md) for the full bug ledger — every
+transpilation bug the differential harness and the fuzzer have caught and
+fixed, with root cause, minimal reproducer, and fix.
+
 ### 1. Unit test suite — `evaluate_correctness.py`
 
 Runs the transpiled Python for 27 representative functions against
@@ -91,6 +95,68 @@ lake build Corpus
 lake env lean Corpus/CorpusTestCombined.lean > /tmp/corpus.py
 python3 -c "import ast, sys; ast.parse(open('/tmp/corpus.py').read()); print('syntax OK')"
 ```
+
+### 5. Grammar-based differential fuzzing — `fuzz/`
+
+`fuzz/gen.py` generates random **well-typed, terminating** Lean function
+definitions from a small typed grammar (over `Nat` / `Bool` / `List Nat` /
+`Nat × Nat`, exercising `if`/`match`, `let`, tuples, arithmetic incl. truncated
+`Nat` subtraction, list combinators, `DecidableEq`, and fuel-bounded recursion).
+Each generated program is run through the same **Lean-as-oracle** pipeline as
+layer 3; any parse error, runtime exception, or Python/Lean value mismatch is a
+transpilation bug. Failures are automatically **shrunk** to a minimal reproducer
+saved under `fuzz/repro/`, and seeds are deterministic so a failure reproduces
+exactly.
+
+```bash
+python3 fuzz/fuzz.py --seeds 200            # broad sweep
+python3 fuzz/fuzz.py --seeds 1 --start 18   # reproduce a specific seed
+```
+
+This layer found six bugs the curated corpus missed — including two *silent
+wrong-value* bugs (Lean's truncated `Nat` subtraction emitted as Python `-`, and
+an `OfNat` literal collision) that no crash-based check would catch. All are
+documented in [`VERIFICATION.md`](VERIFICATION.md).
+
+The design draws on the grammar-fuzzing literature:
+
+- Generating inputs from a **grammar** to reach deep structural states goes back
+  to Purdom's sentence generator for testing parsers [1] and underlies modern
+  grammar/whitebox fuzzers such as Godefroid et al. [2].
+- Using an **independent oracle for differential testing** — comparing two
+  executions that should agree, rather than checking hand-written expected
+  values — is the methodology behind Csmith's discovery of C-compiler bugs [3];
+  here Lean's `#eval` is the oracle and the transpiled Python the system under
+  test.
+- **Automatic reduction** of a failing input to a minimal reproducer is delta
+  debugging [4]; `fuzz.py` uses a simple size-shrinking form.
+
+Techniques from this literature that would further strengthen the fuzzer (not
+yet implemented):
+
+- **Grammar/production coverage** — systematically covering every grammar
+  production, and k-path (context-sensitive) coverage of production
+  combinations, rather than pure random sampling [5]; this bounds the "did we
+  actually exercise construct X?" question the current uniform sampler leaves to
+  chance.
+- **Probabilistic / coverage-guided grammars** — biasing production
+  probabilities toward rare or newly-covered constructs, e.g. reusing real code
+  fragments as in LangFuzz [6], to spend generation budget where bugs are more
+  likely.
+
+## References
+
+1. P. Purdom. *A sentence generator for testing parsers.* BIT Numerical
+   Mathematics, 12(3):366–375, 1972.
+2. P. Godefroid, A. Kiezun, M. Y. Levin. *Grammar-based whitebox fuzzing.*
+   PLDI 2008.
+3. X. Yang, Y. Chen, E. Eide, J. Regehr. *Finding and understanding bugs in C
+   compilers.* PLDI 2011.
+4. A. Zeller, R. Hildebrandt. *Simplifying and isolating failure-inducing
+   input.* IEEE Transactions on Software Engineering, 28(2):183–200, 2002.
+5. N. Havrikov, A. Zeller. *Systematically covering input structure.* ASE 2019.
+6. C. Holler, K. Herzig, A. Zeller. *Fuzzing with code fragments.* USENIX
+   Security 2012.
 
 ## Corpus
 
