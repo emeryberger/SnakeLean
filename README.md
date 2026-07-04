@@ -173,18 +173,18 @@ approaches — are written up with citations in
 ## References
 
 1. P. Purdom. *A sentence generator for testing parsers.* BIT Numerical
-   Mathematics, 12(3):366–375, 1972.
+   Mathematics, 12(3):366–375, 1972. <https://doi.org/10.1007/BF01932308>
 2. P. Godefroid, A. Kiezun, M. Y. Levin. *Grammar-based whitebox fuzzing.*
-   PLDI 2008.
+   PLDI 2008. <https://doi.org/10.1145/1375581.1375607>
 3. X. Yang, Y. Chen, E. Eide, J. Regehr. *Finding and understanding bugs in C
-   compilers.* PLDI 2011. (Csmith)
+   compilers.* PLDI 2011. (Csmith) <https://doi.org/10.1145/1993498.1993532>
 4. A. Zeller, R. Hildebrandt. *Simplifying and isolating failure-inducing
-   input.* IEEE Transactions on Software Engineering, 28(2):183–200, 2002.
-5. N. Havrikov, A. Zeller. *Systematically covering input structure.* ASE 2019.
+   input.* IEEE Transactions on Software Engineering, 28(2):183–200, 2002. <https://doi.org/10.1109/32.988498>
+5. N. Havrikov, A. Zeller. *Systematically covering input structure.* ASE 2019. <https://doi.org/10.1109/ASE.2019.00027>
 6. V. Le, M. Afshari, Z. Su. *Compiler validation via equivalence modulo
-   inputs.* PLDI 2014. (EMI)
+   inputs.* PLDI 2014. (EMI) <https://doi.org/10.1145/2594291.2594334>
 7. V. Le, C. Sun, Z. Su. *Finding deep compiler bugs via guided stochastic
-   program mutation.* OOPSLA 2015.
+   program mutation.* OOPSLA 2015. <https://doi.org/10.1145/2814270.2814319>
 
 ## Corpus
 

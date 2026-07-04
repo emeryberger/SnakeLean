@@ -93,25 +93,26 @@ unlike that lineage, adding systematic randomized differential testing on top.
 ## References
 
 1. V. Le, M. Afshari, Z. Su. *Compiler validation via equivalence modulo
-   inputs.* PLDI 2014.
+   inputs.* PLDI 2014. <https://doi.org/10.1145/2594291.2594334>
 2. V. Le, C. Sun, Z. Su. *Finding deep compiler bugs via guided stochastic
-   program mutation.* OOPSLA 2015.
-3. N. Havrikov, A. Zeller. *Systematically covering input structure.* ASE 2019.
+   program mutation.* OOPSLA 2015. <https://doi.org/10.1145/2814270.2814319>
+3. N. Havrikov, A. Zeller. *Systematically covering input structure.* ASE 2019. <https://doi.org/10.1109/ASE.2019.00027>
 4. C. Holler, K. Herzig, A. Zeller. *Fuzzing with code fragments.* USENIX
-   Security 2012.
-5. G. Misherghi, Z. Su. *HDD: Hierarchical delta debugging.* ICSE 2006.
+   Security 2012. <https://www.usenix.org/conference/usenixsecurity12/technical-sessions/presentation/holler>
+5. G. Misherghi, Z. Su. *HDD: Hierarchical delta debugging.* ICSE 2006. <https://doi.org/10.1145/1134285.1134307>
 6. J. Regehr, Y. Chen, P. Cuoq, E. Eide, C. Ellison, X. Yang. *Test-case
-   reduction for C compiler bugs.* PLDI 2012.
+   reduction for C compiler bugs.* PLDI 2012. <https://doi.org/10.1145/2254064.2254104>
 7. M. Willsey, C. Nandi, Y. R. Wang, O. Flatt, Z. Tatlock, P. Panchekha.
-   *egg: Fast and extensible equality saturation.* POPL 2021.
-8. T. Koehler et al. *Guided equality saturation.* POPL 2024.
+   *egg: Fast and extensible equality saturation.* POPL 2021. <https://doi.org/10.1145/3434304>
+8. T. Koehler et al. *Guided equality saturation.* POPL 2024. <https://doi.org/10.1145/3632900>
 9. M. Rossel. *An Equality Saturation Tactic for Lean.* MSc thesis, TU
-   Dresden, 2024.
-10. P. Letouzey. *A new extraction for Coq.* TYPES 2002.
+   Dresden, 2024. <https://github.com/marcusrossel/lean-egg>
+10. P. Letouzey. *A new extraction for Coq.* TYPES 2002. <https://doi.org/10.1007/3-540-39185-1_12>
 11. P. Letouzey. *Programmation fonctionnelle certifiée : l'extraction de
     programmes dans l'assistant Coq.* PhD thesis, Université Paris-Sud, 2004.
+    <http://www.pps.jussieu.fr/~letouzey/download/these_letouzey.pdf>
 12. Y. Forster, M. Sozeau, N. Tabareau. *Verified extraction from Coq to
     OCaml.* PLDI 2024. (MetaCoq/MetaRocq + Malfunction;
-    artifact: github.com/MetaRocq/rocq-verified-extraction)
+    artifact: github.com/MetaRocq/rocq-verified-extraction) <https://doi.org/10.1145/3656379>
 13. A. Anand, A. Appel, G. Morrisett, et al. *CertiCoq: A verified compiler for
-    Coq.* CoqPL 2017.
+    Coq.* CoqPL 2017. <https://certicoq.org/>
