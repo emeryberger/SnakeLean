@@ -30,3 +30,6 @@ Thumbs.db
 # round-trip harness generated output
 roundtrip/gen*.txt
 roundtrip/*.err
+
+# fuzzer generated reproducers
+fuzz/repro/
