@@ -27,7 +27,7 @@ def rightChild (i : Nat) : Nat := 2 * i + 2
 
 -- Swap elements at indices i and j in a list
 def swapAt (xs : List α) (i j : Nat) : List α :=
-  match xs.get? i, xs.get? j with
+  match xs[i]?, xs[j]? with
   | some a, some b => xs.set i b |>.set j a
   | _, _ => xs
 
@@ -36,9 +36,9 @@ partial def siftUp [Ord α] (xs : List α) (i : Nat) : List α :=
   if i == 0 then xs
   else
     let p := parent i
-    match xs.get? i, xs.get? p with
+    match xs[i]?, xs[p]? with
     | some vi, some vp =>
-      if compare vi vp == .lt then
+      if compare vi vp == Ordering.lt then
         siftUp (swapAt xs i p) p
       else xs
     | _, _ => xs
@@ -53,12 +53,12 @@ partial def siftDown [Ord α] (xs : List α) (i : Nat) : List α :=
     -- Find the smaller child
     let smaller :=
       if r >= n then l  -- Only left child exists
-      else match xs.get? l, xs.get? r with
-        | some vl, some vr => if compare vl vr == .lt then l else r
+      else match xs[l]?, xs[r]? with
+        | some vl, some vr => if compare vl vr == Ordering.lt then l else r
         | _, _ => l
-    match xs.get? i, xs.get? smaller with
+    match xs[i]?, xs[smaller]? with
     | some vi, some vs =>
-      if compare vs vi == .lt then
+      if compare vs vi == Ordering.lt then
         siftDown (swapAt xs i smaller) smaller
       else xs
     | _, _ => xs
@@ -117,7 +117,7 @@ def UnionFind.ofSize (n : Nat) : UnionFind :=
 
 -- Find root of element (with path compression would require mutation)
 partial def UnionFind.root (uf : UnionFind) (i : Nat) : Nat :=
-  match uf.parent.get? i with
+  match uf.parent[i]? with
   | none => i
   | some p => if p == i then i else uf.root p
 
@@ -131,7 +131,7 @@ def UnionFind.union (uf : UnionFind) (i j : Nat) : UnionFind :=
   let rj := uf.root j
   if ri == rj then uf
   else
-    match uf.rank.get? ri, uf.rank.get? rj with
+    match uf.rank[ri]?, uf.rank[rj]? with
     | some ranki, some rankj =>
       if ranki < rankj then
         ⟨uf.parent.set ri rj, uf.rank⟩
@@ -225,7 +225,7 @@ def Graph.topoSort (g : Graph) : Option (List Nat) :=
         -- Decrease in-degree of neighbors
         let outEdges := g.edges.filter (·.1 == v)
         let (newInDeg, newQueue) := outEdges.foldl (fun (deg, q) (_, w) =>
-          match deg.get? w with
+          match deg[w]? with
           | some d =>
             let newD := d - 1
             let newDeg := deg.set w newD
@@ -236,7 +236,7 @@ def Graph.topoSort (g : Graph) : Option (List Nat) :=
 
   -- Start with vertices having in-degree 0
   let initQueue := List.range g.vertices |>.filter fun v =>
-    inDegree.get? v |>.map (· == 0) |>.getD false
+    inDegree[v]? |>.map (· == 0) |>.getD false
   loop initQueue inDegree [] (g.vertices + 1)
 
 -- Detect cycle in directed graph
@@ -244,16 +244,16 @@ def Graph.hasCycle (g : Graph) : Bool :=
   g.topoSort.isNone
 
 -- Matrix operations (for algorithms like Floyd-Warshall)
-def Matrix := List (List Int)
+abbrev Matrix := List (List Int)
 
 def Matrix.get (m : Matrix) (i j : Nat) : Option Int :=
-  match m.get? i with
+  match m[i]? with
   | none => none
-  | some row => row.get? j
+  | some row => row[j]?
 
 def Matrix.set (m : Matrix) (i j : Nat) (v : Int) : Matrix :=
-  m.enum.map fun (idx, row) =>
-    if idx == i then row.enum.map fun (jdx, val) => if jdx == j then v else val
+  m.zipIdx.map fun (row, idx) =>
+    if idx == i then row.zipIdx.map fun (val, jdx) => if jdx == j then v else val
     else row
 
 -- Create n×n matrix filled with value

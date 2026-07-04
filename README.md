@@ -210,7 +210,7 @@ LeanToPython/
 │   ├── Production.lean    # Red-Black Trees, Union-Find, DP
 │   └── CorpusTestCombined.lean
 ├── extracted/             # Generated Python output
-│   ├── lcnf_corpus.py     # 12,465 lines, 536 functions
+│   ├── lcnf_corpus.py     # ~11,900 lines of transpiled Python
 │   └── llm_corpus.py
 ├── evaluate_correctness.py
 └── CORRECTNESS_REPORT.md

@@ -45,7 +45,7 @@ def char (c : Char) : Parser Char :=
 def string (target : String) : Parser String :=
   ⟨fun s =>
     if s.startsWith target then
-      { value := some target, remaining := s.drop target.length }
+      { value := some target, remaining := (s.drop target.length).toString }
     else
       { value := none, remaining := s }⟩
 
