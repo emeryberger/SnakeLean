@@ -1,14 +1,11 @@
 /-
-  Exhaustive Lean-oracle check (round-trip Option C).
+  Exhaustive Lean-oracle check (round-trip Option B).
 
   Where `Oracle.lean` samples inputs, this enumerates the ENTIRE bounded input
   domain for a set of functions and emits a Lean-computed oracle row for every
   point.  `run_oracle.py` then checks the transpiled Python agrees on all of
   them.  Exhaustive agreement over the bounded domain is a stronger faithfulness
   statement than sampling: there is no untested input in range.
-
-  (This mirrors, for ordinary corpus functions, the exhaustive 1440/1440 check
-  used for the SmashCoreConc enum/record model.)
 -/
 import LeanToPython
 import Corpus.Algorithms
