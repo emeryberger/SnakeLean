@@ -28,8 +28,9 @@ import random
 import sys
 
 # Types in the grammar.
-NAT, BOOL, LISTNAT, PAIR = "Nat", "Bool", "List Nat", "Nat × Nat"
-LEAN_TYPES = [NAT, BOOL, LISTNAT, PAIR]
+NAT, BOOL, LISTNAT, PAIR, INT, OPTNAT = (
+    "Nat", "Bool", "List Nat", "Nat × Nat", "Int", "Option Nat")
+LEAN_TYPES = [NAT, BOOL, LISTNAT, PAIR, INT, OPTNAT]
 
 # Every production label the grammar can emit — the coverage universe.  Kept in
 # sync with the `choose(...)` labels below; `fuzz.py` reports coverage against
@@ -37,12 +38,19 @@ LEAN_TYPES = [NAT, BOOL, LISTNAT, PAIR]
 ALL_PRODUCTIONS = frozenset({
     "nat.lit", "nat.var", "nat.proj1", "nat.proj2", "nat.length", "nat.headD",
     "nat.foldl", "nat.add", "nat.mul", "nat.sub", "nat.div", "nat.mod",
-    "nat.if", "nat.match", "nat.let",
+    "nat.if", "nat.match", "nat.let", "nat.toNat", "nat.natAbs",
     "bool.const", "bool.var", "bool.lt", "bool.le", "bool.gt", "bool.ge",
     "bool.eq", "bool.ne", "bool.and", "bool.or", "bool.not",
+    "bool.ilt", "bool.ieq", "bool.isEmpty", "bool.elem",
     "list.nil", "list.var", "list.lit", "list.map", "list.filter",
     "list.reverse", "list.append", "list.cons", "list.match",
+    "list.take", "list.drop", "list.foldr",
     "pair.mk",
+    # Int
+    "int.lit", "int.var", "int.ofNat", "int.neg", "int.add", "int.sub",
+    "int.mul", "int.div", "int.mod", "int.if",
+    # Option Nat
+    "opt.none", "opt.some", "opt.var", "opt.getD", "opt.if", "opt.match",
 })
 
 
@@ -85,6 +93,10 @@ class Gen:
             return self.gen_list(env, depth)
         if ty == PAIR:
             return self.gen_pair(env, depth)
+        if ty == INT:
+            return self.gen_int(env, depth)
+        if ty == OPTNAT:
+            return self.gen_opt(env, depth)
         raise ValueError(ty)
 
     def vars_of(self, env, ty):
@@ -140,6 +152,12 @@ class Gen:
                     s = self.gen(NAT, env + [(fresh, NAT)], depth - 1)
                     return f"(match {n} with | 0 => {z} | {fresh} + 1 => {s})"
                 alts.append(("nat.match", nat_match))
+            # Nat from Int: absolute value / clamp-to-Nat.
+            alts.append(("nat.natAbs", lambda: f"({self.gen(INT, env, depth-1)}).natAbs"))
+            alts.append(("nat.toNat", lambda: f"({self.gen(INT, env, depth-1)}).toNat"))
+            # Nat from an Option Nat via getD (default).
+            alts.append(("opt.getD",
+                         lambda: f"(({self.gen(OPTNAT, env, depth-1)}).getD {self.gen(NAT, env, depth-1)})"))
         return self.choose(alts)
 
     def gen_bool(self, env, depth):
@@ -157,6 +175,17 @@ class Gen:
                 return (label, lambda: f"({self.gen(BOOL, env, depth-1)} {op} {self.gen(BOOL, env, depth-1)})")
             alts += [logic("&&", "bool.and"), logic("||", "bool.or")]
             alts.append(("bool.not", lambda: f"(!{self.gen(BOOL, env, depth-1)})"))
+            # Int comparisons and list predicates.
+            alts.append(("bool.ilt",
+                         lambda: f"(decide ({self.gen(INT, env, depth-1)} < {self.gen(INT, env, depth-1)}))"))
+            alts.append(("bool.ieq",
+                         lambda: f"(decide ({self.gen(INT, env, depth-1)} == {self.gen(INT, env, depth-1)}))"))
+            # Annotate the list operand: a bare `[]` receiver is ambiguous for
+            # `.isEmpty`/`.contains`, so pin it to `List Nat`.
+            alts.append(("bool.isEmpty",
+                         lambda: f"(({self.gen(LISTNAT, env, depth-1)} : List Nat)).isEmpty"))
+            alts.append(("bool.elem",
+                         lambda: f"(({self.gen(LISTNAT, env, depth-1)} : List Nat)).contains {self.gen(NAT, env, depth-1)}"))
         return self.choose(alts)
 
     def gen_list(self, env, depth):
@@ -194,6 +223,21 @@ class Gen:
                          lambda: f"({self.gen(LISTNAT, env, depth-1)} ++ {self.gen(LISTNAT, env, depth-1)})"))
             alts.append(("list.cons",
                          lambda: f"({self.gen(NAT, env, depth-1)} :: {self.gen(LISTNAT, env, depth-1)})"))
+            if vs:
+                alts.append(("list.take",
+                             lambda: f"({self.pick(vs)}.take {self.gen(NAT, env, depth-1)})"))
+                alts.append(("list.drop",
+                             lambda: f"({self.pick(vs)}.drop {self.gen(NAT, env, depth-1)})"))
+
+                def list_foldr():
+                    # foldr prepending mapped elements: builds a list.
+                    n = self.pick(vs)
+                    fresh = self.fresh(env)
+                    acc = self.fresh(env, offset=1)
+                    init = self.gen(LISTNAT, env, depth - 1)
+                    body = self.gen(NAT, env + [(fresh, NAT), (acc, LISTNAT)], depth - 1)
+                    return f"({n}.foldr (fun {fresh} {acc} => {body} :: {acc}) {init})"
+                alts.append(("list.foldr", list_foldr))
         return self.choose(alts)
 
     def gen_pair(self, env, depth):
@@ -202,6 +246,60 @@ class Gen:
             b = self.gen(NAT, env, max(depth - 1, 0))
             return f"({a}, {b})"
         return self.choose([("pair.mk", mk)])
+
+    def gen_int(self, env, depth):
+        vs = self.vars_of(env, INT)
+        alts = [("int.lit", lambda: f"({self.rng.randint(-9, 9)} : Int)")]
+        for v in vs:
+            alts.append(("int.var", (lambda v=v: v)))
+        # Int from a Nat (coercion).
+        alts.append(("int.ofNat", lambda: f"(({self.gen(NAT, env, max(depth-1, 0))} : Nat) : Int)"))
+        if depth > 0 and self.rng.random() >= 0.35:
+            def ibin(op):
+                a = self.gen(INT, env, depth - 1)
+                b = self.gen(INT, env, depth - 1)
+                if op in ("/", "%"):  # guard div/mod by zero: nonzero divisor
+                    return f"({a} {op} (if {b} == 0 then 1 else {b}))"
+                return f"({a} {op} {b})"
+            alts += [
+                ("int.add", lambda: ibin("+")), ("int.sub", lambda: ibin("-")),
+                ("int.mul", lambda: ibin("*")), ("int.div", lambda: ibin("/")),
+                ("int.mod", lambda: ibin("%")),
+            ]
+            alts.append(("int.neg", lambda: f"(-{self.gen(INT, env, depth-1)})"))
+
+            def int_if():
+                c = self.gen(BOOL, env, depth - 1)
+                a = self.gen(INT, env, depth - 1)
+                b = self.gen(INT, env, depth - 1)
+                return f"(if {c} then {a} else {b})"
+            alts.append(("int.if", int_if))
+        return self.choose(alts)
+
+    def gen_opt(self, env, depth):
+        vs = self.vars_of(env, OPTNAT)
+        alts = [
+            ("opt.none", lambda: "(none : Option Nat)"),
+            ("opt.some", lambda: f"(some {self.gen(NAT, env, max(depth-1, 0))})"),
+        ]
+        for v in vs:
+            alts.append(("opt.var", (lambda v=v: v)))
+        if depth > 0 and self.rng.random() >= 0.35:
+            def opt_if():
+                c = self.gen(BOOL, env, depth - 1)
+                a = self.gen(OPTNAT, env, depth - 1)
+                b = self.gen(OPTNAT, env, depth - 1)
+                return f"(if {c} then {a} else {b})"
+            alts.append(("opt.if", opt_if))
+            if vs:
+                def opt_match():
+                    n = self.pick(vs)
+                    none_e = self.gen(OPTNAT, env, depth - 1)
+                    fresh = self.fresh(env)
+                    some_e = self.gen(OPTNAT, env + [(fresh, NAT)], depth - 1)
+                    return f"(match {n} with | none => {none_e} | some {fresh} => {some_e})"
+                alts.append(("opt.match", opt_match))
+        return self.choose(alts)
 
     _counter = 0
 
@@ -240,6 +338,11 @@ class Gen:
             return [self.rng.randint(0, 9) for _ in range(self.rng.randint(0, 5))]
         if ty == PAIR:
             return [self.rng.randint(0, 12), self.rng.randint(0, 12)]
+        if ty == INT:
+            # deliberately include negatives — that's where Int div/mod bites
+            return self.rng.randint(-12, 12)
+        if ty == OPTNAT:
+            return None if self.rng.random() < 0.3 else self.rng.randint(0, 12)
         raise ValueError(ty)
 
 
@@ -252,6 +355,10 @@ def lean_lit(ty, v):
         return "[" + ", ".join(str(x) for x in v) + "]"
     if ty == PAIR:
         return f"({v[0]}, {v[1]})"
+    if ty == INT:
+        return f"({v} : Int)"
+    if ty == OPTNAT:
+        return "(none : Option Nat)" if v is None else f"(some {v} : Option Nat)"
     raise ValueError(ty)
 
 
@@ -269,6 +376,10 @@ def serializer_call(ty, expr):
         return f"jListNat ({expr})"
     if ty == PAIR:
         return f"jPair ({expr})"
+    if ty == INT:
+        return f"jInt ({expr})"
+    if ty == OPTNAT:
+        return f"jOpt ({expr})"
     raise ValueError(ty)
 
 
@@ -281,6 +392,10 @@ def jListNat (xs : List Nat) : String :=
   "[" ++ String.intercalate "," (xs.map toString) ++ "]"
 def jPair : Nat × Nat → String
   | (a, b) => "[" ++ toString a ++ "," ++ toString b ++ "]"
+def jInt (n : Int) : String := toString n
+def jOpt : Option Nat → String
+  | none => "null"
+  | some n => toString n
 """
 
 

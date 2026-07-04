@@ -121,6 +121,64 @@ answer**, not a crash.
 - **Fix:** resolve aliases before the literal/bool lookup in the `return`
   emitter.
 
+### Grammar expansion — adding `Int` and `Option Nat`
+
+Widening the grammar beyond `Nat`/`Bool`/`List Nat` (the *grammar expansion*
+technique: bugs hide in constructs the grammar never generates) immediately
+surfaced five more, two of them silent wrong values.
+
+### F7. `Nat → Int` coercion emitted as a call to undefined `cast`
+
+- **Kind:** runtime (`NameError: name 'cast' is not defined`)
+- **Root cause:** the `Nat → Int` coercion (`Nat.cast` via `instNatCastInt`) was
+  emitted through the generic const path as `cast(None, inst, x)`.
+- **Fix:** treat numeric coercions (`Nat.cast`/`NatCast.natCast`/`Int.ofNat`) as
+  identity in Python (both are `int`), aliasing to the coerced value — the
+  *last* fvar argument (the earlier fvar is the typeclass instance).
+
+### F8. `Int.toNat` not mapped (would be a silent wrong value)
+
+- **Kind:** runtime (`NameError: name 'to_nat'`)
+- **Root cause:** `Int.toNat` was unmapped. It clamps negatives to 0
+  (`(-5).toNat = 0`), so even the "obvious" identity mapping would be wrong.
+- **Fix:** emit `max(0, x)`.
+
+### F9. `List.take`/`drop` emitted as a mis-applied lambda
+
+- **Kind:** runtime (`NameError: name 'take_tr'`, then a `TypeError`)
+- **Root cause:** `List.take` lowers to `List.takeTR` in 4.31 (unmapped); and
+  the `stdlibFnToPython?` lambda forms for `take`/`drop`
+  (`(lambda n, xs: xs[:n])`) were treated by the generic handler as *bare
+  callables* and applied to a single argument. This was a latent bug for every
+  lambda-form stdlib entry.
+- **Fix:** dedicated `take`/`drop` emission (`xs[:n]` / `xs[n:]`, recognizing the
+  `*TR` form), and the generic handler now only treats a `pyFn` as a bare
+  callable when it contains no `(`, space, or `{}` — lambda/format forms must be
+  special-cased.
+
+### F10. Euclidean `Int` division / modulo emitted as Python `//` / `%` (silent wrong value)
+
+- **Seed:** 11 · **Kind:** mismatch (`python=-7` vs `lean=-9`)
+- **Root cause:** Lean's `Int./` and `Int.%` are **Euclidean** (the remainder is
+  always non-negative: `(-7) % 3 = 2`, `(-7) / 3 = -3`), whereas Python `//`/`%`
+  *floor*. They diverge whenever operands have opposite signs. The transpiler
+  emitted the raw Python operators.
+- **Fix:** for `Int` division/modulo (tagged via the concrete `Int.instDiv`/
+  `Int.instMod` instance, propagated like `natsub`), emit the Euclidean forms
+  `(a - a % abs(b)) // b` and `a % abs(b)`, which match Lean bit-for-bit on all
+  sign combinations. `Nat` and `Int` share the generic `instHDiv`/`instHMod`, so
+  the per-instance tag is what distinguishes them.
+
+### F11. `OfNat` literal collision on `Int` literals (silent wrong value)
+
+- **Seed:** 36 · **Kind:** runtime (`ZeroDivisionError`, masking a wrong value:
+  `0 == 0` emitted as `0 == 8`)
+- **Root cause:** the same global-`lastLiteral` collision as F5, but for `Int`
+  literals, whose `OfNat` instance is `instOfNat` (not the `instOfNatNat` that
+  F5's fix special-cased). A nearby `8` literal clobbered a `0`.
+- **Fix:** capture the per-instance literal for *any* `OfNat` instance
+  (`instOfNat`/`instOfNatNat`/namespaced), not just `instOfNatNat`.
+
 ## Bugs found by the round-trip differential harness
 
 Found while building `roundtrip/` (before fuzzing), by running corpus functions

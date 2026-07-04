@@ -135,20 +135,23 @@ The design draws on the grammar-fuzzing literature:
   production, and the generator *prefers not-yet-covered productions* within
   each file rather than sampling uniformly. `fuzz.py` aggregates which
   productions were exercised across the sweep and prints a coverage line (e.g.
-  `36/36 (100%)`), so "did we actually exercise construct X?" is a measurement,
+  `61/61 (100%)`), so "did we actually exercise construct X?" is a measurement,
   not a matter of chance. Coverage guidance is scoped per file (per seed) so
   generation stays a pure function of the seed — the reproducibility the
   shrinker depends on.
+- **Grammar expansion** — the surest way to find *more* bugs is to widen the
+  input domain, since bugs hide in constructs the grammar never generates.
+  Growing the grammar from `Nat`/`Bool`/`List Nat` to also cover `Int` and
+  `Option Nat` immediately surfaced five further bugs (F7–F11 in
+  [`VERIFICATION.md`](VERIFICATION.md)), including two silent wrong-value bugs:
+  Lean's Euclidean `Int` division/modulo emitted as Python's flooring `//`/`%`,
+  and an `Int`-literal `OfNat` collision.
 
-Further techniques from this literature that could strengthen the fuzzer (not
-yet implemented):
-
-- **k-path (context-sensitive) coverage** [5] — covering *combinations* of
-  productions along the derivation (e.g. a `match` inside a `map` inside a
-  `let`), a stronger target than covering each production once.
-- **Probabilistic / fragment-reuse grammars** — biasing production
-  probabilities toward rare constructs, or reusing real code fragments as in
-  LangFuzz [6], to spend generation budget where bugs are more likely.
+Techniques we considered but have **not** adopted — additional fuzzing methods
+(EMI, k-path coverage, fragment-reuse grammars, stronger reduction), the
+`Float`-vs-exact-`Fraction` question, and formal-verification / e-graph
+approaches — are written up with citations in
+[`RELATED_WORK.md`](RELATED_WORK.md).
 
 ## References
 
@@ -157,12 +160,10 @@ yet implemented):
 2. P. Godefroid, A. Kiezun, M. Y. Levin. *Grammar-based whitebox fuzzing.*
    PLDI 2008.
 3. X. Yang, Y. Chen, E. Eide, J. Regehr. *Finding and understanding bugs in C
-   compilers.* PLDI 2011.
+   compilers.* PLDI 2011. (Csmith)
 4. A. Zeller, R. Hildebrandt. *Simplifying and isolating failure-inducing
    input.* IEEE Transactions on Software Engineering, 28(2):183–200, 2002.
 5. N. Havrikov, A. Zeller. *Systematically covering input structure.* ASE 2019.
-6. C. Holler, K. Herzig, A. Zeller. *Fuzzing with code fragments.* USENIX
-   Security 2012.
 
 ## Corpus
 
