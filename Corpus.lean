@@ -11,3 +11,5 @@ import Corpus.Geometry
 import Corpus.Combinatorics
 import Corpus.Sequences
 import Corpus.Sorting
+import Corpus.Advanced
+import Corpus.Production

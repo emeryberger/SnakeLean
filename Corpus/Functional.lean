@@ -201,7 +201,7 @@ def List.permutations (xs : List α) : List (List α) :=
   | [] => [[]]
   | x :: xs' =>
     let perms := List.permutations xs'
-    perms.bind fun perm =>
+    perms.flatMap fun perm =>
       (List.range (perm.length + 1)).map fun i =>
         let (l, r) := perm.splitAt i
         l ++ [x] ++ r
