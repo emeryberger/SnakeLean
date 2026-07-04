@@ -55,7 +55,7 @@ ALL_PRODUCTIONS = frozenset({
 
 
 class Gen:
-    def __init__(self, seed, max_depth=4, covered=None):
+    def __init__(self, seed, max_depth=4, covered=None, emi=0.0):
         self.rng = random.Random(seed)
         self.max_depth = max_depth
         # Production labels offered / chosen so far (this file).  `covered` may
@@ -63,6 +63,16 @@ class Gen:
         # rng, so the output is a pure function of the seed.
         self.all_prods = set()
         self.covered = set(covered) if covered else set()
+        # EMI (equivalence modulo inputs, Le/Afshari/Su PLDI'14) + guided
+        # stochastic mutation (Le/Sun/Su OOPSLA'15): `emi` is the per-subterm
+        # probability of wrapping a just-generated expression in a
+        # semantics-PRESERVING identity envelope (e.g. `x` -> `(x + 0)`).  The
+        # result computes the same value, so the Lean oracle is unchanged, but
+        # the transpiler sees a different — often deeper — term.  The *count* of
+        # envelopes is stochastic (each subterm flips a coin) and *which*
+        # envelope is chosen is coverage-guided via `choose`, so mutation steers
+        # toward not-yet-covered productions rather than sampling blindly.
+        self.emi = emi
 
     def pick(self, xs):
         return self.rng.choice(xs)
@@ -86,18 +96,48 @@ class Gen:
     def gen(self, ty, env, depth):
         """env: list of (name, type) in scope. Returns a Lean expression str."""
         if ty == NAT:
-            return self.gen_nat(env, depth)
-        if ty == BOOL:
-            return self.gen_bool(env, depth)
-        if ty == LISTNAT:
-            return self.gen_list(env, depth)
-        if ty == PAIR:
-            return self.gen_pair(env, depth)
-        if ty == INT:
-            return self.gen_int(env, depth)
-        if ty == OPTNAT:
-            return self.gen_opt(env, depth)
-        raise ValueError(ty)
+            e = self.gen_nat(env, depth)
+        elif ty == BOOL:
+            e = self.gen_bool(env, depth)
+        elif ty == LISTNAT:
+            e = self.gen_list(env, depth)
+        elif ty == PAIR:
+            e = self.gen_pair(env, depth)
+        elif ty == INT:
+            e = self.gen_int(env, depth)
+        elif ty == OPTNAT:
+            e = self.gen_opt(env, depth)
+        else:
+            raise ValueError(ty)
+        return self.maybe_envelope(ty, e)
+
+    # EMI identity envelopes per type: each maps `x` to an expression that
+    # provably computes the same value, so wrapping never changes the oracle.
+    EMI_ENVELOPES = {
+        NAT: [("emi.nat.add0", "({x} + 0)"), ("emi.nat.mul1", "({x} * 1)"),
+              ("emi.nat.ite", "(if true then {x} else 0)"),
+              ("emi.nat.projpair", "(({x}, 0).1)")],
+        INT: [("emi.int.add0", "({x} + (0 : Int))"), ("emi.int.negneg", "(-(-({x})))"),
+              ("emi.int.ite", "(if true then {x} else (0 : Int))")],
+        BOOL: [("emi.bool.and", "({x} && true)"), ("emi.bool.notnot", "(!(!({x})))"),
+               ("emi.bool.or", "(false || {x})")],
+        LISTNAT: [("emi.list.appnil", "({x} ++ [])"), ("emi.list.nilapp", "([] ++ {x})"),
+                  ("emi.list.revrev", "(({x} : List Nat).reverse.reverse)"),
+                  ("emi.list.mapid", "(({x} : List Nat).map (fun z => z))")],
+        OPTNAT: [("emi.opt.ite", "(if true then {x} else (none : Option Nat))")],
+        PAIR: [("emi.pair.ite", "(if true then {x} else (0, 0))")],
+    }
+
+    def maybe_envelope(self, ty, expr):
+        """With probability `self.emi`, wrap `expr` in a semantics-preserving
+        identity envelope (EMI).  Envelope choice is coverage-guided."""
+        if self.emi <= 0.0 or self.rng.random() >= self.emi:
+            return expr
+        alts = [(label, (lambda tpl=tpl: tpl.format(x=expr)))
+                for (label, tpl) in self.EMI_ENVELOPES.get(ty, [])]
+        if not alts:
+            return expr
+        return self.choose(alts)
 
     def vars_of(self, env, ty):
         return [n for (n, t) in env if t == ty]
@@ -399,17 +439,18 @@ def jOpt : Option Nat → String
 """
 
 
-def emit_lean_file(seed, ndefs, ninputs, covered=None):  # noqa: E302
+def emit_lean_file(seed, ndefs, ninputs, covered=None, emi=0.0):  # noqa: E302
     """Emit the Lean file for `seed`.
 
     `covered` optionally seeds the coverage-preference (labels already exercised
     by earlier files in the sweep), steering this file toward fresh productions.
-    Generation is still a pure function of `seed` given the same `covered`, so
-    `fuzz.py` reproduces/shrinks a failure by re-passing the same `covered`.
-    The Gen's `all_prods` / `covered` are exposed via `emit_lean_file.last_gen`
-    for the caller to aggregate coverage.
+    `emi` (0..1) is the per-subterm EMI envelope probability.  Generation is
+    still a pure function of `(seed, emi)`, so `fuzz.py` reproduces/shrinks a
+    failure by re-passing the same values.  The Gen's `all_prods` / `covered`
+    are exposed via `emit_lean_file.last_gen` for the caller to aggregate
+    coverage.
     """
-    g = Gen(seed, covered=covered)
+    g = Gen(seed, covered=covered, emi=emi)
     setattr(emit_lean_file, "last_gen", g)
     defs = [g.gen_def(i) for i in range(ndefs)]
     parts = [PRELUDE, ""]
@@ -439,7 +480,8 @@ def main():
     seed = int(sys.argv[1]) if len(sys.argv) > 1 else 0
     ndefs = int(sys.argv[2]) if len(sys.argv) > 2 else 8
     ninputs = int(sys.argv[3]) if len(sys.argv) > 3 else 5
-    sys.stdout.write(emit_lean_file(seed, ndefs, ninputs))
+    emi = float(sys.argv[4]) if len(sys.argv) > 4 else 0.0
+    sys.stdout.write(emit_lean_file(seed, ndefs, ninputs, emi=emi))
 
 
 if __name__ == "__main__":

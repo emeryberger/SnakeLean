@@ -37,8 +37,17 @@ Generation is **coverage-guided** (Havrikov & Zeller, ASE 2019): each grammar
 choice is a labeled production and the generator prefers productions not yet
 covered *within a file*, so a short sweep exercises every construct rather than
 relying on uniform sampling. `fuzz.py` reports aggregate production coverage
-(e.g. `36/36`). Guidance is per-seed, so output stays a pure function of the
+(e.g. `61/61`). Guidance is per-seed, so output stays a pure function of the
 seed.
+
+It also applies **EMI + guided stochastic mutation** (Le/Afshari/Su PLDI 2014;
+Le/Sun/Su OOPSLA 2015): each generated subterm is stochastically wrapped in a
+semantics-*preserving* identity envelope (`x` → `(x + 0)`, `b` → `!!b`,
+`xs` → `xs.reverse.reverse`, …). The envelope computes the same value, so the
+Lean oracle is unchanged, but the transpiler sees a different, deeper term —
+each seed becomes many differential tests over shapes the base grammar would not
+reach. The envelope count is stochastic and the choice is coverage-guided
+(`--emi P`, default 0.3).
 
 On failure it **shrinks** to the smallest `(defs, inputs)` that still fails and
 saves a reproducer under `fuzz/repro/`. Seeds are deterministic, so a failing

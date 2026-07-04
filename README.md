@@ -109,14 +109,21 @@ Python/Lean value mismatch is a transpilation bug. Failures are automatically
 **shrunk** to a minimal reproducer saved under `fuzz/repro/`, and seeds are
 deterministic so a failure reproduces exactly.
 
+Seeds are checked **in parallel** across CPU cores (each seed's Lean
+elaboration is independent and is the bottleneck), so a sweep scales with
+`--jobs` (default: cores − 1).
+
 ```bash
-python3 fuzz/fuzz.py --seeds 200            # broad sweep
-python3 fuzz/fuzz.py --seeds 1 --start 18   # reproduce a specific seed
+python3 fuzz/fuzz.py --seeds 200             # broad sweep (EMI on by default)
+python3 fuzz/fuzz.py --seeds 1 --start 18    # reproduce a specific seed
+python3 fuzz/fuzz.py --seeds 200 --emi 0     # disable EMI mutation
+python3 fuzz/fuzz.py --seeds 2000 --jobs 190 # big sweep on a many-core box
 ```
 
-This layer found six bugs the curated corpus missed — including two *silent
-wrong-value* bugs (Lean's truncated `Nat` subtraction emitted as Python `-`, and
-an `OfNat` literal collision) that no crash-based check would catch. All are
+This layer found **eleven** bugs the curated corpus missed — including several
+*silent wrong-value* bugs (Lean's truncated `Nat` subtraction emitted as Python
+`-`; Euclidean `Int` division/modulo emitted as Python's flooring `//`/`%`; an
+`OfNat` literal collision) that no crash-based check would catch. All are
 documented in [`VERIFICATION.md`](VERIFICATION.md).
 
 The design draws on the grammar-fuzzing literature:
@@ -146,9 +153,19 @@ The design draws on the grammar-fuzzing literature:
   [`VERIFICATION.md`](VERIFICATION.md)), including two silent wrong-value bugs:
   Lean's Euclidean `Int` division/modulo emitted as Python's flooring `//`/`%`,
   and an `Int`-literal `OfNat` collision.
+- **Equivalence Modulo Inputs (EMI) [6] + guided stochastic mutation [7]** —
+  after generating a subterm, the generator stochastically wraps it in a
+  *semantics-preserving identity envelope* (`x` → `(x + 0)`, `b` → `!!b`,
+  `xs` → `xs.reverse.reverse`, …). Because the envelope computes the same value,
+  the Lean oracle is unchanged, but the transpiler sees a different, deeper term
+  — so each seed becomes many differential tests over shapes the base grammar
+  wouldn't reach. The *number* of envelopes is stochastic (guided mutation) and
+  *which* envelope is chosen is coverage-guided. Controlled by `--emi P`
+  (default 0.3; `--emi 0` disables). Envelopes are provably identities, so a
+  disagreement is unambiguously a transpiler bug.
 
-Techniques we considered but have **not** adopted — additional fuzzing methods
-(EMI, k-path coverage, fragment-reuse grammars, stronger reduction), the
+Techniques we considered but have **not** adopted — remaining fuzzing methods
+(k-path coverage, fragment-reuse grammars, stronger reduction), the
 `Float`-vs-exact-`Fraction` question, and formal-verification / e-graph
 approaches — are written up with citations in
 [`RELATED_WORK.md`](RELATED_WORK.md).
@@ -164,6 +181,10 @@ approaches — are written up with citations in
 4. A. Zeller, R. Hildebrandt. *Simplifying and isolating failure-inducing
    input.* IEEE Transactions on Software Engineering, 28(2):183–200, 2002.
 5. N. Havrikov, A. Zeller. *Systematically covering input structure.* ASE 2019.
+6. V. Le, M. Afshari, Z. Su. *Compiler validation via equivalence modulo
+   inputs.* PLDI 2014. (EMI)
+7. V. Le, C. Sun, Z. Su. *Finding deep compiler bugs via guided stochastic
+   program mutation.* OOPSLA 2015.
 
 ## Corpus
 
