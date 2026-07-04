@@ -205,6 +205,13 @@ def report_bug(seed, kind, detail, ndefs, ninputs, emi):
 
 
 def main():
+    # The transpiled Python uses PEP 604 unions (`list[int] | None`) in dataclass
+    # fields / type aliases, which are evaluated eagerly and require Python 3.10+.
+    # Fail fast with a clear message rather than misreporting the resulting
+    # TypeError as a transpiler bug (as happens under 3.9).
+    if sys.version_info < (3, 10):
+        sys.exit(f"fuzz.py needs Python 3.10+ to exec the transpiled code "
+                 f"(found {sys.version.split()[0]}); e.g. run with python3.11.")
     ap = argparse.ArgumentParser()
     ap.add_argument("--seeds", type=int, default=200)
     ap.add_argument("--start", type=int, default=0)
