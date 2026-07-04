@@ -11,7 +11,7 @@ Two complementary checks, both driven by `run.sh`:
   battery of inputs and emits the result as JSON; the runner execs the
   transpiled Python on the same inputs and asserts equality.
 
-- **Option C — exhaustive** (`Exhaustive.lean` + `run_oracle.py`).
+- **Option B — exhaustive** (`Exhaustive.lean` + `run_oracle.py`).
   For 12 functions with small finite domains, enumerates the *entire* bounded
   input space — all `n ∈ [0,60]` (unary) and all `(x,y) ∈ [0,25]²` (binary),
   3807 points — so there is no untested input in range. This mirrors, for
@@ -31,7 +31,7 @@ Expected tail:
   cases: 112/112 agree
   ALL AGREE — transpilation is faithful on this battery
 
-=== Option C: exhaustive over bounded input domains ===
+=== Option B: exhaustive over bounded input domains ===
   cases: 3807/3807 agree
   ALL AGREE — transpilation is faithful on this battery
 ```
