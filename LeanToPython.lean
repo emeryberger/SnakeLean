@@ -19,6 +19,33 @@ namespace LeanToPython
 
 open Lean Lean.Compiler.LCNF
 
+/-!
+Lean 4.31 made the LCNF datatypes (`Decl`, `Code`, `FunDecl`, `LetDecl`,
+`LetValue`, `Param`, `Arg`, `Alt`, `Cases`) indexed by a `Purity` parameter.
+This transpiler operates entirely on the `.pure` phase (what `toDecl` returns),
+so we pin the purity here with shadowing abbreviations.  A local `abbrev`
+shadows the `open`ed indexed type, and field projections resolve through it, so
+the rest of the file is unchanged.
+-/
+abbrev Decl     := Lean.Compiler.LCNF.Decl     .pure
+abbrev Code     := Lean.Compiler.LCNF.Code     .pure
+abbrev FunDecl  := Lean.Compiler.LCNF.FunDecl  .pure
+abbrev LetDecl  := Lean.Compiler.LCNF.LetDecl  .pure
+abbrev LetValue := Lean.Compiler.LCNF.LetValue .pure
+abbrev Param    := Lean.Compiler.LCNF.Param    .pure
+abbrev Arg      := Lean.Compiler.LCNF.Arg      .pure
+abbrev Alt      := Lean.Compiler.LCNF.Alt      .pure
+abbrev Cases    := Lean.Compiler.LCNF.Cases    .pure
+
+/-- Lean 4.31 wraps a declaration's body in `DeclValue` (`.code` | `.extern`);
+    previously `Decl.value` was the `Code` directly.  This transpiler only
+    handles code bodies, so project the `Code` out (extern decls have no LCNF
+    body to translate, so we treat them as an empty/unreachable body). -/
+def declCode (d : Decl) : Code :=
+  match d.value with
+  | .code c => c
+  | .extern _ => default
+
 structure Context where
   modName : Name
   indentLevel : Nat := 0
@@ -357,8 +384,8 @@ def natBinOp? (name : Name) : Option String :=
   | ``Int.add => some "+"
   | ``Int.sub => some "-"
   | ``Int.mul => some "*"
-  | ``Int.div => some "//"
-  | ``Int.mod => some "%"
+  | ``Int.tdiv | ``Int.ediv => some "//"
+  | ``Int.tmod | ``Int.emod => some "%"
   | ``Int.decLt => some "<"
   | ``Int.decLe => some "<="
   | ``BEq.beq => some "=="
@@ -370,7 +397,7 @@ def builtinFn? (name : Name) : Option String :=
   | ``String.length => some "len"
   | ``List.length => some "len"
   | ``Array.size => some "len"
-  | ``Bool.not | ``not => some "not"
+  | ``not => some "not"
   | ``Int.neg | ``Neg.neg => some "-"
   | _ => none
 
@@ -410,14 +437,14 @@ def stdlibFnToPython? (name : Name) : Option String :=
   | ``List.dropLast => some "(lambda xs: xs[:-1])"
   | ``List.take => some "(lambda n, xs: xs[:n])"
   | ``List.drop => some "(lambda n, xs: xs[n:])"
-  | ``List.filter => some "list(filter({}, {}))"  -- special format
-  | ``List.map => some "list(map({}, {}))"  -- special format
-  | ``List.filterMap => some "[y for x in {} if (y := {}(x)) is not None]"
+  | ``List.filter | ``List.filterTR => some "list(filter({}, {}))"  -- special format
+  | ``List.map | ``List.mapTR => some "list(map({}, {}))"  -- special format
+  | ``List.filterMap | ``List.filterMapTR => some "[y for x in {} if (y := {}(x)) is not None]"
   | ``List.find? => some "next((x for x in {} if {}(x)), None)"
   | ``List.any => some "any({} for x in {})"  -- special
   | ``List.all => some "all({} for x in {})"  -- special
   | ``List.eraseDups => some "list(dict.fromkeys({}))"
-  | ``List.enum => some "list(enumerate({}))"
+  | ``List.zipIdx => some "list(enumerate({}))"
   | ``List.zip => some "list(zip({}, {}))"
   | ``List.unzip => some "(lambda xs: (list(map(lambda x: x[0], xs)), list(map(lambda x: x[1], xs))))"
   | ``List.intersperse => some "(lambda sep, xs: [y for x in xs for y in [x, sep]][:-1] if xs else [])"
@@ -473,6 +500,14 @@ def isDecidableCompare (name : Name) : Option String :=
   if s.startsWith "Nat.decLt" || s.startsWith "Int.decLt" then some "<"
   else if s.startsWith "Nat.decLe" || s.startsWith "Int.decLe" then some "<="
   else if s.startsWith "Nat.decEq" || s.startsWith "Int.decEq" || name == ``instDecidableEqNat then some "=="
+  -- Any derived / user `DecidableEq T` decision procedure is an equality test.
+  -- `deriving DecidableEq` produces `T.decEq` and the instance `instDecidableEqT`
+  -- (also `.decEq` as a trailing component for namespaced types); the LCNF call
+  -- site passes the two operands, so we render it as `a == b`.  Without this,
+  -- a comparison on a user enum/structure falls through to the generic
+  -- `instDecidable*` alias-to-first-arg path, which drops the boolean scrutinee.
+  else if s.endsWith ".decEq" || s.startsWith "instDecidableEq"
+          || containsSubstr s ".instDecidableEq" then some "=="
   else none
 
 /-- Check if this is a BEq operation -/
@@ -492,7 +527,7 @@ def hOpToPyOp? (instName : Name) : Option String :=
   | ``instHDiv => some "//"
   | ``instHMod => some "%"
   | ``instHPow => some "**"
-  | ``instBEqNat => some "=="
+  | ``instBEqOfDecidableEq => some "=="
   | _ =>
     -- Match by string for variants
     let s := instName.toString
@@ -530,14 +565,24 @@ def quotePyString (s : String) : String :=
 
 def emitLitValue (lit : LitValue) : EmitM Unit := do
   match lit with
-  | .natVal n => emit (toString n)
-  | .strVal s => emit (quotePyString s)
+  | .nat n => emit (toString n)
+  | .str s => emit (quotePyString s)
+  | .uint8 v => emit (toString v.toNat)
+  | .uint16 v => emit (toString v.toNat)
+  | .uint32 v => emit (toString v.toNat)
+  | .uint64 v => emit (toString v.toNat)
+  | .usize v => emit (toString v.toNat)
 
 /-- Pure string form of a literal value (for expression-mode rendering). -/
 def litValueStr (lit : LitValue) : String :=
   match lit with
-  | .natVal n => toString n
-  | .strVal s => quotePyString s
+  | .nat n => toString n
+  | .str s => quotePyString s
+  | .uint8 v => toString v.toNat
+  | .uint16 v => toString v.toNat
+  | .uint32 v => toString v.toNat
+  | .uint64 v => toString v.toNat
+  | .usize v => toString v.toNat
 
 /-! ## Argument Emission -/
 
@@ -584,11 +629,33 @@ def markAsLiteralVar (fvarId : FVarId) (lit : LitValue) : EmitM Unit :=
 /-- Check if this is an instance construction we should skip -/
 def shouldSkipLetDecl (decl : LetDecl) : EmitM Bool := do
   match decl.value with
-  | .value lit =>
+  | .lit lit =>
     -- Record the literal for OfNat pattern
     recordLiteral lit
     return false  -- Don't skip, we'll emit it
   | .const name _ args =>
+    -- A decidable *comparison* (Nat/Int/derived `DecidableEq` on a user enum or
+    -- structure) is NOT type-class machinery to elide: it produces the boolean
+    -- scrutinee for a downstream `if`.  Emit it (return false) so the const
+    -- path renders `a == b`.  Recognizing this first is essential — the derived
+    -- instance is named e.g. `MyMod.instDecidableEqPState`, which otherwise
+    -- matches `isInstanceCtor` (contains `.inst`) and gets skipped, dropping
+    -- the comparison and leaving the `if` referencing an unbound name.
+    --
+    -- BUT only when the two value operands are actually applied here.  A bare
+    -- instance value (`instDecidableEqNat` with no value args, later fed to a
+    -- separate `decide`) has no operands to compare and must still be skipped;
+    -- emitting it produced a dangling nullary call like `inst_decidable_eq_nat()`.
+    let valArgCount := (args.filter (fun a => match a with
+      | .fvar _ => true | _ => false)).size
+    if (isDecidableCompare name).isSome && valArgCount >= 2 then
+      return false
+    -- `instDecidableNot` is the decision for `¬p` (e.g. the `≠` in `a ≠ b`).
+    -- It must NOT be skipped/aliased to its inner decidable — that silently
+    -- drops the negation and collapses `≠` to `=`.  Emit it so the const path
+    -- can render `not <inner>`.
+    if name == ``instDecidableNot then
+      return false
     -- Special case: instDecidable* with fvar args should alias to the first fvar
     -- This handles patterns like `if boolExpr then ...`
     let nameStr := name.toString
@@ -703,7 +770,7 @@ def isConstFnSafeToInline (declName : Name) : Bool :=
     side-effects (literal/instance/op tracking) mirror `emitLetValue`. -/
 partial def renderLetValueExpr (decl : LetDecl) : EmitM (Option String) := do
   match decl.value with
-  | .value v =>
+  | .lit v =>
     recordLiteral v
     return some (litValueStr v)
   | .erased => return none
@@ -834,7 +901,7 @@ def setCompFromArg (listArg : Arg) : EmitM String := do
       match (← get).lastListComp with
       | some (lastFv, start, stop) =>
         if lastFv == fv && stop == (← get).buf.length then
-          modify fun s => { s with buf := s.buf.take start, lastListComp := none }
+          modify fun s => { s with buf := (s.buf.take start).toString, lastListComp := none }
       | none => pure ()
       return lbrace ++ inner ++ rbrace
   let xs ← renderArg listArg
@@ -853,7 +920,7 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
     return
 
   match decl.value with
-  | .value v =>
+  | .lit v =>
     -- Record the literal - if it's used by OfNat, we'll inline it and not need this var
     recordLiteral v
     -- We'll emit it, but if it turns out to be unused (only via OfNat), it's harmless
@@ -964,6 +1031,19 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
       if let some lastVar := (← get).lastCompareVar then
         aliasVar decl.fvarId lastVar
       return
+    -- `instDecidableNot` decides `¬p`: render `not <inner decidable>` so a
+    -- comparison like `a ≠ b` (which is `¬(a = b)`) keeps its negation.
+    if declName == ``instDecidableNot then
+      -- The last fvar arg is the inner decidable (the `a = b` result).
+      let mut inner : Option FVarId := none
+      for arg in args do
+        if let .fvar fv := arg then inner := some fv
+      if let some fv := inner then
+        let innerName ← getVarName (← resolveAlias fv)
+        emitIndent
+        emit s!"{varName} = not {innerName}\n"
+        modify fun s => { s with boolVars := s.boolVars.insert decl.fvarId true }
+        return
     -- Check for instDecidableEqBool(x, true) or instDecidableEqBool(x, false)
     -- This pattern appears in `if boolExpr then ...`
     let declStr := declName.toString
@@ -982,6 +1062,21 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
       emit s!"{varName} = True\n"
       return
     if declName == ``Bool.false then
+      modify fun s => { s with boolVars := s.boolVars.insert decl.fvarId false }
+      emitIndent
+      emit s!"{varName} = False\n"
+      return
+    -- `Decidable.isTrue`/`isFalse` carry a proof, but as a *value* a Decidable
+    -- is just its boolean verdict.  When such a constructor is built directly
+    -- (e.g. a `decide`-style helper returning `isTrue …`) and later used as an
+    -- `if` scrutinee, emitting the raw dataclass (`isTrue(None)`) is always
+    -- truthy — silently breaking the branch.  Lower to a real Python bool.
+    if declName == ``Decidable.isTrue then
+      modify fun s => { s with boolVars := s.boolVars.insert decl.fvarId true }
+      emitIndent
+      emit s!"{varName} = True\n"
+      return
+    if declName == ``Decidable.isFalse then
       modify fun s => { s with boolVars := s.boolVars.insert decl.fvarId false }
       emitIndent
       emit s!"{varName} = False\n"
@@ -1045,7 +1140,15 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
         return
       emitIndent
       emit s!"{varName} = {toPyTypeName declName}("
-      emitArgs args
+      -- Emit exactly the constructor's value fields — the trailing
+      -- `numFields` args.  Leading args are type/universe parameters (e.g.
+      -- `Decidable.isTrue`'s implicit `{p : Prop}`) which the dataclass does
+      -- not declare; emitting them produced `isTrue(None, None)` against a
+      -- one-field dataclass and failed at runtime with a TypeError.
+      let valArgs := if args.size >= ctorInfo.numFields
+                     then args.extract (args.size - ctorInfo.numFields) args.size
+                     else args
+      emitArgs valArgs
       emit ")\n"
       return
     -- Check for stdlib function mappings
@@ -1074,8 +1177,11 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
           emitIndent
           emit s!"{varName} = {pyFn}\n"
           return
-    -- Special handling for List.map and List.filter - use idiomatic list comprehensions
-    if declName == ``List.map then
+    -- Special handling for List.map and List.filter - use idiomatic list
+    -- comprehensions.  Lean 4.31 lowers `List.map`/`filter`/`filterMap` to their
+    -- tail-recursive counterparts (`List.mapTR` etc.) in LCNF, with the same
+    -- `(…, f, xs)` argument shape, so we recognize both spellings.
+    if declName == ``List.map || declName == ``List.mapTR then
       if args.size >= 2 then
         let (binder, body) ← fnCompParts args[args.size - 2]! "x"
         let xs ← renderArg args[args.size - 1]!
@@ -1087,7 +1193,7 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
           listCompInner := s.listCompInner.insert decl.fvarId inner
           lastListComp := some (decl.fvarId, start, s.buf.length) }
         return
-    if declName == ``List.filter then
+    if declName == ``List.filter || declName == ``List.filterTR then
       if args.size >= 2 then
         let (binder, body) ← fnCompParts args[args.size - 2]! "x"
         let xs ← renderArg args[args.size - 1]!
@@ -1100,7 +1206,7 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
           lastListComp := some (decl.fvarId, start, s.buf.length) }
         return
     -- List.filterMap - filter + map in one: [y for x in xs if (y := f(x)) is not None]
-    if declName == ``List.filterMap then
+    if declName == ``List.filterMap || declName == ``List.filterMapTR then
       if args.size >= 2 then
         let (binder, body) ← fnCompParts args[args.size - 2]! "x"
         let xs ← renderArg args[args.size - 1]!
@@ -1108,7 +1214,7 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
         emit s!"{varName} = [_y for {binder} in {xs} if (_y := {body}) is not None]\n"
         return
     -- List.bind (flatMap): [y for x in xs for y in f(x)]
-    if declName == ``List.bind then
+    if declName == ``List.flatMap then
       if args.size >= 2 then
         -- bind's function returns a sublist; inline it as the inner iterable.
         let (binder, body) ← fnCompParts args[args.size - 1]! "x"
@@ -1175,8 +1281,9 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
         emitArg args[args.size - 1]!
         emit "))\n"
         return
-    -- List.get? - safe indexing
-    if declName == ``List.get? then
+    -- getElem? (`l[i]?`) - safe indexing (Lean 4.31 removed `List.get?`;
+    -- `l[i]?` now lowers through the generic `getElem?`)
+    if declName == ``getElem? then
       if args.size >= 2 then
         emitIndent
         emit s!"{varName} = "
@@ -1189,8 +1296,8 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
         emitArg args[args.size - 2]!
         emit ") else None\n"
         return
-    -- List.enum - enumerate with indices
-    if declName == ``List.enum then
+    -- List.zipIdx (was List.enum) - enumerate with indices
+    if declName == ``List.zipIdx then
       if args.size >= 1 then
         emitIndent
         emit s!"{varName} = list(enumerate("
@@ -1459,11 +1566,14 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
     emitIndent
     emit s!"{varName} = "
     emit (← getVarName structFvar)
-    -- Use tuple indexing for Prod type, otherwise field access
+    -- Use tuple indexing for Prod type, otherwise field access.  The field name
+    -- MUST match the dataclass declaration in `emitInductiveType`, which names
+    -- fields `field_{i}` — not `{typeName}_{i}`.  (A type-name-derived accessor
+    -- like `page_0` parses fine but fails at runtime with AttributeError.)
     if typeName == ``Prod then
       emit s!"[{idx}]\n"
     else
-      emit s!".{toPyFnName typeName}_{idx}\n"
+      emit s!".field_{idx}\n"
 
 /-- Check if a type is PUnit or Unit -/
 def isUnitType (e : Expr) : Bool :=
@@ -2138,7 +2248,7 @@ def emitDecl (decl : Decl) : EmitM Unit := do
   -- Lean does TCO; Python does not. If every self-recursive call is a tail
   -- call, rewrite the body into a `while True:` loop so deep recursion does not
   -- overflow the Python stack. Detection is sound (see isSelfTailRecursive).
-  if isSelfTailRecursive decl.name decl.value then
+  if isSelfTailRecursive decl.name (declCode decl) then
     -- Collect the Python names of the (non-unit) parameters, in order — these
     -- are what a tail self-call rebinds. emitFunParams already registered them.
     let mut pyParams : Array String := #[]
@@ -2152,11 +2262,11 @@ def emitDecl (decl : Decl) : EmitM Unit := do
       let savedThunks := (← get).inlineThunks
       modify fun s => { s with tailLoop := some (decl.name, pyParams), inlineThunks := {} }
       withIndent do
-        emitCode decl.value
+        emitCode (declCode decl)
       modify fun s => { s with tailLoop := saved, inlineThunks := savedThunks }
   else
     withIndent do
-      emitCode decl.value
+      emitCode (declCode decl)
   emitBlankLine
 
 /-! ## File Structure Emission -/
@@ -2244,6 +2354,30 @@ partial def collectTypesFromCode (code : Code) (acc : Lean.NameSet) : CoreM Lean
     return acc
   | .return _ | .jmp _ _ | .unreach _ => return acc
 
+/-- Transitively add the constructor-field types of every already-collected
+    inductive/structure.  Without this, a type that only ever appears as a
+    *field* of another collected type (never as a param, return, or matched
+    type) is missed — e.g. an enum used solely inside a record and constructed
+    by value.  We iterate to a fixpoint so chains of nested records are closed
+    over. -/
+partial def closeOverFieldTypes (seed : Lean.NameSet) : CoreM Lean.NameSet := do
+  let env ← getEnv
+  let mut acc := seed
+  let mut worklist := seed.toList
+  while !worklist.isEmpty do
+    let name := worklist.head!
+    worklist := worklist.tail!
+    let some (.inductInfo info) := env.find? name | continue
+    for ctorName in info.ctors do
+      let some (.ctorInfo ctorInfo) := env.find? ctorName | continue
+      -- Walk the constructor's type; each field's type is a nested Π-binder.
+      let fieldTypes ← collectCustomTypes ctorInfo.type {}
+      for ft in fieldTypes do
+        unless acc.contains ft do
+          acc := acc.insert ft
+          worklist := ft :: worklist
+  return acc
+
 /-- Collect all custom types from declarations -/
 def collectTypesFromDecls (decls : Array Decl) : CoreM Lean.NameSet := do
   let mut types : Lean.NameSet := {}
@@ -2254,8 +2388,10 @@ def collectTypesFromDecls (decls : Array Decl) : CoreM Lean.NameSet := do
     -- Check return type
     types ← collectCustomTypes decl.type types
     -- Check types used in pattern matching within the function body
-    types ← collectTypesFromCode decl.value types
-  return types
+    types ← collectTypesFromCode (declCode decl) types
+  -- Transitively include the field types of every collected record/enum, so a
+  -- type used only inside another type's fields is still emitted.
+  closeOverFieldTypes types
 
 def emitPythonForDecls (modName : Name) (decls : Array Decl) : CompilerM String := do
   -- First collect custom types
@@ -2308,7 +2444,7 @@ partial def collectHelperNames (decl : Decl) : CompilerM (List Name) := do
             -- Recursively look for helpers called by this helper
             try
               let helperDecl ← toDecl name
-              visit helperDecl.value
+              visit (declCode helperDecl)
             catch _ =>
               pure ()
       | _ => pure ()
@@ -2328,7 +2464,7 @@ partial def collectHelperNames (decl : Decl) : CompilerM (List Name) := do
     | .return _ => pure ()
     | .unreach _ => pure ()
 
-  visit decl.value
+  visit (declCode decl)
   helpersRef.get
 
 def emitPythonForNames (modName : Name) (names : List Name) : CoreM String := do
