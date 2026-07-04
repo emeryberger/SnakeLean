@@ -395,7 +395,7 @@ def natBinOp? (name : Name) : Option String :=
 def builtinFn? (name : Name) : Option String :=
   match name with
   | ``String.length => some "len"
-  | ``List.length => some "len"
+  | ``List.length | ``List.lengthTR => some "len"
   | ``Array.size => some "len"
   | ``not => some "not"
   | ``Int.neg | ``Neg.neg => some "-"
@@ -513,6 +513,17 @@ def isDecidableCompare (name : Name) : Option String :=
 /-- Check if this is a BEq operation -/
 def isBEqOp (name : Name) : Bool :=
   name == ``BEq.beq || name.toString == "beq"
+
+/-- Proof-level equality casts that are the identity on their carried value at
+    runtime.  They leak into LCNF from `partial`/well-founded definitions (the
+    motive rewrite around a recursive call).  Erasing them to their data
+    argument is semantics-preserving; leaving them emits a call to an undefined
+    `eq_ndrec`/`eq_mpr` name.  For all of these the carried value is the first
+    non-type/non-proof (i.e. first fvar) argument. -/
+def isIdentityCast (name : Name) : Bool :=
+  name == ``Eq.ndrec || name == ``Eq.ndrec_symm || name == ``Eq.mpr
+  || name == ``Eq.mp || name == ``Eq.rec || name == ``Eq.recOn
+  || name == ``cast || name == ``Eq.subst
 
 /-- Check if name looks like a decide call -/
 def isDecide (name : Name) : Bool :=
@@ -650,6 +661,23 @@ def shouldSkipLetDecl (decl : LetDecl) : EmitM Bool := do
       | .fvar _ => true | _ => false)).size
     if (isDecidableCompare name).isSome && valArgCount >= 2 then
       return false
+    -- Identity equality casts (`Eq.ndrec`, `Eq.mpr`, …): alias to the carried
+    -- value and skip, so the cast disappears at runtime.  These consts take
+    -- their type/motive arguments first, then the data value, then (erased)
+    -- index/proof arguments.  The data value is therefore the first fvar that
+    -- appears AFTER the last `.type` argument — not merely the first fvar,
+    -- which would wrongly pick an index like `a` in `motive a`.
+    if isIdentityCast name then
+      let mut lastType := 0
+      for h : i in [0:args.size] do
+        if let .type _ := args[i] then lastType := i + 1
+      let mut aliased := false
+      for h : i in [0:args.size] do
+        if i >= lastType && !aliased then
+          if let .fvar fv := args[i] then
+            aliasVar decl.fvarId fv
+            aliased := true
+      return true
     -- `instDecidableNot` is the decision for `¬p` (e.g. the `≠` in `a ≠ b`).
     -- It must NOT be skipped/aliased to its inner decidable — that silently
     -- drops the negation and collapses `≠` to `=`.  Emit it so the const path
@@ -2100,11 +2128,17 @@ partial def emitListCases (discr : String) (alts : Array Alt) : EmitM Unit := do
     | _ => pure ()
   emitIndent
   emit "else:\n"
-  -- Find cons case
+  -- The non-nil branch is either an explicit `List.cons` arm or a `default`
+  -- arm.  Lean lowers an n-way list match (e.g. []/[x]/x::y::rest) to *nested*
+  -- binary `List.casesOn`, where the inner non-nil case is emitted as a
+  -- `default` rather than a named `List.cons` — so we must handle both, or the
+  -- `else:` body is dropped (leaving an empty block / SyntaxError).
+  let mut emitted := false
   for alt in alts do
     match alt with
     | .alt ctorName params code =>
-      if ctorName == ``List.cons then
+      if ctorName == ``List.cons && !emitted then
+        emitted := true
         withIndent do
           if params.size >= 2 then
             let headName ← registerVar params[params.size - 2]!.fvarId params[params.size - 2]!.binderName
@@ -2113,6 +2147,17 @@ partial def emitListCases (discr : String) (alts : Array Alt) : EmitM Unit := do
             emitLn s!"{tailName} = {discr}[1:]"
           emitCode code
     | _ => pure ()
+  if !emitted then
+    for alt in alts do
+      match alt with
+      | .default code =>
+        if !emitted then
+          emitted := true
+          withIndent do emitCode code
+      | _ => pure ()
+  -- Safety net: never leave the `else` body empty (keeps output parseable).
+  if !emitted then
+    withIndent do emitLn "pass"
 
 partial def emitNatCases (discr : String) (alts : Array Alt) : EmitM Unit := do
   for h : i in [0:alts.size] do
@@ -2424,7 +2469,21 @@ def hasAncestor (name baseName : Name) : Bool := Id.run do
     n := n.getPrefix
   return false
 
-/-- Collect helper names by walking the code and looking for const calls with matching prefix -/
+/-- The top-level component of a name (`Corpus.Math.gcd` → `Corpus`). -/
+partial def rootComponent (n : Name) : Name :=
+  let p := n.getPrefix
+  if p.isAnonymous then n else rootComponent p
+
+/-- Should a called constant be emitted as its own Python `def`?  We pull in a
+    callee when it is an internal helper of the base function (`foo.go`), OR a
+    *sibling* user definition sharing the same top-level namespace root (e.g.
+    another `Corpus.*` function that this one calls) so the emitted module is
+    self-contained.  Stdlib callees (`List.*`, `Nat.*`, …) have a different root
+    and are handled by the builtin/stdlib special cases instead. -/
+def isEmittableCallee (name baseName : Name) : Bool :=
+  hasAncestor name baseName
+  || (rootComponent name == rootComponent baseName && rootComponent name != baseName)
+
 partial def collectHelperNames (decl : Decl) : CompilerM (List Name) := do
   let baseName := decl.name
   let helpersRef ← IO.mkRef ([] : List Name)
@@ -2436,7 +2495,7 @@ partial def collectHelperNames (decl : Decl) : CompilerM (List Name) := do
       -- Check let value for helper calls
       match ld.value with
       | .const name _ _ =>
-        if hasAncestor name baseName then
+        if isEmittableCallee name baseName then
           let visited := (← visitedRef.get)
           if !visited.contains name then
             visitedRef.modify (·.insert name)
