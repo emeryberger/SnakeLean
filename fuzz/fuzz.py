@@ -104,8 +104,16 @@ def check_output(stdout):
             raise Failure("mismatch", f"{fn}{tuple(args)}: python={got!r} lean={expected!r}")
 
 
-def run_seed(seed, ndefs, ninputs, tmp_path):
+def run_seed(seed, ndefs, ninputs, tmp_path, coverage=None):
+    # Each file is coverage-guided *internally* (its own Gen prefers uncovered
+    # productions), so a file depends only on its seed — reproducibility the
+    # shrinker relies on.  We do NOT steer across seeds (that would make a file
+    # depend on sweep history); instead we just aggregate which productions were
+    # exercised, into `coverage`, to report grammar coverage over the whole run.
     src = gen.emit_lean_file(seed, ndefs, ninputs)
+    if coverage is not None:
+        coverage["offered"] |= gen.emit_lean_file.last_gen.all_prods
+        coverage["hit"] |= gen.emit_lean_file.last_gen.covered
     _rc, out, err = lean_run(src, tmp_path)
     errs = real_errors(err)
     if errs:
@@ -139,9 +147,10 @@ def main():
     tmp = "/tmp/fuzz_run.lean"
     lean_errors = 0
     checked = 0
+    coverage = {"offered": set(), "hit": set()}
     for seed in range(args.start, args.start + args.seeds):
         try:
-            run_seed(seed, args.defs, args.inputs, tmp)
+            run_seed(seed, args.defs, args.inputs, tmp, coverage=coverage)
             checked += 1
         except Failure as f:
             if f.kind == "lean-error":
@@ -164,6 +173,14 @@ def main():
                   f"{lean_errors} skipped as ill-typed)")
     print(f"\nNo transpiler bugs found in {args.seeds} seeds "
           f"({checked} checked, {lean_errors} skipped as ill-typed).")
+    # Grammar production coverage over the whole sweep.
+    universe = gen.ALL_PRODUCTIONS
+    hit = coverage["hit"] & universe
+    print(f"\nGrammar production coverage: {len(hit)}/{len(universe)} "
+          f"({100 * len(hit) // max(len(universe), 1)}%)")
+    missed = sorted(universe - hit)
+    if missed:
+        print(f"  never exercised: {', '.join(missed)}")
 
 
 if __name__ == "__main__":
