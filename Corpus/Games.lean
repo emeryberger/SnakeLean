@@ -86,7 +86,7 @@ def ConnectFour.drop (g : ConnectFour) (col : Nat) : Option ConnectFour :=
     if height >= 6 then none
     else
       let row := 5 - height
-      let newBoard := g.board.enum.map fun (r, rowData) =>
+      let newBoard := g.board.zipIdx.map fun (rowData, r) =>
         if r == row then rowData.set col (some g.currentPlayer)
         else rowData
       some {
@@ -275,9 +275,9 @@ def isValidSudokuGrid (grid : List (List Nat)) : Bool :=
     grid.filterMap fun row => row[c]?
   let validCols := cols.all isValidSudokuRow
   -- Check 3x3 boxes
-  let boxes := (List.range 3).bind fun br =>
+  let boxes := (List.range 3).flatMap fun br =>
     (List.range 3).map fun bc =>
-      (List.range 3).bind fun r =>
+      (List.range 3).flatMap fun r =>
         (List.range 3).filterMap fun c =>
           match grid[br * 3 + r]? with
           | some row => row[bc * 3 + c]?

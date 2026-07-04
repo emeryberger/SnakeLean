@@ -199,6 +199,24 @@ class TicTacToe_mk:
 TicTacToe = TicTacToe_mk
 
 @dataclass
+class hearts:
+    pass
+
+@dataclass
+class diamonds:
+    pass
+
+@dataclass
+class clubs:
+    pass
+
+@dataclass
+class spades:
+    pass
+
+Suit = hearts | diamonds | clubs | spades
+
+@dataclass
 class zero:
     pass
 
@@ -315,12151 +333,11550 @@ Option = Option_none | Option_some
 
 # Lean: Corpus.Production.countInversions.mergeAndCount.go
 def merge_and_count_go(xs: list[int], ys: list[int], acc: list[int], inv: int) -> tuple[list[int], int]:
-    def _f_13158(ys_0: list[int]):
-        _x_13155 = list(reversed(acc))
-        _x_13156 = _x_13155 + ys_0
-        _x_13157 = (_x_13156, inv)
-        return _x_13157
-    _alt_13159 = _f_13158
-    _alt_13160 = _f_13158
-    def _f_13176(x: int, xs_: list[int], y: int, ys_: list[int]):
-        _x_13161 = x <= y
-        if _x_13161:
-            _x_13172 = [y] + ys_
-            _x_13173 = [x] + acc
-            _x_13174 = merge_and_count_go(xs_, _x_13172, _x_13173, inv)
-            return _x_13174
+    while True:
+        def _f_21276(ys_0: list[int]):
+            _x_21273 = list(reversed(acc))
+            _x_21274 = _x_21273 + ys_0
+            _x_21275 = (_x_21274, inv)
+            return _x_21275
+        _alt_21277 = _f_21276
+        _alt_21278 = _f_21276
+        if len(xs) == 0:
+            _x_21296 = _alt_21277(ys)
+            return _x_21296
         else:
-            _x_13163 = [x] + xs_
-            _x_13164 = [y] + acc
-            _x_13168 = len(xs)
-            _x_13169 = inv + _x_13168
-            _x_13170 = merge_and_count_go(_x_13163, ys_, _x_13164, _x_13169)
-            return _x_13170
-    _alt_13177 = _f_13176
-    if len(xs) == 0:
-        if len(ys) == 0:
-            _x_13178 = []
-            _x_13179 = _alt_13159(_x_13178)
-            return _x_13179
-        else:
-            head_13180 = ys[0]
-            tail_13181 = ys[1:]
-            _x_13182 = [head_13180] + tail_13181
-            _x_13183 = _alt_13159(_x_13182)
-            return _x_13183
-    else:
-        head_13185 = xs[0]
-        tail_13186 = xs[1:]
-        if len(ys) == 0:
-            _x_13187 = [head_13185] + tail_13186
-            _x_13188 = _alt_13160(_x_13187)
-            return _x_13188
-        else:
-            head_13189 = ys[0]
-            tail_13190 = ys[1:]
-            _x_13191 = _alt_13177(head_13185, tail_13186, head_13189, tail_13190)
-            return _x_13191
+            head_21297 = xs[0]
+            tail_21298 = xs[1:]
+            if len(ys) == 0:
+                _x_21299 = [head_21297] + tail_21298
+                _x_21300 = _alt_21278(_x_21299)
+                return _x_21300
+            else:
+                head_21301 = ys[0]
+                tail_21302 = ys[1:]
+                x = head_21297
+                xs_ = tail_21298
+                y = head_21301
+                ys_ = tail_21302
+                _x_21279 = x <= y
+                if _x_21279:
+                    _x_21290 = [y] + ys_
+                    _x_21291 = [x] + acc
+                    xs, ys, acc, inv = xs_, _x_21290, _x_21291, inv
+                    continue
+                else:
+                    _x_21281 = [x] + xs_
+                    _x_21282 = [y] + acc
+                    _x_21286 = len(xs)
+                    _x_21287 = inv + _x_21286
+                    xs, ys, acc, inv = _x_21281, ys_, _x_21282, _x_21287
+                    continue
 
 # Lean: Corpus.Production.countInversions.mergeAndCount
 def merge_and_count(xs_1: list[int], ys_2: list[int]) -> tuple[list[int], int]:
-    _x_13195 = []
-    _x_13196 = 0
-    _x_13199 = merge_and_count_go(xs_1, ys_2, _x_13195, 0)
-    return _x_13199
+    _x_21307 = []
+    _x_21308 = 0
+    _x_21311 = merge_and_count_go(xs_1, ys_2, _x_21307, 0)
+    return _x_21311
 
 # Lean: Corpus.Production.countInversions.mergeCount
 def merge_count(xs_3: list[int]) -> tuple[list[int], int]:
-    _x_13201 = len(xs_3)
-    _x_13202 = 1
-    _x_13205 = _x_13201 <= 1
-    if _x_13205:
-        _x_13251 = 0
-        _x_13254 = (xs_3, 0)
-        return _x_13254
+    _x_21313 = len(xs_3)
+    _x_21314 = 1
+    _x_21317 = _x_21313 <= 1
+    if _x_21317:
+        _x_21363 = 0
+        _x_21366 = (xs_3, 0)
+        return _x_21366
     else:
-        _x_13210 = 2
-        _x_13213 = _x_13201 // 2
-        def _f_13241(left: list[int], right: list[int]):
-            def _f_13234(sorted_l: list[int], inv_l: int):
-                def _f_13227(sorted_r: list[int], inv_r: int):
-                    def _f_13220(merged: list[int], inv_merge: int):
-                        _x_13217 = inv_l + inv_r
-                        _x_13218 = _x_13217 + inv_merge
-                        _x_13219 = (merged, _x_13218)
-                        return _x_13219
-                    _alt_13221 = _f_13220
-                    _x_13222 = merge_and_count(sorted_l, sorted_r)
-                    match _x_13222:
-                        case (fst_13223, snd_13224):
-                            _x_13225 = _alt_13221(fst_13223, snd_13224)
-                            return _x_13225
-                _alt_13228 = _f_13227
-                _x_13229 = merge_count(right)
-                match _x_13229:
-                    case (fst_13230, snd_13231):
-                        _x_13232 = _alt_13228(fst_13230, snd_13231)
-                        return _x_13232
-            _alt_13235 = _f_13234
-            _x_13236 = merge_count(left)
-            match _x_13236:
-                case (fst_13237, snd_13238):
-                    _x_13239 = _alt_13235(fst_13237, snd_13238)
-                    return _x_13239
-        _alt_13242 = _f_13241
-        _x_13243 = (lambda n, xs: xs[:n])(xs_3)
-        _x_13244 = (lambda n, xs: xs[n:])(xs_3)
-        _x_13245 = (_x_13243, _x_13244)
-        match _x_13245:
-            case (fst_13246, snd_13247):
-                _x_13248 = _alt_13242(fst_13246, snd_13247)
-                return _x_13248
+        _x_21322 = 2
+        _x_21325 = _x_21313 // 2
+        def _f_21353(left: list[int], right: list[int]):
+            def _f_21346(sorted_l: list[int], inv_l: int):
+                def _f_21339(sorted_r: list[int], inv_r: int):
+                    def _f_21332(merged: list[int], inv_merge: int):
+                        _x_21329 = inv_l + inv_r
+                        _x_21330 = _x_21329 + inv_merge
+                        _x_21331 = (merged, _x_21330)
+                        return _x_21331
+                    _alt_21333 = _f_21332
+                    _x_21334 = merge_and_count(sorted_l, sorted_r)
+                    match _x_21334:
+                        case (fst_21335, snd_21336):
+                            _x_21337 = _alt_21333(fst_21335, snd_21336)
+                            return _x_21337
+                _alt_21340 = _f_21339
+                _x_21341 = merge_count(right)
+                match _x_21341:
+                    case (fst_21342, snd_21343):
+                        _x_21344 = _alt_21340(fst_21342, snd_21343)
+                        return _x_21344
+            _alt_21347 = _f_21346
+            _x_21348 = merge_count(left)
+            match _x_21348:
+                case (fst_21349, snd_21350):
+                    _x_21351 = _alt_21347(fst_21349, snd_21350)
+                    return _x_21351
+        _alt_21354 = _f_21353
+        _x_21355 = take_tr(None, _x_21325, xs_3)
+        _x_21356 = (lambda n, xs: xs[n:])(xs_3)
+        _x_21357 = (_x_21355, _x_21356)
+        match _x_21357:
+            case (fst_21358, snd_21359):
+                _x_21360 = _alt_21354(fst_21358, snd_21359)
+                return _x_21360
 
 # Lean: Corpus.Production.maxSubarraySum.kadane
 def kadane(xs_4: list[int], current_max: int, global_max: int) -> int:
-    def _f_13257():
-        return global_max
-    _alt_13258 = _f_13257
-    def _f_13268(x_5: int, rest: list[int]):
-        _x_13260 = max
-        _x_13264 = current_max + x_5
-        _x_13265 = _x_13260(x_5, _x_13264)
-        _x_13266 = _x_13260(global_max, _x_13265)
-        _x_13267 = kadane(rest, _x_13265, _x_13266)
-        return _x_13267
-    _alt_13269 = _f_13268
-    if len(xs_4) == 0:
-        _x_13271 = _alt_13258()
-        return _x_13271
-    else:
-        head_13272 = xs_4[0]
-        tail_13273 = xs_4[1:]
-        _x_13274 = _alt_13269(head_13272, tail_13273)
-        return _x_13274
+    while True:
+        def _f_21369():
+            return global_max
+        _alt_21370 = _f_21369
+        if len(xs_4) == 0:
+            _x_21383 = _alt_21370()
+            return _x_21383
+        else:
+            head_21384 = xs_4[0]
+            tail_21385 = xs_4[1:]
+            x_5 = head_21384
+            rest = tail_21385
+            _x_21372 = max
+            _x_21376 = current_max + x_5
+            _x_21377 = _x_21372(x_5, _x_21376)
+            _x_21378 = _x_21372(global_max, _x_21377)
+            xs_4, current_max, global_max = rest, _x_21377, _x_21378
+            continue
 
 # Lean: Corpus.Production.lis.fill
 def fill(xs_6: list[int], n: int, i: int, dp: list[int], parent: list[int]) -> tuple[list[int], list[int]]:
-    _x_13277 = n <= i
-    if _x_13277:
-        _x_13375 = (dp, parent)
-        return _x_13375
-    else:
-        def _f_13282(xs_7: list[int], i_8: int):
-            _x_13280 = len(xs_7)
-            _x_13281 = i_8 < _x_13280
-            return _x_13281
-        _x_13284 = _x_13283.get_elem__2
-        _x_13286 = _x_13284(_x_13285, xs_6, i)
-        def _f_13297(max_len: int, max_j: int):
-            _x_13290 = 1
-            _x_13293 = i + 1
-            _x_13294 = set_(None, dp, i, max_len)
-            _x_13295 = set_(None, parent, i, max_j)
-            _x_13296 = fill(xs_6, n, _x_13293, _x_13294, _x_13295)
-            return _x_13296
-        _alt_13298 = _f_13297
-        def _f_13363(x_13299: tuple[int, int], j: int):
-            def _f_13357(acc_9: int, pj: int):
-                def _f_13301():
-                    _x_13300 = False
-                    return False
-                _alt_13302 = _f_13301
-                def _f_13319():
-                    def _f_13309(xs_12: list[int], i_13: int):
-                        _x_13307 = len(xs_12)
-                        _x_13308 = i_13 < _x_13307
-                        return _x_13308
-                    _x_13311 = _x_13310.get_elem__2
-                    _x_13312 = _x_13311(_x_13285, dp, j)
-                    _x_13313 = 1
-                    _x_13316 = _x_13312 + 1
-                    _x_13317 = acc_9 < _x_13316
-                    return _x_13317
-                _alt_13320 = _f_13319
-                _x_13321 = _x_13284(_x_13285, xs_6, j)
-                _x_13322 = _x_13321 < _x_13286
-                def _jp_13350(_y_13328: bool):
-                    _x_13329 = True
-                    if _y_13328:
-                        def _f_13340(xs_14: list[int], i_15: int):
-                            _x_13338 = len(xs_14)
-                            _x_13339 = i_15 < _x_13338
-                            return _x_13339
-                        _x_13342 = _x_13341.get_elem__2
-                        _x_13343 = _x_13342(_x_13285, dp, j)
-                        _x_13344 = 1
-                        _x_13347 = _x_13343 + 1
-                        _x_13348 = (_x_13347, j)
-                        return _x_13348
+    while True:
+        _x_21389 = n <= i
+        if _x_21389:
+            _x_21475 = (dp, parent)
+            return _x_21475
+        else:
+            _x_21392 = _x_21391.field_2
+            _x_21394 = _x_21392(_x_21393, xs_6, i)
+            def _f_21463(x_21407: tuple[int, int], j: int):
+                def _f_21457(acc_7: int, pj: int):
+                    def _f_21409():
+                        _x_21408 = False
+                        return False
+                    _alt_21410 = _f_21409
+                    def _f_21423():
+                        _x_21415 = _x_21414.field_2
+                        _x_21416 = _x_21415(_x_21393, dp, j)
+                        _x_21417 = 1
+                        _x_21420 = _x_21416 + 1
+                        _x_21421 = acc_7 < _x_21420
+                        return _x_21421
+                    _alt_21424 = _f_21423
+                    _x_21425 = _x_21392(_x_21393, xs_6, j)
+                    _x_21426 = _x_21425 < _x_21394
+                    def _jp_21450(_y_21432: bool):
+                        _x_21433 = True
+                        _x_21434 = _y_21432 == True
+                        if _x_21434:
+                            _x_21442 = _x_21441.field_2
+                            _x_21443 = _x_21442(_x_21393, dp, j)
+                            _x_21444 = 1
+                            _x_21447 = _x_21443 + 1
+                            _x_21448 = (_x_21447, j)
+                            return _x_21448
+                        else:
+                            _x_21436 = (acc_7, pj)
+                            return _x_21436
+                    def _jp_21453():
+                        _x_21452 = _alt_21410()
+                        return _jp_21450(_x_21452)
+                    def _jp_21456():
+                        _x_21455 = _alt_21424()
+                        return _jp_21450(_x_21455)
+                    if _x_21426:
+                        return _jp_21456()
                     else:
-                        _x_13332 = (acc_9, pj)
-                        return _x_13332
-                def _jp_13353():
-                    _x_13352 = _alt_13302()
-                    return _jp_13350(_x_13352)
-                def _jp_13356():
-                    _x_13355 = _alt_13320()
-                    return _jp_13350(_x_13355)
-                if _x_13322:
-                    return _jp_13356()
-                else:
-                    return _jp_13353()
-            _alt_13358 = _f_13357
-            match x_13299:
-                case (fst_13359, snd_13360):
-                    _x_13361 = _alt_13358(fst_13359, snd_13360)
-                    return _x_13361
-        _x_13364 = 1
-        _x_13367 = (1, n)
-        _x_13368 = list(range(i))
-        _x_13369 = functools.reduce(_f_13363, _x_13368, _x_13367)
-        match _x_13369:
-            case (fst_13370, snd_13371):
-                _x_13372 = _alt_13298(fst_13370, snd_13371)
-                return _x_13372
+                        return _jp_21453()
+                _alt_21458 = _f_21457
+                match x_21407:
+                    case (fst_21459, snd_21460):
+                        _x_21461 = _alt_21458(fst_21459, snd_21460)
+                        return _x_21461
+            _x_21464 = 1
+            _x_21467 = (1, n)
+            _x_21468 = list(range(i))
+            _x_21469 = functools.reduce(_f_21463, _x_21468, _x_21467)
+            match _x_21469:
+                case (fst_21470, snd_21471):
+                    max_len = fst_21470
+                    max_j = snd_21471
+                    _x_21398 = 1
+                    _x_21401 = i + 1
+                    _x_21402 = set_(None, dp, i, max_len)
+                    _x_21403 = set_(None, parent, i, max_j)
+                    xs_6, n, i, dp, parent = xs_6, n, _x_21401, _x_21402, _x_21403
+                    continue
 
 # Lean: Corpus.Production.lis.backtrack
-def backtrack(xs_16: list[int], n_17: int, parent_: list[int], i_18: int, acc_19: list[int]) -> list[int]:
-    _x_13378 = n_17 <= i_18
-    if _x_13378:
-        return acc_19
-    else:
-        def _f_13383(xs_20: list[int], i_21: int):
-            _x_13381 = len(xs_20)
-            _x_13382 = i_21 < _x_13381
-            return _x_13382
-        _x_13385 = _x_13384.get_elem__2
-        _x_13387 = _x_13385(_x_13386, parent_, i_18)
-        def _f_13391(xs_22: list[int], i_23: int):
-            _x_13389 = len(xs_22)
-            _x_13390 = i_23 < _x_13389
-            return _x_13390
-        _x_13393 = _x_13392.get_elem__2
-        _x_13394 = _x_13393(_x_13386, xs_16, i_18)
-        _x_13395 = [_x_13394] + acc_19
-        _x_13396 = backtrack(xs_16, n_17, parent_, _x_13387, _x_13395)
-        return _x_13396
+def backtrack(xs_10: list[int], n_11: int, parent_: list[int], i_12: int, acc_13: list[int]) -> list[int]:
+    while True:
+        _x_21478 = n_11 <= i_12
+        if _x_21478:
+            return acc_13
+        else:
+            _x_21481 = _x_21480.field_2
+            _x_21483 = _x_21481(_x_21482, parent_, i_12)
+            _x_21485 = _x_21484.field_2
+            _x_21486 = _x_21485(_x_21482, xs_10, i_12)
+            _x_21487 = [_x_21486] + acc_13
+            xs_10, n_11, parent_, i_12, acc_13 = xs_10, n_11, parent_, _x_21483, _x_21487
+            continue
 
 # Lean: Corpus.Production.lisLength.fill
-def fill(xs_24: list[int], n_25: int, i_26: int, dp_27: list[int]) -> list[int]:
-    _x_13400 = n_25 <= i_26
-    if _x_13400:
-        return dp_27
-    else:
-        def _f_13405(xs_28: list[int], i_29: int):
-            _x_13403 = len(xs_28)
-            _x_13404 = i_29 < _x_13403
-            return _x_13404
-        _x_13407 = _x_13406.get_elem__2
-        _x_13409 = _x_13407(_x_13408, xs_24, i_26)
-        def _f_13432(acc_31: int, j_32: int):
-            _x_13410 = _x_13407(_x_13408, xs_24, j_32)
-            _x_13411 = _x_13410 < _x_13409
-            if _x_13411:
-                _x_13415 = max
-                def _f_13422(xs_33: list[int], i_34: int):
-                    _x_13420 = len(xs_33)
-                    _x_13421 = i_34 < _x_13420
-                    return _x_13421
-                _x_13424 = _x_13423.get_elem__2
-                _x_13425 = _x_13424(_x_13408, dp_27, j_32)
-                _x_13426 = 1
-                _x_13429 = _x_13425 + 1
-                _x_13430 = _x_13415(acc_31, _x_13429)
-                return _x_13430
-            else:
-                return acc_31
-        _x_13433 = 1
-        _x_13436 = list(range(i_26))
-        _x_13437 = functools.reduce(_f_13432, _x_13436, 1)
-        _x_13441 = i_26 + 1
-        _x_13442 = set_(None, dp_27, i_26, _x_13437)
-        _x_13443 = fill(xs_24, n_25, _x_13441, _x_13442)
-        return _x_13443
+def fill(xs_14: list[int], n_15: int, i_16: int, dp_17: list[int]) -> list[int]:
+    while True:
+        _x_21492 = n_15 <= i_16
+        if _x_21492:
+            return dp_17
+        else:
+            _x_21495 = _x_21494.field_2
+            _x_21497 = _x_21495(_x_21496, xs_14, i_16)
+            def _f_21516(acc_19: int, j_20: int):
+                _x_21498 = _x_21495(_x_21496, xs_14, j_20)
+                _x_21499 = _x_21498 < _x_21497
+                if _x_21499:
+                    _x_21503 = max
+                    _x_21508 = _x_21507.field_2
+                    _x_21509 = _x_21508(_x_21496, dp_17, j_20)
+                    _x_21510 = 1
+                    _x_21513 = _x_21509 + 1
+                    _x_21514 = _x_21503(acc_19, _x_21513)
+                    return _x_21514
+                else:
+                    return acc_19
+            _x_21517 = 1
+            _x_21520 = list(range(i_16))
+            _x_21521 = functools.reduce(_f_21516, _x_21520, 1)
+            _x_21525 = i_16 + 1
+            _x_21526 = set_(None, dp_17, i_16, _x_21521)
+            xs_14, n_15, i_16, dp_17 = xs_14, n_15, _x_21525, _x_21526
+            continue
 
 # Lean: Corpus.Production.matrixChainOrder.fill
-def fill(dims: list[int], n_35: int, inf: int, len: int, i_36: int, dp_37: list[int]) -> list[int]:
-    _x_13447 = n_35 < len
-    if _x_13447:
-        return dp_37
-    else:
-        _x_13452 = i_36 + len
-        _x_13453 = n_35 < _x_13452
-        if _x_13453:
-            _x_13520 = 1
-            _x_13523 = len + 1
-            _x_13524 = 0
-            _x_13527 = fill(dims, n_35, inf, _x_13523, 0, dp_37)
-            return _x_13527
+def fill(dims: list[int], n_21: int, inf: int, len: int, i_22: int, dp_23: list[int]) -> list[int]:
+    while True:
+        _x_21531 = n_21 < len
+        if _x_21531:
+            return dp_23
         else:
-            _x_13458 = 1
-            _x_13461 = _x_13452 - 1
-            _x_13465 = i_36 * n_35
-            _x_13466 = _x_13465 + _x_13461
-            _x_13469 = len == 1
-            _x_13470 = True
-            if _x_13469:
-                _x_13512 = i_36 + 1
-                _x_13513 = 0
-                _x_13516 = set_(None, dp_37, _x_13466, 0)
-                _x_13517 = fill(dims, n_35, inf, len, _x_13512, _x_13516)
-                return _x_13517
+            _x_21536 = i_22 + len
+            _x_21537 = n_21 < _x_21536
+            if _x_21537:
+                _x_21597 = 1
+                _x_21600 = len + 1
+                _x_21601 = 0
+                dims, n_21, inf, len, i_22, dp_23 = dims, n_21, inf, _x_21600, 0, dp_23
+                continue
             else:
-                def _f_13504(acc_39: int, k_: int):
-                    _x_13473 = i_36 + k_
-                    def _f_13477(xs_40: list[int], i_41: int):
-                        _x_13475 = len(xs_40)
-                        _x_13476 = i_41 < _x_13475
-                        return _x_13476
-                    _x_13479 = _x_13478.get_elem__2
-                    _x_13481 = _x_13465 + _x_13473
-                    _x_13482 = _x_13479(_x_13480, dp_37, _x_13481)
-                    _x_13483 = _x_13473 + 1
-                    _x_13484 = _x_13483 * n_35
-                    _x_13485 = _x_13484 + _x_13461
-                    _x_13486 = _x_13479(_x_13480, dp_37, _x_13485)
-                    _x_13487 = _x_13482 + _x_13486
-                    def _f_13491(xs_42: list[int], i_43: int):
-                        _x_13489 = len(xs_42)
-                        _x_13490 = i_43 < _x_13489
-                        return _x_13490
-                    _x_13493 = _x_13492.get_elem__2
-                    _x_13494 = _x_13493(_x_13480, dims, i_36)
-                    _x_13495 = _x_13493(_x_13480, dims, _x_13483)
-                    _x_13496 = _x_13494 * _x_13495
-                    _x_13497 = _x_13461 + 1
-                    _x_13498 = _x_13493(_x_13480, dims, _x_13497)
-                    _x_13499 = _x_13496 * _x_13498
-                    _x_13500 = _x_13487 + _x_13499
-                    _x_13502 = min
-                    _x_13503 = _x_13502(acc_39, _x_13500)
-                    return _x_13503
-                _x_13505 = len - 1
-                _x_13506 = list(range(_x_13505))
-                _x_13507 = functools.reduce(_f_13504, _x_13506, inf)
-                _x_13508 = i_36 + 1
-                _x_13509 = set_(None, dp_37, _x_13466, _x_13507)
-                _x_13510 = fill(dims, n_35, inf, len, _x_13508, _x_13509)
-                return _x_13510
+                _x_21542 = 1
+                _x_21545 = _x_21536 - 1
+                _x_21549 = i_22 * n_21
+                _x_21550 = _x_21549 + _x_21545
+                _x_21554 = len == 1
+                _x_21555 = True
+                _x_21556 = _x_21554 == True
+                if _x_21556:
+                    _x_21589 = i_22 + 1
+                    _x_21590 = 0
+                    _x_21593 = set_(None, dp_23, _x_21550, 0)
+                    dims, n_21, inf, len, i_22, dp_23 = dims, n_21, inf, len, _x_21589, _x_21593
+                    continue
+                else:
+                    def _f_21581(acc_25: int, k_: int):
+                        _x_21558 = i_22 + k_
+                        _x_21560 = _x_21559.field_2
+                        _x_21562 = _x_21549 + _x_21558
+                        _x_21563 = _x_21560(_x_21561, dp_23, _x_21562)
+                        _x_21564 = _x_21558 + 1
+                        _x_21565 = _x_21564 * n_21
+                        _x_21566 = _x_21565 + _x_21545
+                        _x_21567 = _x_21560(_x_21561, dp_23, _x_21566)
+                        _x_21568 = _x_21563 + _x_21567
+                        _x_21570 = _x_21569.field_2
+                        _x_21571 = _x_21570(_x_21561, dims, i_22)
+                        _x_21572 = _x_21570(_x_21561, dims, _x_21564)
+                        _x_21573 = _x_21571 * _x_21572
+                        _x_21574 = _x_21545 + 1
+                        _x_21575 = _x_21570(_x_21561, dims, _x_21574)
+                        _x_21576 = _x_21573 * _x_21575
+                        _x_21577 = _x_21568 + _x_21576
+                        _x_21579 = min
+                        _x_21580 = _x_21579(acc_25, _x_21577)
+                        return _x_21580
+                    _x_21582 = len - 1
+                    _x_21583 = list(range(_x_21582))
+                    _x_21584 = functools.reduce(_f_21581, _x_21583, inf)
+                    _x_21585 = i_22 + 1
+                    _x_21586 = set_(None, dp_23, _x_21550, _x_21584)
+                    dims, n_21, inf, len, i_22, dp_23 = dims, n_21, inf, len, _x_21585, _x_21586
+                    continue
 
 # Lean: Corpus.Production.coinChange.fill
-def fill(coins: list[int], amount: int, inf_44: int, a: int, dp_45: list[int]) -> list[int]:
-    _x_13532 = amount < a
-    if _x_13532:
-        return dp_45
-    else:
-        def _f_13594(acc_46: int, c: int):
-            def _f_13535():
-                _x_13534 = False
-                return False
-            _alt_13536 = _f_13535
-            def _f_13551():
-                def _f_13540(xs_49: list[int], i_50: int):
-                    _x_13538 = len(xs_49)
-                    _x_13539 = i_50 < _x_13538
-                    return _x_13539
-                _x_13542 = _x_13541.get_elem__2
-                _x_13547 = a - c
-                _x_13548 = _x_13542(_x_13543, dp_45, _x_13547)
-                _x_13549 = _x_13548 < inf_44
-                return _x_13549
-            _alt_13552 = _f_13551
-            _x_13553 = c <= a
-            def _jp_13587(_y_13559: bool):
-                _x_13560 = True
-                if _y_13559:
-                    _x_13565 = min
-                    def _f_13572(xs_51: list[int], i_52: int):
-                        _x_13570 = len(xs_51)
-                        _x_13571 = i_52 < _x_13570
-                        return _x_13571
-                    _x_13574 = _x_13573.get_elem__2
-                    _x_13579 = a - c
-                    _x_13580 = _x_13574(_x_13575, dp_45, _x_13579)
-                    _x_13581 = 1
-                    _x_13584 = _x_13580 + 1
-                    _x_13585 = _x_13565(acc_46, _x_13584)
-                    return _x_13585
+def fill(coins: list[int], amount: int, inf_26: int, a: int, dp_27: list[int]) -> list[int]:
+    while True:
+        _x_21609 = amount < a
+        if _x_21609:
+            return dp_27
+        else:
+            def _f_21663(acc_28: int, c: int):
+                def _f_21612():
+                    _x_21611 = False
+                    return False
+                _alt_21613 = _f_21612
+                def _f_21624():
+                    _x_21615 = _x_21614.field_2
+                    _x_21620 = a - c
+                    _x_21621 = _x_21615(_x_21616, dp_27, _x_21620)
+                    _x_21622 = _x_21621 < inf_26
+                    return _x_21622
+                _alt_21625 = _f_21624
+                _x_21626 = c <= a
+                def _jp_21656(_y_21632: bool):
+                    _x_21633 = True
+                    _x_21634 = _y_21632 == True
+                    if _x_21634:
+                        _x_21638 = min
+                        _x_21643 = _x_21642.field_2
+                        _x_21648 = a - c
+                        _x_21649 = _x_21643(_x_21644, dp_27, _x_21648)
+                        _x_21650 = 1
+                        _x_21653 = _x_21649 + 1
+                        _x_21654 = _x_21638(acc_28, _x_21653)
+                        return _x_21654
+                    else:
+                        return acc_28
+                def _jp_21659():
+                    _x_21658 = _alt_21613()
+                    return _jp_21656(_x_21658)
+                def _jp_21662():
+                    _x_21661 = _alt_21625()
+                    return _jp_21656(_x_21661)
+                if _x_21626:
+                    return _jp_21662()
                 else:
-                    return acc_46
-            def _jp_13593():
-                _x_13592 = _alt_13552()
-                return _jp_13587(_x_13592)
-            def _jp_13590():
-                _x_13589 = _alt_13536()
-                return _jp_13587(_x_13589)
-            if _x_13553:
-                return _jp_13593()
-            else:
-                return _jp_13590()
-        _x_13595 = functools.reduce(_f_13594, coins, inf_44)
-        _x_13599 = 1
-        _x_13602 = a + 1
-        _x_13603 = set_(None, dp_45, a, _x_13595)
-        _x_13604 = fill(coins, amount, inf_44, _x_13602, _x_13603)
-        return _x_13604
+                    return _jp_21659()
+            _x_21664 = functools.reduce(_f_21663, coins, inf_26)
+            _x_21668 = 1
+            _x_21671 = a + 1
+            _x_21672 = set_(None, dp_27, a, _x_21664)
+            coins, amount, inf_26, a, dp_27 = coins, amount, inf_26, _x_21671, _x_21672
+            continue
 
 # Lean: Corpus.Production.knapsack01.fill
-def fill(capacity: int, weights: list[int], values: list[int], n_53: int, i_54: int, w: int, dp_55: list[int]) -> list[int]:
-    _x_13608 = n_53 < i_54
-    if _x_13608:
-        return dp_55
+def fill(capacity: int, weights: list[int], values: list[int], n_31: int, i_32: int, w: int, dp_33: list[int]) -> list[int]:
+    _x_21677 = n_31 < i_32
+    if _x_21677:
+        return dp_33
     else:
-        _x_13610 = capacity < w
-        if _x_13610:
-            _x_13685 = 1
-            _x_13688 = i_54 + 1
-            _x_13689 = 0
-            _x_13692 = fill(capacity, weights, values, n_53, _x_13688, 0, dp_55)
-            return _x_13692
+        _x_21679 = capacity < w
+        if _x_21679:
+            _x_21744 = 1
+            _x_21747 = i_32 + 1
+            _x_21748 = 0
+            _x_21751 = fill(capacity, weights, values, n_31, _x_21747, 0, dp_33)
+            return _x_21751
         else:
-            _x_13618 = 1
-            _x_13621 = capacity + 1
-            _x_13622 = i_54 * _x_13621
-            _x_13623 = _x_13622 + w
-            _x_13626 = 0
-            _x_13629 = i_54 == 0
-            _x_13630 = True
-            def _jp_13680(_y_13676: int):
-                _x_13677 = w + 1
-                _x_13678 = set_(None, dp_55, _x_13623, _y_13676)
-                _x_13679 = fill(capacity, weights, values, n_53, i_54, _x_13677, _x_13678)
-                return _x_13679
-            if _x_13629:
-                return _jp_13680(0)
+            _x_21687 = 1
+            _x_21690 = capacity + 1
+            _x_21691 = i_32 * _x_21690
+            _x_21692 = _x_21691 + w
+            _x_21696 = 0
+            _x_21699 = i_32 == 0
+            _x_21700 = True
+            _x_21701 = _x_21699 == True
+            def _jp_21739(_y_21735: int):
+                _x_21736 = w + 1
+                _x_21737 = set_(None, dp_33, _x_21692, _y_21735)
+                _x_21738 = fill(capacity, weights, values, n_31, i_32, _x_21736, _x_21737)
+                return _x_21738
+            if _x_21701:
+                return _jp_21739(0)
             else:
-                def _f_13636(xs_57: list[int], i_58: int):
-                    _x_13634 = len(xs_57)
-                    _x_13635 = i_58 < _x_13634
-                    return _x_13635
-                _x_13638 = _x_13637.get_elem__2
-                _x_13643 = i_54 - 1
-                _x_13644 = _x_13638(_x_13639, weights, _x_13643)
-                _x_13645 = _x_13638(_x_13639, values, _x_13643)
-                _x_13646 = w < _x_13644
-                if _x_13646:
-                    def _f_13668(xs_59: list[int], i_60: int):
-                        _x_13666 = len(xs_59)
-                        _x_13667 = i_60 < _x_13666
-                        return _x_13667
-                    _x_13670 = _x_13669.get_elem__2
-                    _x_13671 = _x_13643 * _x_13621
-                    _x_13672 = _x_13671 + w
-                    _x_13673 = _x_13670(_x_13639, dp_55, _x_13672)
-                    return _jp_13680(_x_13673)
+                _x_21704 = _x_21703.field_2
+                _x_21709 = i_32 - 1
+                _x_21710 = _x_21704(_x_21705, weights, _x_21709)
+                _x_21711 = _x_21704(_x_21705, values, _x_21709)
+                _x_21712 = w < _x_21710
+                if _x_21712:
+                    _x_21728 = _x_21727.field_2
+                    _x_21729 = _x_21709 * _x_21690
+                    _x_21730 = _x_21729 + w
+                    _x_21731 = _x_21728(_x_21705, dp_33, _x_21730)
+                    return _jp_21739(_x_21731)
                 else:
-                    _x_13649 = max
-                    def _f_13653(xs_61: list[int], i_62: int):
-                        _x_13651 = len(xs_61)
-                        _x_13652 = i_62 < _x_13651
-                        return _x_13652
-                    _x_13655 = _x_13654.get_elem__2
-                    _x_13656 = _x_13643 * _x_13621
-                    _x_13657 = _x_13656 + w
-                    _x_13658 = _x_13655(_x_13639, dp_55, _x_13657)
-                    _x_13659 = w - _x_13644
-                    _x_13660 = _x_13656 + _x_13659
-                    _x_13661 = _x_13655(_x_13639, dp_55, _x_13660)
-                    _x_13662 = _x_13661 + _x_13645
-                    _x_13663 = _x_13649(_x_13658, _x_13662)
-                    return _jp_13680(_x_13663)
+                    _x_21715 = max
+                    _x_21717 = _x_21716.field_2
+                    _x_21718 = _x_21709 * _x_21690
+                    _x_21719 = _x_21718 + w
+                    _x_21720 = _x_21717(_x_21705, dp_33, _x_21719)
+                    _x_21721 = w - _x_21710
+                    _x_21722 = _x_21718 + _x_21721
+                    _x_21723 = _x_21717(_x_21705, dp_33, _x_21722)
+                    _x_21724 = _x_21723 + _x_21711
+                    _x_21725 = _x_21715(_x_21720, _x_21724)
+                    return _jp_21739(_x_21725)
 
 # Lean: Corpus.Production.intervalScheduling.select
-def select(remaining: list[tuple[int, int]], last_end: int, acc_63: list[tuple[int, int]]) -> list[tuple[int, int]]:
-    def _f_13698():
-        _x_13697 = list(reversed(acc_63))
-        return _x_13697
-    _alt_13699 = _f_13698
-    def _f_13708(s: int, e: int, rest_65: list[tuple[int, int]]):
-        _x_13700 = last_end <= s
-        if _x_13700:
-            _x_13704 = (s, e)
-            _x_13705 = [_x_13704] + acc_63
-            _x_13706 = select(rest_65, e, _x_13705)
-            return _x_13706
+def select(remaining: list[tuple[int, int]], last_end: int, acc_35: list[tuple[int, int]]) -> list[tuple[int, int]]:
+    while True:
+        def _f_21757():
+            _x_21756 = list(reversed(acc_35))
+            return _x_21756
+        _alt_21758 = _f_21757
+        if len(remaining) == 0:
+            _x_21770 = _alt_21758()
+            return _x_21770
         else:
-            _x_13702 = select(rest_65, last_end, acc_63)
-            return _x_13702
-    _alt_13709 = _f_13708
-    if len(remaining) == 0:
-        _x_13711 = _alt_13699()
-        return _x_13711
-    else:
-        head_13712 = remaining[0]
-        tail_13713 = remaining[1:]
-        match head_13712:
-            case (fst_13714, snd_13715):
-                _x_13716 = _alt_13709(fst_13714, snd_13715, tail_13713)
-                return _x_13716
+            head_21771 = remaining[0]
+            tail_21772 = remaining[1:]
+            match head_21771:
+                case (fst_21773, snd_21774):
+                    s = fst_21773
+                    e = snd_21774
+                    rest_37 = tail_21772
+                    _x_21759 = last_end <= s
+                    if _x_21759:
+                        _x_21763 = (s, e)
+                        _x_21764 = [_x_21763] + acc_35
+                        remaining, last_end, acc_35 = rest_37, e, _x_21764
+                        continue
+                    else:
+                        remaining, last_end, acc_35 = rest_37, last_end, acc_35
+                        continue
 
 # Lean: Corpus.Production.editDistance.fill
-def fill(xs_66: list[int], ys_67: list[int], m: int, n_68: int, i_69: int, j_70: int, dp_71: list[int]) -> list[int]:
-    _x_13720 = m < i_69
-    if _x_13720:
-        return dp_71
+def fill(xs_38: list[int], ys_39: list[int], m: int, n_40: int, i_41: int, j_42: int, dp_43: list[int]) -> list[int]:
+    _x_21779 = m < i_41
+    if _x_21779:
+        return dp_43
     else:
-        _x_13722 = n_68 < j_70
-        if _x_13722:
-            _x_13800 = 1
-            _x_13803 = i_69 + 1
-            _x_13804 = 0
-            _x_13807 = fill(xs_66, ys_67, m, n_68, _x_13803, 0, dp_71)
-            return _x_13807
+        _x_21781 = n_40 < j_42
+        if _x_21781:
+            _x_21854 = 1
+            _x_21857 = i_41 + 1
+            _x_21858 = 0
+            _x_21861 = fill(xs_38, ys_39, m, n_40, _x_21857, 0, dp_43)
+            return _x_21861
         else:
-            _x_13730 = 1
-            _x_13733 = n_68 + 1
-            _x_13734 = i_69 * _x_13733
-            _x_13735 = _x_13734 + j_70
-            _x_13738 = 0
-            _x_13741 = i_69 == 0
-            _x_13742 = True
-            def _jp_13795(_y_13791: int):
-                _x_13792 = j_70 + 1
-                _x_13793 = set_(None, dp_71, _x_13735, _y_13791)
-                _x_13794 = fill(xs_66, ys_67, m, n_68, i_69, _x_13792, _x_13793)
-                return _x_13794
-            if _x_13741:
-                return _jp_13795(j_70)
+            _x_21789 = 1
+            _x_21792 = n_40 + 1
+            _x_21793 = i_41 * _x_21792
+            _x_21794 = _x_21793 + j_42
+            _x_21798 = 0
+            _x_21801 = i_41 == 0
+            _x_21802 = True
+            _x_21803 = _x_21801 == True
+            def _jp_21849(_y_21845: int):
+                _x_21846 = j_42 + 1
+                _x_21847 = set_(None, dp_43, _x_21794, _y_21845)
+                _x_21848 = fill(xs_38, ys_39, m, n_40, i_41, _x_21846, _x_21847)
+                return _x_21848
+            if _x_21803:
+                return _jp_21849(j_42)
             else:
-                _x_13745 = j_70 == 0
-                if _x_13745:
-                    return _jp_13795(i_69)
+                _x_21805 = j_42 == 0
+                _x_21806 = _x_21805 == True
+                if _x_21806:
+                    return _jp_21849(i_41)
                 else:
-                    def _f_13751(xs_74: list[int], i_75: int):
-                        _x_13749 = len(xs_74)
-                        _x_13750 = i_75 < _x_13749
-                        return _x_13750
-                    _x_13753 = _x_13752.get_elem__2
-                    _x_13758 = i_69 - 1
-                    _x_13759 = _x_13753(_x_13754, xs_66, _x_13758)
-                    _x_13760 = j_70 - 1
-                    _x_13761 = _x_13753(_x_13754, ys_67, _x_13760)
-                    _x_13762 = _x_13759 == _x_13761
-                    def _jp_13787(_y_13766: int):
-                        _x_13768 = min
-                        def _f_13772(xs_78: list[int], i_79: int):
-                            _x_13770 = len(xs_78)
-                            _x_13771 = i_79 < _x_13770
-                            return _x_13771
-                        _x_13774 = _x_13773.get_elem__2
-                        _x_13775 = _x_13758 * _x_13733
-                        _x_13776 = _x_13775 + j_70
-                        _x_13777 = _x_13774(_x_13754, dp_71, _x_13776)
-                        _x_13778 = _x_13777 + 1
-                        _x_13779 = _x_13734 + _x_13760
-                        _x_13780 = _x_13774(_x_13754, dp_71, _x_13779)
-                        _x_13781 = _x_13780 + 1
-                        _x_13782 = _x_13768(_x_13778, _x_13781)
-                        _x_13783 = _x_13775 + _x_13760
-                        _x_13784 = _x_13774(_x_13754, dp_71, _x_13783)
-                        _x_13785 = _x_13784 + _y_13766
-                        _x_13786 = _x_13768(_x_13782, _x_13785)
-                        return _jp_13795(_x_13786)
-                    if _x_13762:
-                        return _jp_13787(0)
+                    _x_21809 = _x_21808.field_2
+                    _x_21814 = i_41 - 1
+                    _x_21815 = _x_21809(_x_21810, xs_38, _x_21814)
+                    _x_21816 = j_42 - 1
+                    _x_21817 = _x_21809(_x_21810, ys_39, _x_21816)
+                    _x_21818 = _x_21815 == _x_21817
+                    _x_21819 = _x_21818 == True
+                    def _jp_21841(_y_21824: int):
+                        _x_21826 = min
+                        _x_21828 = _x_21827.field_2
+                        _x_21829 = _x_21814 * _x_21792
+                        _x_21830 = _x_21829 + j_42
+                        _x_21831 = _x_21828(_x_21810, dp_43, _x_21830)
+                        _x_21832 = _x_21831 + 1
+                        _x_21833 = _x_21793 + _x_21816
+                        _x_21834 = _x_21828(_x_21810, dp_43, _x_21833)
+                        _x_21835 = _x_21834 + 1
+                        _x_21836 = _x_21826(_x_21832, _x_21835)
+                        _x_21837 = _x_21829 + _x_21816
+                        _x_21838 = _x_21828(_x_21810, dp_43, _x_21837)
+                        _x_21839 = _x_21838 + _y_21824
+                        _x_21840 = _x_21826(_x_21836, _x_21839)
+                        return _jp_21849(_x_21840)
+                    if _x_21819:
+                        return _jp_21841(0)
                     else:
-                        return _jp_13787(1)
+                        return _jp_21841(0)
 
 # Lean: Corpus.Production.lcs.backtrack
-def backtrack(xs_80: list[int], ys_81: list[int], n_82: int, memo_: list[int], i_83: int, j_84: int, acc_85: list[int]) -> list[int]:
-    def _f_13813():
-        _x_13812 = True
+def backtrack(xs_48: list[int], ys_49: list[int], n_50: int, memo_: list[int], i_51: int, j_52: int, acc_53: list[int]) -> list[int]:
+    def _f_21867():
+        _x_21866 = True
         return True
-    _alt_13814 = _f_13813
-    def _f_13821():
-        _x_13817 = 0
-        _x_13820 = j_84 == 0
-        return _x_13820
-    _alt_13822 = _f_13821
-    _x_13825 = 0
-    _x_13828 = i_83 == 0
-    def _jp_13888(_y_13833: bool):
-        _x_13834 = True
-        if _y_13833:
-            return acc_85
+    _alt_21868 = _f_21867
+    def _f_21876():
+        _x_21872 = 0
+        _x_21875 = j_52 == 0
+        return _x_21875
+    _alt_21877 = _f_21876
+    _x_21881 = 0
+    _x_21884 = i_51 == 0
+    def _jp_21936(_y_21889: bool):
+        _x_21890 = True
+        _x_21891 = _y_21889 == True
+        if _x_21891:
+            return acc_53
         else:
-            def _f_13840(xs_88: list[int], i_89: int):
-                _x_13838 = len(xs_88)
-                _x_13839 = i_89 < _x_13838
-                return _x_13839
-            _x_13842 = _x_13841.get_elem__2
-            _x_13847 = 1
-            _x_13850 = i_83 - 1
-            _x_13851 = _x_13842(_x_13843, xs_80, _x_13850)
-            _x_13852 = j_84 - 1
-            _x_13853 = _x_13842(_x_13843, ys_81, _x_13852)
-            _x_13854 = _x_13851 == _x_13853
-            if _x_13854:
-                _x_13883 = [_x_13851] + acc_85
-                _x_13884 = backtrack(xs_80, ys_81, n_82, memo_, _x_13850, _x_13852, _x_13883)
-                return _x_13884
+            _x_21894 = _x_21893.field_2
+            _x_21899 = 1
+            _x_21902 = i_51 - 1
+            _x_21903 = _x_21894(_x_21895, xs_48, _x_21902)
+            _x_21904 = j_52 - 1
+            _x_21905 = _x_21894(_x_21895, ys_49, _x_21904)
+            _x_21906 = _x_21903 == _x_21905
+            _x_21907 = _x_21906 == True
+            if _x_21907:
+                _x_21931 = [_x_21903] + acc_53
+                _x_21932 = backtrack(xs_48, ys_49, n_50, memo_, _x_21902, _x_21904, _x_21931)
+                return _x_21932
             else:
-                def _f_13860(xs_92: list[int], i_93: int):
-                    _x_13858 = len(xs_92)
-                    _x_13859 = i_93 < _x_13858
-                    return _x_13859
-                _x_13862 = _x_13861.get_elem__2
-                _x_13869 = n_82 + 1
-                _x_13870 = i_83 * _x_13869
-                _x_13871 = _x_13870 + _x_13852
-                _x_13872 = _x_13862(_x_13843, memo_, _x_13871)
-                _x_13873 = _x_13850 * _x_13869
-                _x_13874 = _x_13873 + j_84
-                _x_13875 = _x_13862(_x_13843, memo_, _x_13874)
-                _x_13876 = _x_13872 < _x_13875
-                if _x_13876:
-                    _x_13880 = backtrack(xs_80, ys_81, n_82, memo_, _x_13850, j_84, acc_85)
-                    return _x_13880
+                _x_21910 = _x_21909.field_2
+                _x_21917 = n_50 + 1
+                _x_21918 = i_51 * _x_21917
+                _x_21919 = _x_21918 + _x_21904
+                _x_21920 = _x_21910(_x_21895, memo_, _x_21919)
+                _x_21921 = _x_21902 * _x_21917
+                _x_21922 = _x_21921 + j_52
+                _x_21923 = _x_21910(_x_21895, memo_, _x_21922)
+                _x_21924 = _x_21920 < _x_21923
+                if _x_21924:
+                    _x_21928 = backtrack(xs_48, ys_49, n_50, memo_, _x_21902, j_52, acc_53)
+                    return _x_21928
                 else:
-                    _x_13878 = backtrack(xs_80, ys_81, n_82, memo_, i_83, _x_13852, acc_85)
-                    return _x_13878
-    def _jp_13891():
-        _x_13890 = _alt_13822()
-        return _jp_13888(_x_13890)
-    def _jp_13894():
-        _x_13893 = _alt_13814()
-        return _jp_13888(_x_13893)
-    if _x_13828:
-        return _jp_13894()
+                    _x_21926 = backtrack(xs_48, ys_49, n_50, memo_, i_51, _x_21904, acc_53)
+                    return _x_21926
+    def _jp_21942():
+        _x_21941 = _alt_21868()
+        return _jp_21936(_x_21941)
+    def _jp_21939():
+        _x_21938 = _alt_21877()
+        return _jp_21936(_x_21938)
+    if _x_21884:
+        return _jp_21942()
     else:
-        return _jp_13891()
+        return _jp_21939()
 
 # Lean: Corpus.Production.lcs.fill
-def fill(xs_94: list[int], ys_95: list[int], m_96: int, n_97: int, i_98: int, j_99: int, memo: list[int]) -> list[int]:
-    _x_13896 = m_96 < i_98
-    if _x_13896:
+def fill(xs_58: list[int], ys_59: list[int], m_60: int, n_61: int, i_62: int, j_63: int, memo: list[int]) -> list[int]:
+    _x_21944 = m_60 < i_62
+    if _x_21944:
         return memo
     else:
-        _x_13898 = n_97 < j_99
-        if _x_13898:
-            _x_14000 = 1
-            _x_14003 = i_98 + 1
-            _x_14004 = 0
-            _x_14007 = fill(xs_94, ys_95, m_96, n_97, _x_14003, 0, memo)
-            return _x_14007
+        _x_21946 = n_61 < j_63
+        if _x_21946:
+            _x_22038 = 1
+            _x_22041 = i_62 + 1
+            _x_22042 = 0
+            _x_22045 = fill(xs_58, ys_59, m_60, n_61, _x_22041, 0, memo)
+            return _x_22045
         else:
-            _x_13906 = 1
-            _x_13909 = n_97 + 1
-            _x_13910 = i_98 * _x_13909
-            _x_13911 = _x_13910 + j_99
-            def _f_13913():
-                _x_13912 = True
+            _x_21954 = 1
+            _x_21957 = n_61 + 1
+            _x_21958 = i_62 * _x_21957
+            _x_21959 = _x_21958 + j_63
+            def _f_21961():
+                _x_21960 = True
                 return True
-            _alt_13914 = _f_13913
-            def _f_13921():
-                _x_13917 = 0
-                _x_13920 = j_99 == 0
-                return _x_13920
-            _alt_13922 = _f_13921
-            _x_13925 = 0
-            _x_13928 = i_98 == 0
-            def _jp_13989(_y_13933: bool):
-                _x_13934 = True
-                if _y_13933:
-                    _x_13985 = j_99 + 1
-                    _x_13986 = set_(None, memo, _x_13911, 0)
-                    _x_13987 = fill(xs_94, ys_95, m_96, n_97, i_98, _x_13985, _x_13986)
-                    return _x_13987
+            _alt_21962 = _f_21961
+            def _f_21970():
+                _x_21966 = 0
+                _x_21969 = j_63 == 0
+                return _x_21969
+            _alt_21971 = _f_21970
+            _x_21975 = 0
+            _x_21978 = i_62 == 0
+            def _jp_22027(_y_21983: bool):
+                _x_21984 = True
+                _x_21985 = _y_21983 == True
+                if _x_21985:
+                    _x_22023 = j_63 + 1
+                    _x_22024 = set_(None, memo, _x_21959, 0)
+                    _x_22025 = fill(xs_58, ys_59, m_60, n_61, i_62, _x_22023, _x_22024)
+                    return _x_22025
                 else:
-                    def _f_13940(xs_103: list[int], i_104: int):
-                        _x_13938 = len(xs_103)
-                        _x_13939 = i_104 < _x_13938
-                        return _x_13939
-                    _x_13942 = _x_13941.get_elem__2
-                    _x_13947 = i_98 - 1
-                    _x_13948 = _x_13942(_x_13943, xs_94, _x_13947)
-                    _x_13949 = j_99 - 1
-                    _x_13950 = _x_13942(_x_13943, ys_95, _x_13949)
-                    _x_13951 = _x_13948 == _x_13950
-                    def _jp_13983(_y_13979: int):
-                        _x_13980 = j_99 + 1
-                        _x_13981 = set_(None, memo, _x_13911, _y_13979)
-                        _x_13982 = fill(xs_94, ys_95, m_96, n_97, i_98, _x_13980, _x_13981)
-                        return _x_13982
-                    if _x_13951:
-                        def _f_13972(xs_108: list[int], i_109: int):
-                            _x_13970 = len(xs_108)
-                            _x_13971 = i_109 < _x_13970
-                            return _x_13971
-                        _x_13974 = _x_13973.get_elem__2
-                        _x_13975 = _x_13947 * _x_13909
-                        _x_13976 = _x_13975 + _x_13949
-                        _x_13977 = _x_13974(_x_13943, memo, _x_13976)
-                        _x_13978 = _x_13977 + 1
-                        return _jp_13983(_x_13978)
+                    _x_21988 = _x_21987.field_2
+                    _x_21993 = i_62 - 1
+                    _x_21994 = _x_21988(_x_21989, xs_58, _x_21993)
+                    _x_21995 = j_63 - 1
+                    _x_21996 = _x_21988(_x_21989, ys_59, _x_21995)
+                    _x_21997 = _x_21994 == _x_21996
+                    _x_21998 = _x_21997 == True
+                    def _jp_22021(_y_22017: int):
+                        _x_22018 = j_63 + 1
+                        _x_22019 = set_(None, memo, _x_21959, _y_22017)
+                        _x_22020 = fill(xs_58, ys_59, m_60, n_61, i_62, _x_22018, _x_22019)
+                        return _x_22020
+                    if _x_21998:
+                        _x_22012 = _x_22011.field_2
+                        _x_22013 = _x_21993 * _x_21957
+                        _x_22014 = _x_22013 + _x_21995
+                        _x_22015 = _x_22012(_x_21989, memo, _x_22014)
+                        _x_22016 = _x_22015 + 1
+                        return _jp_22021(_x_22016)
                     else:
-                        _x_13955 = max
-                        def _f_13959(xs_110: list[int], i_111: int):
-                            _x_13957 = len(xs_110)
-                            _x_13958 = i_111 < _x_13957
-                            return _x_13958
-                        _x_13961 = _x_13960.get_elem__2
-                        _x_13962 = _x_13947 * _x_13909
-                        _x_13963 = _x_13962 + j_99
-                        _x_13964 = _x_13961(_x_13943, memo, _x_13963)
-                        _x_13965 = _x_13910 + _x_13949
-                        _x_13966 = _x_13961(_x_13943, memo, _x_13965)
-                        _x_13967 = _x_13955(_x_13964, _x_13966)
-                        return _jp_13983(_x_13967)
-            def _jp_13995():
-                _x_13994 = _alt_13914()
-                return _jp_13989(_x_13994)
-            def _jp_13992():
-                _x_13991 = _alt_13922()
-                return _jp_13989(_x_13991)
-            if _x_13928:
-                return _jp_13995()
+                        _x_22001 = max
+                        _x_22003 = _x_22002.field_2
+                        _x_22004 = _x_21993 * _x_21957
+                        _x_22005 = _x_22004 + j_63
+                        _x_22006 = _x_22003(_x_21989, memo, _x_22005)
+                        _x_22007 = _x_21958 + _x_21995
+                        _x_22008 = _x_22003(_x_21989, memo, _x_22007)
+                        _x_22009 = _x_22001(_x_22006, _x_22008)
+                        return _jp_22021(_x_22009)
+            def _jp_22033():
+                _x_22032 = _alt_21962()
+                return _jp_22027(_x_22032)
+            def _jp_22030():
+                _x_22029 = _alt_21971()
+                return _jp_22027(_x_22029)
+            if _x_21978:
+                return _jp_22033()
             else:
-                return _jp_13992()
+                return _jp_22030()
 
 # Lean: Corpus.Production.lcsLength.fill
-def fill(xs_112: list[int], ys_113: list[int], m_114: int, n_115: int, i_116: int, j_117: int, memo_118: list[int]) -> list[int]:
-    _x_14012 = m_114 < i_116
-    if _x_14012:
-        return memo_118
+def fill(xs_70: list[int], ys_71: list[int], m_72: int, n_73: int, i_74: int, j_75: int, memo_76: list[int]) -> list[int]:
+    _x_22050 = m_72 < i_74
+    if _x_22050:
+        return memo_76
     else:
-        _x_14014 = n_115 < j_117
-        if _x_14014:
-            _x_14116 = 1
-            _x_14119 = i_116 + 1
-            _x_14120 = 0
-            _x_14123 = fill(xs_112, ys_113, m_114, n_115, _x_14119, 0, memo_118)
-            return _x_14123
+        _x_22052 = n_73 < j_75
+        if _x_22052:
+            _x_22144 = 1
+            _x_22147 = i_74 + 1
+            _x_22148 = 0
+            _x_22151 = fill(xs_70, ys_71, m_72, n_73, _x_22147, 0, memo_76)
+            return _x_22151
         else:
-            _x_14022 = 1
-            _x_14025 = n_115 + 1
-            _x_14026 = i_116 * _x_14025
-            _x_14027 = _x_14026 + j_117
-            def _f_14029():
-                _x_14028 = True
+            _x_22060 = 1
+            _x_22063 = n_73 + 1
+            _x_22064 = i_74 * _x_22063
+            _x_22065 = _x_22064 + j_75
+            def _f_22067():
+                _x_22066 = True
                 return True
-            _alt_14030 = _f_14029
-            def _f_14037():
-                _x_14033 = 0
-                _x_14036 = j_117 == 0
-                return _x_14036
-            _alt_14038 = _f_14037
-            _x_14041 = 0
-            _x_14044 = i_116 == 0
-            def _jp_14105(_y_14049: bool):
-                _x_14050 = True
-                if _y_14049:
-                    _x_14101 = j_117 + 1
-                    _x_14102 = set_(None, memo_118, _x_14027, 0)
-                    _x_14103 = fill(xs_112, ys_113, m_114, n_115, i_116, _x_14101, _x_14102)
-                    return _x_14103
+            _alt_22068 = _f_22067
+            def _f_22076():
+                _x_22072 = 0
+                _x_22075 = j_75 == 0
+                return _x_22075
+            _alt_22077 = _f_22076
+            _x_22081 = 0
+            _x_22084 = i_74 == 0
+            def _jp_22133(_y_22089: bool):
+                _x_22090 = True
+                _x_22091 = _y_22089 == True
+                if _x_22091:
+                    _x_22129 = j_75 + 1
+                    _x_22130 = set_(None, memo_76, _x_22065, 0)
+                    _x_22131 = fill(xs_70, ys_71, m_72, n_73, i_74, _x_22129, _x_22130)
+                    return _x_22131
                 else:
-                    def _f_14056(xs_122: list[int], i_123: int):
-                        _x_14054 = len(xs_122)
-                        _x_14055 = i_123 < _x_14054
-                        return _x_14055
-                    _x_14058 = _x_14057.get_elem__2
-                    _x_14063 = i_116 - 1
-                    _x_14064 = _x_14058(_x_14059, xs_112, _x_14063)
-                    _x_14065 = j_117 - 1
-                    _x_14066 = _x_14058(_x_14059, ys_113, _x_14065)
-                    _x_14067 = _x_14064 == _x_14066
-                    def _jp_14099(_y_14095: int):
-                        _x_14096 = j_117 + 1
-                        _x_14097 = set_(None, memo_118, _x_14027, _y_14095)
-                        _x_14098 = fill(xs_112, ys_113, m_114, n_115, i_116, _x_14096, _x_14097)
-                        return _x_14098
-                    if _x_14067:
-                        def _f_14088(xs_127: list[int], i_128: int):
-                            _x_14086 = len(xs_127)
-                            _x_14087 = i_128 < _x_14086
-                            return _x_14087
-                        _x_14090 = _x_14089.get_elem__2
-                        _x_14091 = _x_14063 * _x_14025
-                        _x_14092 = _x_14091 + _x_14065
-                        _x_14093 = _x_14090(_x_14059, memo_118, _x_14092)
-                        _x_14094 = _x_14093 + 1
-                        return _jp_14099(_x_14094)
+                    _x_22094 = _x_22093.field_2
+                    _x_22099 = i_74 - 1
+                    _x_22100 = _x_22094(_x_22095, xs_70, _x_22099)
+                    _x_22101 = j_75 - 1
+                    _x_22102 = _x_22094(_x_22095, ys_71, _x_22101)
+                    _x_22103 = _x_22100 == _x_22102
+                    _x_22104 = _x_22103 == True
+                    def _jp_22127(_y_22123: int):
+                        _x_22124 = j_75 + 1
+                        _x_22125 = set_(None, memo_76, _x_22065, _y_22123)
+                        _x_22126 = fill(xs_70, ys_71, m_72, n_73, i_74, _x_22124, _x_22125)
+                        return _x_22126
+                    if _x_22104:
+                        _x_22118 = _x_22117.field_2
+                        _x_22119 = _x_22099 * _x_22063
+                        _x_22120 = _x_22119 + _x_22101
+                        _x_22121 = _x_22118(_x_22095, memo_76, _x_22120)
+                        _x_22122 = _x_22121 + 1
+                        return _jp_22127(_x_22122)
                     else:
-                        _x_14071 = max
-                        def _f_14075(xs_129: list[int], i_130: int):
-                            _x_14073 = len(xs_129)
-                            _x_14074 = i_130 < _x_14073
-                            return _x_14074
-                        _x_14077 = _x_14076.get_elem__2
-                        _x_14078 = _x_14063 * _x_14025
-                        _x_14079 = _x_14078 + j_117
-                        _x_14080 = _x_14077(_x_14059, memo_118, _x_14079)
-                        _x_14081 = _x_14026 + _x_14065
-                        _x_14082 = _x_14077(_x_14059, memo_118, _x_14081)
-                        _x_14083 = _x_14071(_x_14080, _x_14082)
-                        return _jp_14099(_x_14083)
-            def _jp_14111():
-                _x_14110 = _alt_14030()
-                return _jp_14105(_x_14110)
-            def _jp_14108():
-                _x_14107 = _alt_14038()
-                return _jp_14105(_x_14107)
-            if _x_14044:
-                return _jp_14111()
+                        _x_22107 = max
+                        _x_22109 = _x_22108.field_2
+                        _x_22110 = _x_22099 * _x_22063
+                        _x_22111 = _x_22110 + j_75
+                        _x_22112 = _x_22109(_x_22095, memo_76, _x_22111)
+                        _x_22113 = _x_22064 + _x_22101
+                        _x_22114 = _x_22109(_x_22095, memo_76, _x_22113)
+                        _x_22115 = _x_22107(_x_22112, _x_22114)
+                        return _jp_22127(_x_22115)
+            def _jp_22139():
+                _x_22138 = _alt_22068()
+                return _jp_22133(_x_22138)
+            def _jp_22136():
+                _x_22135 = _alt_22077()
+                return _jp_22133(_x_22135)
+            if _x_22084:
+                return _jp_22139()
             else:
-                return _jp_14108()
+                return _jp_22136()
 
 # Lean: Corpus.Production.computeZArray.matchLength
-def match_length(s_131: list[str], t: list[str], i_132: int, j_133: int) -> int:
-    def _f_14129():
-        _x_14128 = True
+def match_length(s_83: list[str], t: list[str], i_84: int, j_85: int) -> int:
+    def _f_22157():
+        _x_22156 = True
         return True
-    _alt_14130 = _f_14129
-    def _f_14134():
-        _x_14131 = len(t)
-        _x_14132 = _x_14131 <= j_133
-        return _x_14132
-    _alt_14135 = _f_14134
-    _x_14136 = len(s_131)
-    _x_14137 = _x_14136 <= i_132
-    def _jp_14182(_y_14143: bool):
-        _x_14144 = True
-        if _y_14143:
-            _x_14178 = 0
+    _alt_22158 = _f_22157
+    def _f_22162():
+        _x_22159 = len(t)
+        _x_22160 = _x_22159 <= j_85
+        return _x_22160
+    _alt_22163 = _f_22162
+    _x_22164 = len(s_83)
+    _x_22165 = _x_22164 <= i_84
+    def _jp_22206(_y_22171: bool):
+        _x_22172 = True
+        _x_22173 = _y_22171 == True
+        if _x_22173:
+            _x_22202 = 0
             return 0
         else:
-            def _f_14153(xs_136: list[str], i_137: int):
-                _x_14151 = len(xs_136)
-                _x_14152 = i_137 < _x_14151
-                return _x_14152
-            _x_14155 = _x_14154.get_elem__2
-            _x_14157 = _x_14155(_x_14156, s_131, i_132)
-            _x_14158 = _x_14155(_x_14156, t, j_133)
-            _x_14159 = _x_14157 == _x_14158
-            if _x_14159:
-                _x_14169 = 1
-                _x_14172 = i_132 + 1
-                _x_14173 = j_133 + 1
-                _x_14174 = match_length(s_131, t, _x_14172, _x_14173)
-                _x_14175 = 1 + _x_14174
-                return _x_14175
+            _x_22179 = _x_22178.field_2
+            _x_22181 = _x_22179(_x_22180, s_83, i_84)
+            _x_22182 = _x_22179(_x_22180, t, j_85)
+            _x_22183 = _x_22181 == _x_22182
+            _x_22184 = _x_22183 == True
+            if _x_22184:
+                _x_22193 = 1
+                _x_22196 = i_84 + 1
+                _x_22197 = j_85 + 1
+                _x_22198 = match_length(s_83, t, _x_22196, _x_22197)
+                _x_22199 = 1 + _x_22198
+                return _x_22199
             else:
-                _x_14162 = 0
+                _x_22186 = 0
                 return 0
-    def _jp_14188():
-        _x_14187 = _alt_14130()
-        return _jp_14182(_x_14187)
-    def _jp_14185():
-        _x_14184 = _alt_14135()
-        return _jp_14182(_x_14184)
-    if _x_14137:
-        return _jp_14188()
+    def _jp_22212():
+        _x_22211 = _alt_22158()
+        return _jp_22206(_x_22211)
+    def _jp_22209():
+        _x_22208 = _alt_22163()
+        return _jp_22206(_x_22208)
+    if _x_22165:
+        return _jp_22212()
     else:
-        return _jp_14185()
+        return _jp_22209()
 
 # Lean: Corpus.Production.computeZArray.compute
-def compute(s_138: list[str], n_139: int, z: list[int], i_140: int, l: int, r: int) -> list[int]:
-    _x_14190 = n_139 <= i_140
-    if _x_14190:
-        return z
-    else:
-        _x_14192 = r < i_140
-        if _x_14192:
-            _x_14229 = 0
-            _x_14232 = match_length(s_138, s_138, i_140, 0)
-            _x_14233 = set_(None, z, i_140, _x_14232)
-            _x_14234 = 0 < _x_14232
-            if _x_14234:
-                _x_14248 = 1
-                _x_14251 = i_140 + 1
-                _x_14255 = i_140 + _x_14232
-                _x_14256 = _x_14255 - 1
-                _x_14257 = compute(s_138, n_139, _x_14233, _x_14251, i_140, _x_14256)
-                return _x_14257
-            else:
-                _x_14239 = 1
-                _x_14242 = i_140 + 1
-                _x_14243 = compute(s_138, n_139, _x_14233, _x_14242, l, r)
-                return _x_14243
+def compute(s_88: list[str], n_89: int, z: list[int], i_90: int, l: int, r: int) -> list[int]:
+    while True:
+        _x_22214 = n_89 <= i_90
+        if _x_22214:
+            return z
         else:
-            _x_14197 = i_140 - l
-            def _f_14201(xs_143: list[int], i_144: int):
-                _x_14199 = len(xs_143)
-                _x_14200 = i_144 < _x_14199
-                return _x_14200
-            _x_14203 = _x_14202.get_elem__2
-            _x_14205 = _x_14203(_x_14204, z, _x_14197)
-            _x_14209 = r - i_140
-            _x_14210 = 1
-            _x_14213 = _x_14209 + 1
-            _x_14214 = _x_14205 < _x_14213
-            if _x_14214:
-                _x_14224 = set_(None, z, i_140, _x_14205)
-                _x_14225 = i_140 + 1
-                _x_14226 = compute(s_138, n_139, _x_14224, _x_14225, l, r)
-                return _x_14226
+            _x_22216 = r < i_90
+            if _x_22216:
+                _x_22249 = 0
+                _x_22252 = match_length(s_88, s_88, i_90, 0)
+                _x_22253 = set_(None, z, i_90, _x_22252)
+                _x_22254 = 0 < _x_22252
+                if _x_22254:
+                    _x_22268 = 1
+                    _x_22271 = i_90 + 1
+                    _x_22275 = i_90 + _x_22252
+                    _x_22276 = _x_22275 - 1
+                    s_88, n_89, z, i_90, l, r = s_88, n_89, _x_22253, _x_22271, i_90, _x_22276
+                    continue
+                else:
+                    _x_22259 = 1
+                    _x_22262 = i_90 + 1
+                    s_88, n_89, z, i_90, l, r = s_88, n_89, _x_22253, _x_22262, l, r
+                    continue
             else:
-                _x_14216 = r + 1
-                _x_14217 = match_length(s_138, s_138, _x_14216, _x_14213)
-                _x_14218 = _x_14213 + _x_14217
-                _x_14219 = set_(None, z, i_140, _x_14218)
-                _x_14220 = i_140 + 1
-                _x_14221 = r + _x_14217
-                _x_14222 = compute(s_138, n_139, _x_14219, _x_14220, i_140, _x_14221)
-                return _x_14222
+                _x_22221 = i_90 - l
+                _x_22223 = _x_22222.field_2
+                _x_22225 = _x_22223(_x_22224, z, _x_22221)
+                _x_22229 = r - i_90
+                _x_22230 = 1
+                _x_22233 = _x_22229 + 1
+                _x_22234 = _x_22225 < _x_22233
+                if _x_22234:
+                    _x_22244 = set_(None, z, i_90, _x_22225)
+                    _x_22245 = i_90 + 1
+                    s_88, n_89, z, i_90, l, r = s_88, n_89, _x_22244, _x_22245, l, r
+                    continue
+                else:
+                    _x_22236 = r + 1
+                    _x_22237 = match_length(s_88, s_88, _x_22236, _x_22233)
+                    _x_22238 = _x_22233 + _x_22237
+                    _x_22239 = set_(None, z, i_90, _x_22238)
+                    _x_22240 = i_90 + 1
+                    _x_22241 = r + _x_22237
+                    s_88, n_89, z, i_90, l, r = s_88, n_89, _x_22239, _x_22240, i_90, _x_22241
+                    continue
 
 # Lean: Corpus.Production.naiveStringMatchAll.checkMatch
-def check_match(t_147: list[str], p: list[str], i_148: int, j_149: int) -> bool:
-    _x_14263 = len(p)
-    _x_14264 = _x_14263 <= j_149
-    if _x_14264:
-        _x_14295 = True
-        return True
-    else:
-        def _f_14272(xs_150: list[str], i_151: int):
-            _x_14270 = len(xs_150)
-            _x_14271 = i_151 < _x_14270
-            return _x_14271
-        _x_14274 = _x_14273.get_elem__2
-        _x_14279 = i_148 + j_149
-        _x_14280 = _x_14274(_x_14275, t_147, _x_14279)
-        _x_14281 = _x_14274(_x_14275, p, j_149)
-        _x_14282 = _x_14280 == _x_14281
-        _x_14283 = True
-        if _x_14282:
-            _x_14288 = 1
-            _x_14291 = j_149 + 1
-            _x_14292 = check_match(t_147, p, i_148, _x_14291)
-            return _x_14292
+def check_match(t_95: list[str], p: list[str], i_96: int, j_97: int) -> bool:
+    while True:
+        _x_22283 = len(p)
+        _x_22284 = _x_22283 <= j_97
+        if _x_22284:
+            _x_22311 = True
+            return True
         else:
-            _x_14286 = False
-            return False
+            _x_22290 = _x_22289.field_2
+            _x_22295 = i_96 + j_97
+            _x_22296 = _x_22290(_x_22291, t_95, _x_22295)
+            _x_22297 = _x_22290(_x_22291, p, j_97)
+            _x_22298 = _x_22296 == _x_22297
+            _x_22299 = True
+            _x_22300 = _x_22298 == True
+            if _x_22300:
+                _x_22304 = 1
+                _x_22307 = j_97 + 1
+                t_95, p, i_96, j_97 = t_95, p, i_96, _x_22307
+                continue
+            else:
+                _x_22302 = False
+                return False
 
 # Lean: Corpus.Production.naiveStringMatchAll.search
-def search(t_152: list[str], p_153: list[str], n_154: int, m_155: int, i_156: int, acc_157: list[int]) -> list[int]:
-    _x_14301 = n_154 - m_155
-    _x_14302 = _x_14301 < i_156
-    if _x_14302:
-        _x_14331 = list(reversed(acc_157))
-        return _x_14331
-    else:
-        _x_14304 = 0
-        _x_14307 = check_match(t_152, p_153, i_156, 0)
-        _x_14308 = True
-        if _x_14307:
-            _x_14323 = 1
-            _x_14326 = i_156 + 1
-            _x_14327 = [i_156] + acc_157
-            _x_14328 = search(t_152, p_153, n_154, m_155, _x_14326, _x_14327)
-            return _x_14328
+def search(t_98: list[str], p_99: list[str], n_100: int, m_101: int, i_102: int, acc_103: list[int]) -> list[int]:
+    while True:
+        _x_22317 = n_100 - m_101
+        _x_22318 = _x_22317 < i_102
+        if _x_22318:
+            _x_22347 = list(reversed(acc_103))
+            return _x_22347
         else:
-            _x_14314 = 1
-            _x_14317 = i_156 + 1
-            _x_14318 = search(t_152, p_153, n_154, m_155, _x_14317, acc_157)
-            return _x_14318
+            _x_22320 = 0
+            _x_22323 = check_match(t_98, p_99, i_102, 0)
+            _x_22324 = True
+            _x_22325 = _x_22323 == True
+            if _x_22325:
+                _x_22339 = 1
+                _x_22342 = i_102 + 1
+                _x_22343 = [i_102] + acc_103
+                t_98, p_99, n_100, m_101, i_102, acc_103 = t_98, p_99, n_100, m_101, _x_22342, _x_22343
+                continue
+            else:
+                _x_22330 = 1
+                _x_22333 = i_102 + 1
+                t_98, p_99, n_100, m_101, i_102, acc_103 = t_98, p_99, n_100, m_101, _x_22333, acc_103
+                continue
 
 # Lean: Corpus.Production.naiveStringMatch.checkMatch
-def check_match(t_158: list[str], p_159: list[str], i_160: int, j_161: int) -> bool:
-    _x_14334 = len(p_159)
-    _x_14335 = _x_14334 <= j_161
-    if _x_14335:
-        _x_14366 = True
-        return True
-    else:
-        def _f_14343(xs_162: list[str], i_163: int):
-            _x_14341 = len(xs_162)
-            _x_14342 = i_163 < _x_14341
-            return _x_14342
-        _x_14345 = _x_14344.get_elem__2
-        _x_14350 = i_160 + j_161
-        _x_14351 = _x_14345(_x_14346, t_158, _x_14350)
-        _x_14352 = _x_14345(_x_14346, p_159, j_161)
-        _x_14353 = _x_14351 == _x_14352
-        _x_14354 = True
-        if _x_14353:
-            _x_14359 = 1
-            _x_14362 = j_161 + 1
-            _x_14363 = check_match(t_158, p_159, i_160, _x_14362)
-            return _x_14363
+def check_match(t_104: list[str], p_105: list[str], i_106: int, j_107: int) -> bool:
+    while True:
+        _x_22350 = len(p_105)
+        _x_22351 = _x_22350 <= j_107
+        if _x_22351:
+            _x_22378 = True
+            return True
         else:
-            _x_14357 = False
-            return False
+            _x_22357 = _x_22356.field_2
+            _x_22362 = i_106 + j_107
+            _x_22363 = _x_22357(_x_22358, t_104, _x_22362)
+            _x_22364 = _x_22357(_x_22358, p_105, j_107)
+            _x_22365 = _x_22363 == _x_22364
+            _x_22366 = True
+            _x_22367 = _x_22365 == True
+            if _x_22367:
+                _x_22371 = 1
+                _x_22374 = j_107 + 1
+                t_104, p_105, i_106, j_107 = t_104, p_105, i_106, _x_22374
+                continue
+            else:
+                _x_22369 = False
+                return False
 
 # Lean: Corpus.Production.naiveStringMatch.search
-def search(t_164: list[str], p_165: list[str], n_166: int, m_167: int, i_168: int) -> int | None:
-    _x_14372 = n_166 - m_167
-    _x_14373 = _x_14372 < i_168
-    if _x_14373:
-        _x_14394 = None
-        return _x_14394
-    else:
-        _x_14375 = 0
-        _x_14378 = check_match(t_164, p_165, i_168, 0)
-        _x_14379 = True
-        if _x_14378:
-            _x_14391 = i_168
-            return _x_14391
+def search(t_108: list[str], p_109: list[str], n_110: int, m_111: int, i_112: int) -> int | None:
+    while True:
+        _x_22384 = n_110 - m_111
+        _x_22385 = _x_22384 < i_112
+        if _x_22385:
+            _x_22406 = None
+            return _x_22406
         else:
-            _x_14385 = 1
-            _x_14388 = i_168 + 1
-            _x_14389 = search(t_164, p_165, n_166, m_167, _x_14388)
-            return _x_14389
+            _x_22387 = 0
+            _x_22390 = check_match(t_108, p_109, i_112, 0)
+            _x_22391 = True
+            _x_22392 = _x_22390 == True
+            if _x_22392:
+                _x_22403 = i_112
+                return _x_22403
+            else:
+                _x_22397 = 1
+                _x_22400 = i_112 + 1
+                t_108, p_109, n_110, m_111, i_112 = t_108, p_109, n_110, m_111, _x_22400
+                continue
 
 # Lean: Corpus.Production.lomutoPartition.go
-def lomuto_partition_go(hi: int, pivot: int, arr: list[int], i_169: int, j_170: int) -> tuple[list[int], int]:
-    _x_14397 = hi <= j_170
-    if _x_14397:
-        _x_14430 = swap_(None, arr, i_169, hi)
-        _x_14431 = (_x_14430, i_169)
-        return _x_14431
-    else:
-        def _f_14402(xs_171: list[int], i_172: int):
-            _x_14400 = len(xs_171)
-            _x_14401 = i_172 < _x_14400
-            return _x_14401
-        _x_14404 = _x_14403.get_elem__2
-        _x_14406 = _x_14404(_x_14405, arr, j_170)
-        _x_14407 = _x_14406 < pivot
-        if _x_14407:
-            _x_14418 = swap_(None, arr, i_169, j_170)
-            _x_14422 = 1
-            _x_14425 = i_169 + 1
-            _x_14426 = j_170 + 1
-            _x_14427 = lomuto_partition_go(hi, pivot, _x_14418, _x_14425, _x_14426)
-            return _x_14427
+def lomuto_partition_go(hi: int, pivot: int, arr: list[int], i_113: int, j_114: int) -> tuple[list[int], int]:
+    while True:
+        _x_22409 = hi <= j_114
+        if _x_22409:
+            _x_22438 = swap_if_in_bounds(None, arr, i_113, hi)
+            _x_22439 = (_x_22438, i_113)
+            return _x_22439
         else:
-            _x_14412 = 1
-            _x_14415 = j_170 + 1
-            _x_14416 = lomuto_partition_go(hi, pivot, arr, i_169, _x_14415)
-            return _x_14416
+            _x_22412 = _x_22411.field_2
+            _x_22414 = _x_22412(_x_22413, arr, j_114)
+            _x_22415 = _x_22414 < pivot
+            if _x_22415:
+                _x_22426 = swap_if_in_bounds(None, arr, i_113, j_114)
+                _x_22430 = 1
+                _x_22433 = i_113 + 1
+                _x_22434 = j_114 + 1
+                hi, pivot, arr, i_113, j_114 = hi, pivot, _x_22426, _x_22433, _x_22434
+                continue
+            else:
+                _x_22420 = 1
+                _x_22423 = j_114 + 1
+                hi, pivot, arr, i_113, j_114 = hi, pivot, arr, i_113, _x_22423
+                continue
 
 # Lean: Corpus.Production.UnionFind.ofSize.build
-def of_size_build(n_174: int, i_175: int, nodes: list[UFNode]) -> list[UFNode]:
-    _x_14434 = n_174 <= i_175
-    if _x_14434:
-        return nodes
-    else:
-        _x_14439 = 1
-        _x_14442 = i_175 + 1
-        _x_14443 = 0
-        _x_14446 = UFNode_mk(i_175, 0)
-        _x_14447 = array_push(None, nodes, _x_14446)
-        _x_14448 = of_size_build(n_174, _x_14442, _x_14447)
-        return _x_14448
+def of_size_build(n_116: int, i_117: int, nodes: list[UFNode]) -> list[UFNode]:
+    while True:
+        _x_22442 = n_116 <= i_117
+        if _x_22442:
+            return nodes
+        else:
+            _x_22447 = 1
+            _x_22450 = i_117 + 1
+            _x_22451 = 0
+            _x_22454 = UFNode_mk(i_117, 0)
+            _x_22455 = array_push(None, nodes, _x_22454)
+            n_116, i_117, nodes = n_116, _x_22450, _x_22455
+            continue
+
+# Lean: Corpus.Production.Color.ctorIdx
+def ctor_idx(x_118: Color) -> int:
+    match x_118:
+        case red():
+            _x_22460 = 0
+            return _x_22460
+        case black():
+            _x_22461 = 1
+            return _x_22461
+
+# Lean: Corpus.Production.instBEqColor.beq
+def beq(x_22464: Color, y_22465: Color) -> bool:
+    _x_22469 = ctor_idx(x_22464)
+    _x_22470 = ctor_idx(y_22465)
+    _x_22471 = _x_22469 == _x_22470
+    return _x_22471
+
+# Lean: Corpus.Production.instBEqColor
+def inst_beq_color() -> Any:
+    _x_22474 = BEq_mk(_x_22473)
+    return _x_22474
 
 # Lean: Corpus.Sorting.unique.go
-def unique_go(xs_176: list[int], seen: list[int]) -> list[int]:
-    def _f_14453():
-        _x_14452 = list(reversed(seen))
-        return _x_14452
-    _alt_14454 = _f_14453
-    def _f_14465(x_178: int, rest_179: list[int]):
-        _x_14456 = x_178 in seen
-        _x_14457 = True
-        if _x_14456:
-            _x_14463 = unique_go(rest_179, seen)
-            return _x_14463
+def unique_go(xs_119: list[int], seen: list[int]) -> list[int]:
+    while True:
+        def _f_22476():
+            _x_22475 = list(reversed(seen))
+            return _x_22475
+        _alt_22477 = _f_22476
+        if len(xs_119) == 0:
+            _x_22492 = _alt_22477()
+            return _x_22492
         else:
-            _x_14460 = [x_178] + seen
-            _x_14461 = unique_go(rest_179, _x_14460)
-            return _x_14461
-    _alt_14466 = _f_14465
-    if len(xs_176) == 0:
-        _x_14468 = _alt_14454()
-        return _x_14468
-    else:
-        head_14469 = xs_176[0]
-        tail_14470 = xs_176[1:]
-        _x_14471 = _alt_14466(head_14469, tail_14470)
-        return _x_14471
+            head_22493 = xs_119[0]
+            tail_22494 = xs_119[1:]
+            x_121 = head_22493
+            rest_122 = tail_22494
+            _x_22480 = x_121 in seen
+            _x_22481 = True
+            _x_22482 = _x_22480 == True
+            if _x_22482:
+                xs_119, seen = rest_122, seen
+                continue
+            else:
+                _x_22484 = [x_121] + seen
+                xs_119, seen = rest_122, _x_22484
+                continue
 
 # Lean: Corpus.Sorting.mode.count
-def count(x_180: int, xs_181: list[int]) -> int:
-    def _f_14489(acc_182: int, y_183: int):
-        _x_14476 = y_183 == x_180
-        _x_14477 = True
-        if _x_14476:
-            _x_14484 = 1
-            _x_14487 = acc_182 + 1
-            return _x_14487
+def count(x_123: int, xs_124: list[int]) -> int:
+    def _f_22514(acc_125: int, y_126: int):
+        _x_22501 = y_126 == x_123
+        _x_22502 = True
+        _x_22503 = _x_22501 == True
+        if _x_22503:
+            _x_22509 = 1
+            _x_22512 = acc_125 + 1
+            return _x_22512
         else:
-            return acc_182
-    _x_14490 = 0
-    _x_14493 = functools.reduce(_f_14489, xs_181, 0)
-    return _x_14493
+            return acc_125
+    _x_22515 = 0
+    _x_22518 = functools.reduce(_f_22514, xs_124, 0)
+    return _x_22518
 
 # Lean: Corpus.Sorting.mode.go
-def mode_go(xs_184: list[int], best: int | None, best_count: int) -> int | None:
-    def _f_14495():
-        return best
-    _alt_14496 = _f_14495
-    def _f_14505(x_186: int, rest_187: list[int]):
-        _x_14497 = count(x_186, xs_184)
-        _x_14498 = best_count < _x_14497
-        if _x_14498:
-            _x_14502 = x_186
-            _x_14503 = mode_go(rest_187, _x_14502, _x_14497)
-            return _x_14503
+def mode_go(xs_127: list[int], best: int | None, best_count: int) -> int | None:
+    while True:
+        def _f_22520():
+            return best
+        _alt_22521 = _f_22520
+        if len(xs_127) == 0:
+            _x_22533 = _alt_22521()
+            return _x_22533
         else:
-            _x_14500 = mode_go(rest_187, best, best_count)
-            return _x_14500
-    _alt_14506 = _f_14505
-    if len(xs_184) == 0:
-        _x_14508 = _alt_14496()
-        return _x_14508
+            head_22534 = xs_127[0]
+            tail_22535 = xs_127[1:]
+            x_129 = head_22534
+            rest_130 = tail_22535
+            _x_22522 = count(x_129, xs_127)
+            _x_22523 = best_count < _x_22522
+            if _x_22523:
+                _x_22527 = x_129
+                xs_127, best, best_count = rest_130, _x_22527, _x_22522
+                continue
+            else:
+                xs_127, best, best_count = rest_130, best, best_count
+                continue
+
+# Lean: Corpus.Sorting.insertionSort.insert
+def insertion_sort_insert(x_132: int, sorted: list[int]) -> list[int]:
+    def _f_22541():
+        _x_22539 = []
+        _x_22540 = [x_132] + _x_22539
+        return _x_22540
+    _alt_22542 = _f_22541
+    def _f_22551(y_134: int, ys_135: list[int]):
+        _x_22543 = x_132 <= y_134
+        if _x_22543:
+            _x_22548 = [y_134] + ys_135
+            _x_22549 = [x_132] + _x_22548
+            return _x_22549
+        else:
+            _x_22545 = insertion_sort_insert(x_132, ys_135)
+            _x_22546 = [y_134] + _x_22545
+            return _x_22546
+    _alt_22552 = _f_22551
+    if len(sorted) == 0:
+        _x_22554 = _alt_22542()
+        return _x_22554
     else:
-        head_14509 = xs_184[0]
-        tail_14510 = xs_184[1:]
-        _x_14511 = _alt_14506(head_14509, tail_14510)
-        return _x_14511
+        head_22555 = sorted[0]
+        tail_22556 = sorted[1:]
+        _x_22557 = _alt_22552(head_22555, tail_22556)
+        return _x_22557
+
+# Lean: Corpus.Sorting.insertionSort
+def insertion_sort(xs_136: list[int]) -> list[int]:
+    def _f_22561(sorted_137: list[int], x_138: int):
+        _x_22560 = insertion_sort_insert(x_138, sorted_137)
+        return _x_22560
+    _x_22562 = []
+    _x_22563 = functools.reduce(_f_22561, xs_136, _x_22562)
+    return _x_22563
 
 # Lean: Corpus.Sorting.gnomeSort.go
-def gnome_sort_go(n_189: int, pos: int, arr_190: list[int]) -> list[int]:
-    _x_14514 = n_189 <= pos
-    if _x_14514:
-        return arr_190
+def gnome_sort_go(n_139: int, pos: int, arr_140: list[int]) -> list[int]:
+    _x_22565 = n_139 <= pos
+    if _x_22565:
+        return arr_140
     else:
-        def _f_14517():
-            _x_14516 = True
+        def _f_22568():
+            _x_22567 = True
             return True
-        _alt_14518 = _f_14517
-        def _f_14537():
-            def _f_14522(xs_193: list[int], i_194: int):
-                _x_14520 = len(xs_193)
-                _x_14521 = i_194 < _x_14520
-                return _x_14521
-            _x_14524 = _x_14523.get_elem__2
-            _x_14529 = 1
-            _x_14532 = pos - 1
-            _x_14533 = _x_14524(_x_14525, arr_190, _x_14532)
-            _x_14534 = _x_14524(_x_14525, arr_190, pos)
-            _x_14535 = _x_14533 <= _x_14534
-            return _x_14535
-        _alt_14538 = _f_14537
-        _x_14541 = 0
-        _x_14544 = pos == 0
-        def _jp_14572(_y_14549: bool):
-            _x_14550 = True
-            if _y_14549:
-                _x_14566 = 1
-                _x_14569 = pos + 1
-                _x_14570 = gnome_sort_go(n_189, _x_14569, arr_190)
-                return _x_14570
+        _alt_22569 = _f_22568
+        def _f_22584():
+            _x_22571 = _x_22570.field_2
+            _x_22576 = 1
+            _x_22579 = pos - 1
+            _x_22580 = _x_22571(_x_22572, arr_140, _x_22579)
+            _x_22581 = _x_22571(_x_22572, arr_140, pos)
+            _x_22582 = _x_22580 <= _x_22581
+            return _x_22582
+        _alt_22585 = _f_22584
+        _x_22589 = 0
+        _x_22592 = pos == 0
+        def _jp_22620(_y_22597: bool):
+            _x_22598 = True
+            _x_22599 = _y_22597 == True
+            if _x_22599:
+                _x_22614 = 1
+                _x_22617 = pos + 1
+                _x_22618 = gnome_sort_go(n_139, _x_22617, arr_140)
+                return _x_22618
             else:
-                _x_14556 = 1
-                _x_14559 = pos - 1
-                _x_14560 = swap_(None, arr_190, pos, _x_14559)
-                _x_14561 = gnome_sort_go(n_189, _x_14559, _x_14560)
-                return _x_14561
-        def _jp_14578():
-            _x_14577 = _alt_14518()
-            return _jp_14572(_x_14577)
-        def _jp_14575():
-            _x_14574 = _alt_14538()
-            return _jp_14572(_x_14574)
-        if _x_14544:
-            return _jp_14578()
+                _x_22604 = 1
+                _x_22607 = pos - 1
+                _x_22608 = swap_if_in_bounds(None, arr_140, pos, _x_22607)
+                _x_22609 = gnome_sort_go(n_139, _x_22607, _x_22608)
+                return _x_22609
+        def _jp_22626():
+            _x_22625 = _alt_22569()
+            return _jp_22620(_x_22625)
+        def _jp_22623():
+            _x_22622 = _alt_22585()
+            return _jp_22620(_x_22622)
+        if _x_22592:
+            return _jp_22626()
         else:
-            return _jp_14575()
+            return _jp_22623()
 
 # Lean: Corpus.Sorting.radixSort.go
-def radix_sort_go(max_val: int, exp: int, xs_195: list[int]) -> list[int]:
-    _x_14582 = max_val < exp
-    if _x_14582:
-        return xs_195
-    else:
-        def _f_14599(arr_196: list[list[int]], x_197: int):
-            _x_14590 = x_197 // exp
-            _x_14591 = 10
-            _x_14594 = _x_14590 % 10
-            def _f_14597(x_14595: list[int]):
-                _x_14596 = [x_197] + x_14595
-                return _x_14596
-            _x_14598 = modify(None, arr_196, _x_14594, _f_14597)
-            return _x_14598
-        _x_14600 = 10
-        _x_14603 = []
-        _x_14604 = mk_array(None, 10, _x_14603)
-        _x_14605 = functools.reduce(_f_14599, xs_195, _x_14604)
-        def _f_14611(acc_198: list[int], bucket: list[int]):
-            _x_14609 = list(reversed(bucket))
-            _x_14610 = acc_198 + _x_14609
-            return _x_14610
-        _x_14612 = 0
-        _x_14615 = len(_x_14605)
-        _x_14616 = array_foldl(None, None, _f_14611, _x_14603, _x_14605, 0, _x_14615)
-        _x_14620 = exp * 10
-        _x_14621 = radix_sort_go(max_val, _x_14620, _x_14616)
-        return _x_14621
+def radix_sort_go(max_val: int, exp: int, xs_143: list[int]) -> list[int]:
+    while True:
+        _x_22630 = max_val < exp
+        if _x_22630:
+            return xs_143
+        else:
+            def _f_22647(arr_144: list[list[int]], x_145: int):
+                _x_22638 = x_145 // exp
+                _x_22639 = 10
+                _x_22642 = _x_22638 % 10
+                def _f_22645(x_22643: list[int]):
+                    _x_22644 = [x_145] + x_22643
+                    return _x_22644
+                _x_22646 = modify(None, arr_144, _x_22642, _f_22645)
+                return _x_22646
+            _x_22648 = 10
+            _x_22651 = []
+            _x_22652 = array_replicate(None, 10, _x_22651)
+            _x_22653 = functools.reduce(_f_22647, xs_143, _x_22652)
+            def _f_22659(acc_146: list[int], bucket: list[int]):
+                _x_22657 = list(reversed(bucket))
+                _x_22658 = acc_146 + _x_22657
+                return _x_22658
+            _x_22660 = 0
+            _x_22663 = len(_x_22653)
+            _x_22664 = array_foldl(None, None, _f_22659, _x_22651, _x_22653, 0, _x_22663)
+            _x_22668 = exp * 10
+            max_val, exp, xs_143 = max_val, _x_22668, _x_22664
+            continue
 
 # Lean: Corpus.Sorting.countingSort.expand
-def expand(max_val_199: int, counts: list[int], i_200: int, acc_201: list[int]) -> list[int]:
-    _x_14625 = max_val_199 < i_200
-    if _x_14625:
-        return acc_201
-    else:
-        _x_14630 = 1
-        _x_14633 = i_200 + 1
-        _x_14637 = 0
-        _x_14640 = get_d(None, counts, i_200, 0)
-        _x_14641 = list_replicate(None, _x_14640, i_200)
-        _x_14642 = acc_201 + _x_14641
-        _x_14643 = expand(max_val_199, counts, _x_14633, _x_14642)
-        return _x_14643
+def expand(max_val_148: int, counts: list[int], i_149: int, acc_150: list[int]) -> list[int]:
+    while True:
+        _x_22673 = max_val_148 < i_149
+        if _x_22673:
+            return acc_150
+        else:
+            _x_22678 = 1
+            _x_22681 = i_149 + 1
+            _x_22685 = 0
+            _x_22688 = get_d(None, counts, i_149, 0)
+            _x_22689 = replicate_tr(None, _x_22688, i_149)
+            _x_22690 = acc_150 + _x_22689
+            max_val_148, counts, i_149, acc_150 = max_val_148, counts, _x_22681, _x_22690
+            continue
 
 # Lean: Corpus.Sorting.selectionSort.go.findMin
-def find_min(n_202: int, arr_203: list[int], j_204: int, min_idx: int) -> int:
-    _x_14647 = n_202 <= j_204
-    if _x_14647:
+def find_min(n_151: int, arr_152: list[int], j_153: int, min_idx: int) -> int:
+    _x_22695 = n_151 <= j_153
+    if _x_22695:
         return min_idx
     else:
-        _x_14652 = 1
-        _x_14655 = j_204 + 1
-        def _f_14659(xs_205: list[int], i_206: int):
-            _x_14657 = len(xs_205)
-            _x_14658 = i_206 < _x_14657
-            return _x_14658
-        _x_14661 = _x_14660.get_elem__2
-        _x_14663 = _x_14661(_x_14662, arr_203, j_204)
-        _x_14664 = _x_14661(_x_14662, arr_203, min_idx)
-        _x_14665 = _x_14663 < _x_14664
-        def _jp_14670(_y_14668: int):
-            _x_14669 = find_min(n_202, arr_203, _x_14655, _y_14668)
-            return _x_14669
-        if _x_14665:
-            return _jp_14670(j_204)
+        _x_22700 = 1
+        _x_22703 = j_153 + 1
+        _x_22705 = _x_22704.field_2
+        _x_22707 = _x_22705(_x_22706, arr_152, j_153)
+        _x_22708 = _x_22705(_x_22706, arr_152, min_idx)
+        _x_22709 = _x_22707 < _x_22708
+        def _jp_22714(_y_22712: int):
+            _x_22713 = find_min(n_151, arr_152, _x_22703, _y_22712)
+            return _x_22713
+        if _x_22709:
+            return _jp_22714(j_153)
         else:
-            return _jp_14670(min_idx)
+            return _jp_22714(min_idx)
 
 # Lean: Corpus.Sorting.selectionSort.go
-def selection_sort_go(n_207: int, i_208: int, arr_209: list[int]) -> list[int]:
-    _x_14674 = n_207 <= i_208
-    if _x_14674:
-        return arr_209
-    else:
-        _x_14676 = find_min(n_207, arr_209, i_208, i_208)
-        _x_14680 = 1
-        _x_14683 = i_208 + 1
-        _x_14684 = swap_(None, arr_209, i_208, _x_14676)
-        _x_14685 = selection_sort_go(n_207, _x_14683, _x_14684)
-        return _x_14685
+def selection_sort_go(n_154: int, i_155: int, arr_156: list[int]) -> list[int]:
+    while True:
+        _x_22718 = n_154 <= i_155
+        if _x_22718:
+            return arr_156
+        else:
+            _x_22720 = find_min(n_154, arr_156, i_155, i_155)
+            _x_22724 = 1
+            _x_22727 = i_155 + 1
+            _x_22728 = swap_if_in_bounds(None, arr_156, i_155, _x_22720)
+            n_154, i_155, arr_156 = n_154, _x_22727, _x_22728
+            continue
 
 # Lean: Corpus.Sorting.bubbleSort.outer.inner
-def outer_inner(n_211: int, i_212: int, j_213: int, arr_214: list[int]) -> list[int]:
-    _x_14692 = n_211 - i_212
-    _x_14693 = 1
-    _x_14696 = _x_14692 - 1
-    _x_14697 = _x_14696 <= j_213
-    if _x_14697:
-        return arr_214
+def outer_inner(n_158: int, i_159: int, j_160: int, arr_161: list[int]) -> list[int]:
+    _x_22736 = n_158 - i_159
+    _x_22737 = 1
+    _x_22740 = _x_22736 - 1
+    _x_22741 = _x_22740 <= j_160
+    if _x_22741:
+        return arr_161
     else:
-        def _f_14702(xs_215: list[int], i_216: int):
-            _x_14700 = len(xs_215)
-            _x_14701 = i_216 < _x_14700
-            return _x_14701
-        _x_14704 = _x_14703.get_elem__2
-        _x_14709 = j_213 + 1
-        _x_14710 = _x_14704(_x_14705, arr_214, _x_14709)
-        _x_14711 = _x_14704(_x_14705, arr_214, j_213)
-        _x_14712 = _x_14710 < _x_14711
-        def _jp_14718(_y_14716: list[int]):
-            _x_14717 = outer_inner(n_211, i_212, _x_14709, _y_14716)
-            return _x_14717
-        if _x_14712:
-            _x_14715 = swap_(None, arr_214, j_213, _x_14709)
-            return _jp_14718(_x_14715)
+        _x_22744 = _x_22743.field_2
+        _x_22749 = j_160 + 1
+        _x_22750 = _x_22744(_x_22745, arr_161, _x_22749)
+        _x_22751 = _x_22744(_x_22745, arr_161, j_160)
+        _x_22752 = _x_22750 < _x_22751
+        def _jp_22758(_y_22756: list[int]):
+            _x_22757 = outer_inner(n_158, i_159, _x_22749, _y_22756)
+            return _x_22757
+        if _x_22752:
+            _x_22755 = swap_if_in_bounds(None, arr_161, j_160, _x_22749)
+            return _jp_22758(_x_22755)
         else:
-            return _jp_14718(arr_214)
+            return _jp_22758(arr_161)
 
 # Lean: Corpus.Sorting.bubbleSort.outer
-def outer(n_218: int, i_219: int, arr_220: list[int]) -> list[int]:
-    _x_14722 = n_218 <= i_219
-    if _x_14722:
-        return arr_220
-    else:
-        _x_14727 = 1
-        _x_14730 = i_219 + 1
-        _x_14731 = 0
-        _x_14734 = outer_inner(n_218, i_219, 0, arr_220)
-        _x_14735 = outer(n_218, _x_14730, _x_14734)
-        return _x_14735
+def outer(n_163: int, i_164: int, arr_165: list[int]) -> list[int]:
+    while True:
+        _x_22762 = n_163 <= i_164
+        if _x_22762:
+            return arr_165
+        else:
+            _x_22767 = 1
+            _x_22770 = i_164 + 1
+            _x_22771 = 0
+            _x_22774 = outer_inner(n_163, i_164, 0, arr_165)
+            n_163, i_164, arr_165 = n_163, _x_22770, _x_22774
+            continue
 
 # Lean: Corpus.Sequences.vanEck.go
-def van_eck_go(n_221: int, i_222: int, prev: int, last_seen: list[tuple[int, int]], acc_223: list[int]) -> list[int]:
-    _x_14739 = n_221 < i_222
-    if _x_14739:
-        _x_14800 = list(reversed(acc_223))
-        return _x_14800
+def van_eck_go(n_166: int, i_167: int, prev: int, last_seen: list[tuple[int, int]], acc_168: list[int]) -> list[int]:
+    _x_22779 = n_166 < i_167
+    if _x_22779:
+        _x_22842 = list(reversed(acc_168))
+        return _x_22842
     else:
-        def _f_14744():
-            _x_14741 = 0
+        def _f_22784():
+            _x_22781 = 0
             return 0
-        _alt_14745 = _f_14744
-        def _f_14755(fst_14746: int, idx_225: int):
-            _x_14750 = 1
-            _x_14753 = i_222 - 1
-            _x_14754 = _x_14753 - idx_225
-            return _x_14754
-        _alt_14756 = _f_14755
-        def _f_14761(p_226: tuple[int, int]):
-            _x_14759 = p_226[0]
-            _x_14760 = _x_14759 == prev
-            return _x_14760
-        _x_14762 = next((x for x in last_seen if _f_14761(x)), None)
-        def _jp_14791(_y_14770: int):
-            _x_14774 = 1
-            _x_14777 = i_222 - 1
-            _x_14778 = (prev, _x_14777)
-            def _f_14782(p_227: tuple[int, int]):
-                _x_14780 = p_227[0]
-                _x_14781 = (lambda a, b: a != b)(prev)
-                return _x_14781
-            _x_14783 = [x for x in last_seen if _f_14782(x)]
-            _x_14784 = [_x_14778] + _x_14783
-            _x_14788 = i_222 + 1
-            _x_14789 = [_y_14770] + acc_223
-            _x_14790 = van_eck_go(n_221, _x_14788, _y_14770, _x_14784, _x_14789)
-            return _x_14790
-        def _jp_14798(_y_14795: int, _y_14796: int):
-            _x_14797 = _alt_14756(_y_14795, _y_14796)
-            return _jp_14791(_x_14797)
-        def _jp_14794():
-            _x_14793 = _alt_14745()
-            return _jp_14791(_x_14793)
-        if _x_14762 is None:
-            return _jp_14794()
+        _alt_22785 = _f_22784
+        def _f_22795(fst_22786: int, idx_170: int):
+            _x_22790 = 1
+            _x_22793 = i_167 - 1
+            _x_22794 = _x_22793 - idx_170
+            return _x_22794
+        _alt_22796 = _f_22795
+        _x_22803 = next((p_171 for p_171 in last_seen if (p_171[0] == prev)), None)
+        def _jp_22833(_y_22811: int):
+            _x_22815 = 1
+            _x_22818 = i_167 - 1
+            _x_22819 = (prev, _x_22818)
+            def _f_22824(p_172: tuple[int, int]):
+                _x_22822 = p_172[0]
+                _x_22823 = (lambda a, b: a != b)(prev)
+                return _x_22823
+            _x_22825 = [x for x in last_seen if _f_22824(x)]
+            _x_22826 = [_x_22819] + _x_22825
+            _x_22830 = i_167 + 1
+            _x_22831 = [_y_22811] + acc_168
+            _x_22832 = van_eck_go(n_166, _x_22830, _y_22811, _x_22826, _x_22831)
+            return _x_22832
+        def _jp_22840(_y_22837: int, _y_22838: int):
+            _x_22839 = _alt_22796(_y_22837, _y_22838)
+            return _jp_22833(_x_22839)
+        def _jp_22836():
+            _x_22835 = _alt_22785()
+            return _jp_22833(_x_22835)
+        if _x_22803 is None:
+            return _jp_22836()
         else:
-            val_14765 = _x_14762
-            match val_14765:
-                case (fst_14766, snd_14767):
-                    return _jp_14798(fst_14766, snd_14767)
+            val_22806 = _x_22803
+            match val_22806:
+                case (fst_22807, snd_22808):
+                    return _jp_22840(fst_22807, snd_22808)
 
 # Lean: Corpus.Sequences.firstNPrimes.isPrime.check
-def first_nprimes_is_prime_check(n_228: int, d: int) -> bool:
-    _x_14806 = d * d
-    _x_14807 = n_228 < _x_14806
-    if _x_14807:
-        _x_14834 = True
-        return True
-    else:
-        _x_14814 = n_228 % d
-        _x_14815 = 0
-        _x_14818 = _x_14814 == 0
-        _x_14819 = True
-        if _x_14818:
-            _x_14831 = False
-            return False
+def first_nprimes_is_prime_check(n_173: int, d: int) -> bool:
+    while True:
+        _x_22848 = d * d
+        _x_22849 = n_173 < _x_22848
+        if _x_22849:
+            _x_22877 = True
+            return True
         else:
-            _x_14825 = 1
-            _x_14828 = d + 1
-            _x_14829 = first_nprimes_is_prime_check(n_228, _x_14828)
-            return _x_14829
+            _x_22857 = n_173 % d
+            _x_22858 = 0
+            _x_22861 = _x_22857 == 0
+            _x_22862 = True
+            _x_22863 = _x_22861 == True
+            if _x_22863:
+                _x_22874 = False
+                return False
+            else:
+                _x_22868 = 1
+                _x_22871 = d + 1
+                n_173, d = n_173, _x_22871
+                continue
 
 # Lean: Corpus.Sequences.firstNPrimes.isPrime
-def first_nprimes_is_prime(n_229: int) -> bool:
-    _x_14837 = 2
-    _x_14840 = n_229 < 2
-    if _x_14840:
-        _x_14844 = False
+def first_nprimes_is_prime(n_174: int) -> bool:
+    _x_22880 = 2
+    _x_22883 = n_174 < 2
+    if _x_22883:
+        _x_22887 = False
         return False
     else:
-        _x_14842 = first_nprimes_is_prime_check(n_229, 2)
-        return _x_14842
+        _x_22885 = first_nprimes_is_prime_check(n_174, 2)
+        return _x_22885
 
 # Lean: Corpus.Sequences.firstNPrimes.go
-def first_nprimes_go(n_230: int, candidate: int, found: list[int]) -> list[int]:
-    _x_14847 = len(found)
-    _x_14848 = n_230 <= _x_14847
-    if _x_14848:
-        _x_14874 = list(reversed(found))
-        return _x_14874
-    else:
-        _x_14850 = first_nprimes_is_prime(candidate)
-        _x_14851 = True
-        if _x_14850:
-            _x_14866 = 1
-            _x_14869 = candidate + 1
-            _x_14870 = [candidate] + found
-            _x_14871 = first_nprimes_go(n_230, _x_14869, _x_14870)
-            return _x_14871
+def first_nprimes_go(n_175: int, candidate: int, found: list[int]) -> list[int]:
+    while True:
+        _x_22890 = len(found)
+        _x_22891 = n_175 <= _x_22890
+        if _x_22891:
+            _x_22917 = list(reversed(found))
+            return _x_22917
         else:
-            _x_14857 = 1
-            _x_14860 = candidate + 1
-            _x_14861 = first_nprimes_go(n_230, _x_14860, found)
-            return _x_14861
+            _x_22893 = first_nprimes_is_prime(candidate)
+            _x_22894 = True
+            _x_22895 = _x_22893 == True
+            if _x_22895:
+                _x_22909 = 1
+                _x_22912 = candidate + 1
+                _x_22913 = [candidate] + found
+                n_175, candidate, found = n_175, _x_22912, _x_22913
+                continue
+            else:
+                _x_22900 = 1
+                _x_22903 = candidate + 1
+                n_175, candidate, found = n_175, _x_22903, found
+                continue
 
 # Lean: Corpus.Sequences.recaman.go
-def recaman_go(n_231: int, i_232: int, prev_233: int, seen_234: list[int], acc_235: list[int]) -> list[int]:
-    _x_14877 = n_231 < i_232
-    if _x_14877:
-        _x_14929 = list(reversed(acc_235))
-        return _x_14929
+def recaman_go(n_176: int, i_177: int, prev_178: int, seen_179: list[int], acc_180: list[int]) -> list[int]:
+    _x_22920 = n_176 < i_177
+    if _x_22920:
+        _x_22973 = list(reversed(acc_180))
+        return _x_22973
     else:
-        _x_14882 = prev_233 - i_232
-        def _f_14884():
-            _x_14883 = False
+        _x_22925 = prev_178 - i_177
+        def _f_22927():
+            _x_22926 = False
             return False
-        _alt_14885 = _f_14884
-        def _f_14889():
-            _x_14887 = _x_14882 in seen_234
-            _x_14888 = not _x_14887
-            return _x_14888
-        _alt_14890 = _f_14889
-        _x_14891 = 0
-        _x_14894 = 0 < _x_14882
-        def _jp_14921(_y_14900: bool):
-            _x_14901 = True
-            def _jp_14920(_y_14909: int):
-                _x_14913 = 1
-                _x_14916 = i_232 + 1
-                _x_14917 = [_y_14909] + seen_234
-                _x_14918 = [_y_14909] + acc_235
-                _x_14919 = recaman_go(n_231, _x_14916, _y_14909, _x_14917, _x_14918)
-                return _x_14919
-            if _y_14900:
-                return _jp_14920(_x_14882)
+        _alt_22928 = _f_22927
+        def _f_22933():
+            _x_22931 = _x_22925 in seen_179
+            _x_22932 = not _x_22931
+            return _x_22932
+        _alt_22934 = _f_22933
+        _x_22935 = 0
+        _x_22938 = 0 < _x_22925
+        def _jp_22965(_y_22944: bool):
+            _x_22945 = True
+            _x_22946 = _y_22944 == True
+            def _jp_22964(_y_22953: int):
+                _x_22957 = 1
+                _x_22960 = i_177 + 1
+                _x_22961 = [_y_22953] + seen_179
+                _x_22962 = [_y_22953] + acc_180
+                _x_22963 = recaman_go(n_176, _x_22960, _y_22953, _x_22961, _x_22962)
+                return _x_22963
+            if _x_22946:
+                return _jp_22964(_x_22925)
             else:
-                _x_14907 = prev_233 + i_232
-                return _jp_14920(_x_14907)
-        def _jp_14927():
-            _x_14926 = _alt_14890()
-            return _jp_14921(_x_14926)
-        def _jp_14924():
-            _x_14923 = _alt_14885()
-            return _jp_14921(_x_14923)
-        if _x_14894:
-            return _jp_14927()
+                _x_22951 = prev_178 + i_177
+                return _jp_22964(_x_22951)
+        def _jp_22968():
+            _x_22967 = _alt_22928()
+            return _jp_22965(_x_22967)
+        def _jp_22971():
+            _x_22970 = _alt_22934()
+            return _jp_22965(_x_22970)
+        if _x_22938:
+            return _jp_22971()
         else:
-            return _jp_14924()
+            return _jp_22968()
 
 # Lean: Corpus.Sequences.lookAndSayNext.go
-def look_and_say_next_go(xs_240: list[int], curr: int, count: int, acc_241: list[int]) -> list[int]:
-    def _f_14940():
-        _x_14935 = []
-        _x_14936 = [curr] + _x_14935
-        _x_14937 = [count] + _x_14936
-        _x_14938 = acc_241 + _x_14937
-        _x_14939 = list(reversed(_x_14938))
-        return _x_14939
-    _alt_14941 = _f_14940
-    def _f_14964(x_243: int, rest_244: list[int]):
-        _x_14944 = x_243 == curr
-        _x_14945 = True
-        if _x_14944:
-            _x_14958 = 1
-            _x_14961 = count + 1
-            _x_14962 = look_and_say_next_go(rest_244, curr, _x_14961, acc_241)
-            return _x_14962
+def look_and_say_next_go(xs_185: list[int], curr: int, count: int, acc_186: list[int]) -> list[int]:
+    while True:
+        def _f_22984():
+            _x_22979 = []
+            _x_22980 = [curr] + _x_22979
+            _x_22981 = [count] + _x_22980
+            _x_22982 = acc_186 + _x_22981
+            _x_22983 = list(reversed(_x_22982))
+            return _x_22983
+        _alt_22985 = _f_22984
+        if len(xs_185) == 0:
+            _x_23012 = _alt_22985()
+            return _x_23012
         else:
-            _x_14948 = 1
-            _x_14951 = [count] + acc_241
-            _x_14952 = [curr] + _x_14951
-            _x_14953 = look_and_say_next_go(rest_244, x_243, 1, _x_14952)
-            return _x_14953
-    _alt_14965 = _f_14964
-    if len(xs_240) == 0:
-        _x_14967 = _alt_14941()
-        return _x_14967
-    else:
-        head_14968 = xs_240[0]
-        tail_14969 = xs_240[1:]
-        _x_14970 = _alt_14965(head_14968, tail_14969)
-        return _x_14970
+            head_23013 = xs_185[0]
+            tail_23014 = xs_185[1:]
+            x_188 = head_23013
+            rest_189 = tail_23014
+            _x_22989 = x_188 == curr
+            _x_22990 = True
+            _x_22991 = _x_22989 == True
+            if _x_22991:
+                _x_23003 = 1
+                _x_23006 = count + 1
+                xs_185, curr, count, acc_186 = rest_189, curr, _x_23006, acc_186
+                continue
+            else:
+                _x_22993 = 1
+                _x_22996 = [count] + acc_186
+                _x_22997 = [curr] + _x_22996
+                xs_185, curr, count, acc_186 = rest_189, x_188, 1, _x_22997
+                continue
 
 # Lean: Corpus.Sequences.repunit.go
-def repunit_go(n_245: int, acc_246: int) -> int:
-    _x_14975 = 0
-    _x_14978 = n_245 == 0
-    _x_14979 = True
-    if _x_14978:
-        return acc_246
-    else:
-        _x_14985 = 1
-        _x_14988 = n_245 - 1
-        _x_14995 = 10
-        _x_14998 = acc_246 * 10
-        _x_14999 = _x_14998 + 1
-        _x_15000 = repunit_go(_x_14988, _x_14999)
-        return _x_15000
+def repunit_go(n_190: int, acc_191: int) -> int:
+    while True:
+        _x_23021 = 0
+        _x_23024 = n_190 == 0
+        _x_23025 = True
+        _x_23026 = _x_23024 == True
+        if _x_23026:
+            return acc_191
+        else:
+            _x_23031 = 1
+            _x_23034 = n_190 - 1
+            _x_23041 = 10
+            _x_23044 = acc_191 * 10
+            _x_23045 = _x_23044 + 1
+            n_190, acc_191 = _x_23034, _x_23045
+            continue
 
 # Lean: Corpus.Sequences.narayana.binomial.go
-def binomial_go(n_247: int, k_248: int, i_249: int, acc_250: int) -> int:
-    _x_15006 = i_249 == k_248
-    _x_15007 = True
-    if _x_15006:
-        return acc_250
-    else:
-        _x_15013 = 1
-        _x_15016 = i_249 + 1
-        _x_15026 = n_247 - i_249
-        _x_15027 = acc_250 * _x_15026
-        _x_15028 = _x_15027 // _x_15016
-        _x_15029 = binomial_go(n_247, k_248, _x_15016, _x_15028)
-        return _x_15029
+def binomial_go(n_192: int, k_193: int, i_194: int, acc_195: int) -> int:
+    while True:
+        _x_23053 = i_194 == k_193
+        _x_23054 = True
+        _x_23055 = _x_23053 == True
+        if _x_23055:
+            return acc_195
+        else:
+            _x_23060 = 1
+            _x_23063 = i_194 + 1
+            _x_23073 = n_192 - i_194
+            _x_23074 = acc_195 * _x_23073
+            _x_23075 = _x_23074 // _x_23063
+            n_192, k_193, i_194, acc_195 = n_192, k_193, _x_23063, _x_23075
+            continue
 
 # Lean: Corpus.Sequences.narayana.binomial
-def binomial(n_251: int, k_252: int) -> int:
-    _x_15033 = n_251 < k_252
-    if _x_15033:
-        _x_15052 = 0
+def binomial(n_196: int, k_197: int) -> int:
+    _x_23080 = n_196 < k_197
+    if _x_23080:
+        _x_23100 = 0
         return 0
     else:
-        _x_15038 = n_251 - k_252
-        _x_15039 = _x_15038 < k_252
-        def _jp_15050(_y_15042: int):
-            _x_15043 = 0
-            _x_15046 = 1
-            _x_15049 = binomial_go(n_251, _y_15042, 0, 1)
-            return _x_15049
-        if _x_15039:
-            return _jp_15050(_x_15038)
+        _x_23085 = n_196 - k_197
+        _x_23086 = _x_23085 < k_197
+        def _jp_23098(_y_23090: int):
+            _x_23091 = 0
+            _x_23094 = 1
+            _x_23097 = binomial_go(n_196, _y_23090, 0, 1)
+            return _x_23097
+        if _x_23086:
+            _x_23089 = n_196 - k_197
+            return _jp_23098(_x_23089)
         else:
-            return _jp_15050(k_252)
+            return _jp_23098(k_197)
 
 # Lean: Corpus.Sequences.motzkin.go
-def motzkin_go(n_254: int, k_255: int, acc_256: int) -> int:
-    _x_15062 = 1
-    _x_15065 = n_254 + 1
-    _x_15066 = k_255 == _x_15065
-    _x_15067 = True
-    if _x_15066:
-        return acc_256
-    else:
-        _x_15070 = k_255 + 1
-        _x_15074 = motzkin(k_255)
-        _x_15078 = n_254 - 1
-        _x_15079 = _x_15078 - k_255
-        _x_15080 = motzkin(_x_15079)
-        _x_15081 = _x_15074 * _x_15080
-        _x_15082 = acc_256 + _x_15081
-        _x_15083 = motzkin_go(n_254, _x_15070, _x_15082)
-        return _x_15083
+def motzkin_go(n_199: int, k_200: int, acc_201: int) -> int:
+    while True:
+        _x_23111 = 1
+        _x_23114 = n_199 + 1
+        _x_23115 = k_200 == _x_23114
+        _x_23116 = True
+        _x_23117 = _x_23115 == True
+        if _x_23117:
+            return acc_201
+        else:
+            _x_23119 = k_200 + 1
+            _x_23123 = motzkin(k_200)
+            _x_23127 = n_199 - 1
+            _x_23128 = _x_23127 - k_200
+            _x_23129 = motzkin(_x_23128)
+            _x_23130 = _x_23123 * _x_23129
+            _x_23131 = acc_201 + _x_23130
+            n_199, k_200, acc_201 = n_199, _x_23119, _x_23131
+            continue
 
 # Lean: Corpus.Sequences.jacobsthal.go
-def jacobsthal_go(n_257: int, a_258: int, b: int) -> int:
-    _x_15089 = 0
-    _x_15092 = n_257 == 0
-    _x_15093 = True
-    if _x_15092:
-        return a_258
-    else:
-        _x_15099 = 1
-        _x_15102 = n_257 - 1
-        _x_15109 = 2
-        _x_15112 = 2 * a_258
-        _x_15113 = b + _x_15112
-        _x_15114 = jacobsthal_go(_x_15102, b, _x_15113)
-        return _x_15114
+def jacobsthal_go(n_202: int, a_203: int, b: int) -> int:
+    while True:
+        _x_23139 = 0
+        _x_23142 = n_202 == 0
+        _x_23143 = True
+        _x_23144 = _x_23142 == True
+        if _x_23144:
+            return a_203
+        else:
+            _x_23149 = 1
+            _x_23152 = n_202 - 1
+            _x_23159 = 2
+            _x_23162 = 2 * a_203
+            _x_23163 = b + _x_23162
+            n_202, a_203, b = _x_23152, b, _x_23163
+            continue
 
 # Lean: Corpus.Sequences.perrin.go
-def perrin_go(n_259: int, a_260: int, b_261: int, c_262: int) -> int:
-    _x_15120 = 0
-    _x_15123 = n_259 == 0
-    _x_15124 = True
-    if _x_15123:
-        return a_260
-    else:
-        _x_15130 = 1
-        _x_15133 = n_259 - 1
-        _x_15137 = a_260 + b_261
-        _x_15138 = perrin_go(_x_15133, b_261, c_262, _x_15137)
-        return _x_15138
+def perrin_go(n_204: int, a_205: int, b_206: int, c_207: int) -> int:
+    while True:
+        _x_23171 = 0
+        _x_23174 = n_204 == 0
+        _x_23175 = True
+        _x_23176 = _x_23174 == True
+        if _x_23176:
+            return a_205
+        else:
+            _x_23181 = 1
+            _x_23184 = n_204 - 1
+            _x_23188 = a_205 + b_206
+            n_204, a_205, b_206, c_207 = _x_23184, b_206, c_207, _x_23188
+            continue
 
 # Lean: Corpus.Sequences.padovan.go
-def padovan_go(n_263: int, a_264: int, b_265: int, c_266: int) -> int:
-    _x_15144 = 0
-    _x_15147 = n_263 == 0
-    _x_15148 = True
-    if _x_15147:
-        return a_264
-    else:
-        _x_15154 = 1
-        _x_15157 = n_263 - 1
-        _x_15161 = a_264 + b_265
-        _x_15162 = padovan_go(_x_15157, b_265, c_266, _x_15161)
-        return _x_15162
+def padovan_go(n_208: int, a_209: int, b_210: int, c_211: int) -> int:
+    while True:
+        _x_23196 = 0
+        _x_23199 = n_208 == 0
+        _x_23200 = True
+        _x_23201 = _x_23199 == True
+        if _x_23201:
+            return a_209
+        else:
+            _x_23206 = 1
+            _x_23209 = n_208 - 1
+            _x_23213 = a_209 + b_210
+            n_208, a_209, b_210, c_211 = _x_23209, b_210, c_211, _x_23213
+            continue
 
 # Lean: Corpus.Sequences.pell.go
-def pell_go(n_267: int, a_268: int, b_269: int) -> int:
-    _x_15168 = 0
-    _x_15171 = n_267 == 0
-    _x_15172 = True
-    if _x_15171:
-        return a_268
-    else:
-        _x_15178 = 1
-        _x_15181 = n_267 - 1
-        _x_15188 = 2
-        _x_15191 = 2 * b_269
-        _x_15192 = _x_15191 + a_268
-        _x_15193 = pell_go(_x_15181, b_269, _x_15192)
-        return _x_15193
+def pell_go(n_212: int, a_213: int, b_214: int) -> int:
+    while True:
+        _x_23221 = 0
+        _x_23224 = n_212 == 0
+        _x_23225 = True
+        _x_23226 = _x_23224 == True
+        if _x_23226:
+            return a_213
+        else:
+            _x_23231 = 1
+            _x_23234 = n_212 - 1
+            _x_23241 = 2
+            _x_23244 = 2 * b_214
+            _x_23245 = _x_23244 + a_213
+            n_212, a_213, b_214 = _x_23234, b_214, _x_23245
+            continue
 
 # Lean: Corpus.Sequences.tribonacci.go
-def tribonacci_go(n_270: int, a_271: int, b_272: int, c_273: int) -> int:
-    _x_15199 = 0
-    _x_15202 = n_270 == 0
-    _x_15203 = True
-    if _x_15202:
-        return a_271
-    else:
-        _x_15209 = 1
-        _x_15212 = n_270 - 1
-        _x_15216 = a_271 + b_272
-        _x_15217 = _x_15216 + c_273
-        _x_15218 = tribonacci_go(_x_15212, b_272, c_273, _x_15217)
-        return _x_15218
+def tribonacci_go(n_215: int, a_216: int, b_217: int, c_218: int) -> int:
+    while True:
+        _x_23253 = 0
+        _x_23256 = n_215 == 0
+        _x_23257 = True
+        _x_23258 = _x_23256 == True
+        if _x_23258:
+            return a_216
+        else:
+            _x_23263 = 1
+            _x_23266 = n_215 - 1
+            _x_23270 = a_216 + b_217
+            _x_23271 = _x_23270 + c_218
+            n_215, a_216, b_217, c_218 = _x_23266, b_217, c_218, _x_23271
+            continue
 
 # Lean: Corpus.Sequences.lucas.go
-def lucas_go(n_274: int, a_275: int, b_276: int) -> int:
-    _x_15224 = 0
-    _x_15227 = n_274 == 0
-    _x_15228 = True
-    if _x_15227:
-        return a_275
-    else:
-        _x_15234 = 1
-        _x_15237 = n_274 - 1
-        _x_15241 = a_275 + b_276
-        _x_15242 = lucas_go(_x_15237, b_276, _x_15241)
-        return _x_15242
+def lucas_go(n_219: int, a_220: int, b_221: int) -> int:
+    while True:
+        _x_23279 = 0
+        _x_23282 = n_219 == 0
+        _x_23283 = True
+        _x_23284 = _x_23282 == True
+        if _x_23284:
+            return a_220
+        else:
+            _x_23289 = 1
+            _x_23292 = n_219 - 1
+            _x_23296 = a_220 + b_221
+            n_219, a_220, b_221 = _x_23292, b_221, _x_23296
+            continue
 
 # Lean: Corpus.Sequences.fibonacci.go
-def sequences_fibonacci_go(n_277: int, a_278: int, b_279: int) -> int:
-    _x_15248 = 0
-    _x_15251 = n_277 == 0
-    _x_15252 = True
-    if _x_15251:
-        return a_278
-    else:
-        _x_15258 = 1
-        _x_15261 = n_277 - 1
-        _x_15265 = a_278 + b_279
-        _x_15266 = sequences_fibonacci_go(_x_15261, b_279, _x_15265)
-        return _x_15266
+def sequences_fibonacci_go(n_222: int, a_223: int, b_224: int) -> int:
+    while True:
+        _x_23304 = 0
+        _x_23307 = n_222 == 0
+        _x_23308 = True
+        _x_23309 = _x_23307 == True
+        if _x_23309:
+            return a_223
+        else:
+            _x_23314 = 1
+            _x_23317 = n_222 - 1
+            _x_23321 = a_223 + b_224
+            n_222, a_223, b_224 = _x_23317, b_224, _x_23321
+            continue
 
 # Lean: Corpus.Combinatorics.integerPartitions.go
-def integer_partitions_go(n_280: int, max: int) -> list[list[int]]:
-    _x_15272 = 0
-    _x_15275 = n_280 == 0
-    _x_15276 = True
-    if _x_15275:
-        _x_15304 = []
-        _x_15305 = []
-        _x_15306 = [_x_15304] + _x_15305
-        return _x_15306
+def integer_partitions_go(n_225: int, max: int) -> list[list[int]]:
+    _x_23329 = 0
+    _x_23332 = n_225 == 0
+    _x_23333 = True
+    _x_23334 = _x_23332 == True
+    if _x_23334:
+        _x_23361 = []
+        _x_23362 = []
+        _x_23363 = [_x_23361] + _x_23362
+        return _x_23363
     else:
-        _x_15279 = max == 0
-        if _x_15279:
-            _x_15301 = []
-            return _x_15301
+        _x_23336 = max == 0
+        _x_23337 = _x_23336 == True
+        if _x_23337:
+            _x_23358 = []
+            return _x_23358
         else:
-            def _f_15284(x_15282: list[int]):
-                _x_15283 = [max] + x_15282
-                return _x_15283
-            _x_15288 = n_280 - max
-            _x_15289 = integer_partitions_go(_x_15288, max)
-            _x_15290 = [_f_15284(x) for x in _x_15289]
-            _x_15291 = 1
-            _x_15294 = max - 1
-            _x_15295 = integer_partitions_go(n_280, _x_15294)
-            _x_15299 = _x_15290 + _x_15295
-            return _x_15299
+            def _f_23341(x_23339: list[int]):
+                _x_23340 = [max] + x_23339
+                return _x_23340
+            _x_23345 = n_225 - max
+            _x_23346 = integer_partitions_go(_x_23345, max)
+            _x_23347 = [_f_23341(x) for x in _x_23346]
+            _x_23348 = 1
+            _x_23351 = max - 1
+            _x_23352 = integer_partitions_go(n_225, _x_23351)
+            _x_23356 = _x_23347 + _x_23352
+            return _x_23356
 
 # Lean: Corpus.Combinatorics.compositions.go
-def compositions_go(n_281: int, k_282: int, acc_283: list[list[int]]) -> list[list[int]]:
-    _x_15309 = n_281 < k_282
-    if _x_15309:
-        return acc_283
-    else:
-        _x_15314 = 1
-        _x_15317 = k_282 + 1
-        def _f_15323(x_15321: list[int]):
-            _x_15322 = [k_282] + x_15321
-            return _x_15322
-        _x_15327 = n_281 - k_282
-        _x_15328 = compositions(_x_15327)
-        _x_15329 = [_f_15323(x) for x in _x_15328]
-        _x_15330 = acc_283 + _x_15329
-        _x_15331 = compositions_go(n_281, _x_15317, _x_15330)
-        return _x_15331
+def compositions_go(n_226: int, k_227: int, acc_228: list[list[int]]) -> list[list[int]]:
+    while True:
+        _x_23366 = n_226 < k_227
+        if _x_23366:
+            return acc_228
+        else:
+            _x_23371 = 1
+            _x_23374 = k_227 + 1
+            def _f_23380(x_23378: list[int]):
+                _x_23379 = [k_227] + x_23378
+                return _x_23379
+            _x_23384 = n_226 - k_227
+            _x_23385 = compositions(_x_23384)
+            _x_23386 = [_f_23380(x) for x in _x_23385]
+            _x_23387 = acc_228 + _x_23386
+            n_226, k_227, acc_228 = n_226, _x_23374, _x_23387
+            continue
 
 # Lean: Corpus.Combinatorics.prevPermutation.findI
-def find_i(arr_284: list[int], i_285: int) -> int | None:
-    _x_15337 = 0
-    _x_15340 = i_285 == 0
-    _x_15341 = True
-    if _x_15340:
-        _x_15367 = None
-        return _x_15367
-    else:
-        def _f_15347(xs_286: list[int], i_287: int):
-            _x_15345 = len(xs_286)
-            _x_15346 = i_287 < _x_15345
-            return _x_15346
-        _x_15349 = _x_15348.get_elem__2
-        _x_15351 = _x_15349(_x_15350, arr_284, i_285)
-        _x_15355 = 1
-        _x_15358 = i_285 - 1
-        _x_15359 = _x_15349(_x_15350, arr_284, _x_15358)
-        _x_15360 = _x_15351 < _x_15359
-        if _x_15360:
-            _x_15364 = _x_15358
-            return _x_15364
+def find_i(arr_229: list[int], i_230: int) -> int | None:
+    while True:
+        _x_23395 = 0
+        _x_23398 = i_230 == 0
+        _x_23399 = True
+        _x_23400 = _x_23398 == True
+        if _x_23400:
+            _x_23421 = None
+            return _x_23421
         else:
-            _x_15362 = find_i(arr_284, _x_15358)
-            return _x_15362
+            _x_23403 = _x_23402.field_2
+            _x_23405 = _x_23403(_x_23404, arr_229, i_230)
+            _x_23409 = 1
+            _x_23412 = i_230 - 1
+            _x_23413 = _x_23403(_x_23404, arr_229, _x_23412)
+            _x_23414 = _x_23405 < _x_23413
+            if _x_23414:
+                _x_23418 = _x_23412
+                return _x_23418
+            else:
+                arr_229, i_230 = arr_229, _x_23412
+                continue
 
 # Lean: Corpus.Combinatorics.prevPermutation.reverseFrom.go
-def reverse_from_go(arr_288: list[int], l_289: int, r_290: int) -> list[int]:
-    _x_15370 = r_290 <= l_289
-    if _x_15370:
-        return arr_288
-    else:
-        _x_15372 = swap_(None, arr_288, l_289, r_290)
-        _x_15376 = 1
-        _x_15379 = l_289 + 1
-        _x_15383 = r_290 - 1
-        _x_15384 = reverse_from_go(_x_15372, _x_15379, _x_15383)
-        return _x_15384
+def reverse_from_go(arr_231: list[int], l_232: int, r_233: int) -> list[int]:
+    while True:
+        _x_23424 = r_233 <= l_232
+        if _x_23424:
+            return arr_231
+        else:
+            _x_23426 = swap_if_in_bounds(None, arr_231, l_232, r_233)
+            _x_23430 = 1
+            _x_23433 = l_232 + 1
+            _x_23437 = r_233 - 1
+            arr_231, l_232, r_233 = _x_23426, _x_23433, _x_23437
+            continue
 
 # Lean: Corpus.Combinatorics.prevPermutation.reverseFrom
-def reverse_from(arr_291: list[int], start: int) -> list[int]:
-    _x_15391 = len(arr_291)
-    _x_15392 = 1
-    _x_15395 = _x_15391 - 1
-    _x_15396 = reverse_from_go(arr_291, start, _x_15395)
-    return _x_15396
+def reverse_from(arr_234: list[int], start: int) -> list[int]:
+    _x_23445 = len(arr_234)
+    _x_23446 = 1
+    _x_23449 = _x_23445 - 1
+    _x_23450 = reverse_from_go(arr_234, start, _x_23449)
+    return _x_23450
 
 # Lean: Corpus.Combinatorics.prevPermutation.findJ
-def find_j(arr_292: list[int], i_293: int, j_294: int) -> int:
-    _x_15403 = 1
-    _x_15406 = i_293 + 1
-    _x_15407 = j_294 == _x_15406
-    _x_15408 = True
-    if _x_15407:
-        return j_294
-    else:
-        def _f_15414(xs_295: list[int], i_296: int):
-            _x_15412 = len(xs_295)
-            _x_15413 = i_296 < _x_15412
-            return _x_15413
-        _x_15416 = _x_15415.get_elem__2
-        _x_15421 = j_294 - 1
-        _x_15422 = _x_15416(_x_15417, arr_292, _x_15421)
-        _x_15423 = _x_15416(_x_15417, arr_292, i_293)
-        _x_15424 = _x_15422 < _x_15423
-        if _x_15424:
-            return _x_15421
+def find_j(arr_235: list[int], i_236: int, j_237: int) -> int:
+    while True:
+        _x_23458 = 1
+        _x_23461 = i_236 + 1
+        _x_23462 = j_237 == _x_23461
+        _x_23463 = True
+        _x_23464 = _x_23462 == True
+        if _x_23464:
+            return j_237
         else:
-            _x_15426 = find_j(arr_292, i_293, _x_15421)
-            return _x_15426
+            _x_23467 = _x_23466.field_2
+            _x_23472 = j_237 - 1
+            _x_23473 = _x_23467(_x_23468, arr_235, _x_23472)
+            _x_23474 = _x_23467(_x_23468, arr_235, i_236)
+            _x_23475 = _x_23473 < _x_23474
+            if _x_23475:
+                _x_23479 = j_237 - 1
+                return _x_23479
+            else:
+                arr_235, i_236, j_237 = arr_235, i_236, _x_23472
+                continue
 
 # Lean: Corpus.Combinatorics.nextPermutation.findI
-def find_i(arr_297: list[int], i_298: int) -> int | None:
-    _x_15434 = 0
-    _x_15437 = i_298 == 0
-    _x_15438 = True
-    if _x_15437:
-        _x_15464 = None
-        return _x_15464
-    else:
-        def _f_15444(xs_299: list[int], i_300: int):
-            _x_15442 = len(xs_299)
-            _x_15443 = i_300 < _x_15442
-            return _x_15443
-        _x_15446 = _x_15445.get_elem__2
-        _x_15451 = 1
-        _x_15454 = i_298 - 1
-        _x_15455 = _x_15446(_x_15447, arr_297, _x_15454)
-        _x_15456 = _x_15446(_x_15447, arr_297, i_298)
-        _x_15457 = _x_15455 < _x_15456
-        if _x_15457:
-            _x_15461 = _x_15454
-            return _x_15461
+def find_i(arr_238: list[int], i_239: int) -> int | None:
+    while True:
+        _x_23487 = 0
+        _x_23490 = i_239 == 0
+        _x_23491 = True
+        _x_23492 = _x_23490 == True
+        if _x_23492:
+            _x_23513 = None
+            return _x_23513
         else:
-            _x_15459 = find_i(arr_297, _x_15454)
-            return _x_15459
+            _x_23495 = _x_23494.field_2
+            _x_23500 = 1
+            _x_23503 = i_239 - 1
+            _x_23504 = _x_23495(_x_23496, arr_238, _x_23503)
+            _x_23505 = _x_23495(_x_23496, arr_238, i_239)
+            _x_23506 = _x_23504 < _x_23505
+            if _x_23506:
+                _x_23510 = _x_23503
+                return _x_23510
+            else:
+                arr_238, i_239 = arr_238, _x_23503
+                continue
 
 # Lean: Corpus.Combinatorics.nextPermutation.reverseFrom.go
-def reverse_from_go(arr_301: list[int], l_302: int, r_303: int) -> list[int]:
-    _x_15467 = r_303 <= l_302
-    if _x_15467:
-        return arr_301
-    else:
-        _x_15469 = swap_(None, arr_301, l_302, r_303)
-        _x_15473 = 1
-        _x_15476 = l_302 + 1
-        _x_15480 = r_303 - 1
-        _x_15481 = reverse_from_go(_x_15469, _x_15476, _x_15480)
-        return _x_15481
+def reverse_from_go(arr_240: list[int], l_241: int, r_242: int) -> list[int]:
+    while True:
+        _x_23516 = r_242 <= l_241
+        if _x_23516:
+            return arr_240
+        else:
+            _x_23518 = swap_if_in_bounds(None, arr_240, l_241, r_242)
+            _x_23522 = 1
+            _x_23525 = l_241 + 1
+            _x_23529 = r_242 - 1
+            arr_240, l_241, r_242 = _x_23518, _x_23525, _x_23529
+            continue
 
 # Lean: Corpus.Combinatorics.nextPermutation.reverseFrom
-def reverse_from(arr_304: list[int], start_305: int) -> list[int]:
-    _x_15488 = len(arr_304)
-    _x_15489 = 1
-    _x_15492 = _x_15488 - 1
-    _x_15493 = reverse_from_go(arr_304, start_305, _x_15492)
-    return _x_15493
+def reverse_from(arr_243: list[int], start_244: int) -> list[int]:
+    _x_23537 = len(arr_243)
+    _x_23538 = 1
+    _x_23541 = _x_23537 - 1
+    _x_23542 = reverse_from_go(arr_243, start_244, _x_23541)
+    return _x_23542
 
 # Lean: Corpus.Combinatorics.nextPermutation.findJ
-def find_j(arr_306: list[int], i_307: int, j_308: int) -> int:
-    _x_15500 = 1
-    _x_15503 = i_307 + 1
-    _x_15504 = j_308 == _x_15503
-    _x_15505 = True
-    if _x_15504:
-        return j_308
-    else:
-        def _f_15511(xs_309: list[int], i_310: int):
-            _x_15509 = len(xs_309)
-            _x_15510 = i_310 < _x_15509
-            return _x_15510
-        _x_15513 = _x_15512.get_elem__2
-        _x_15515 = _x_15513(_x_15514, arr_306, i_307)
-        _x_15519 = j_308 - 1
-        _x_15520 = _x_15513(_x_15514, arr_306, _x_15519)
-        _x_15521 = _x_15515 < _x_15520
-        if _x_15521:
-            return _x_15519
+def find_j(arr_245: list[int], i_246: int, j_247: int) -> int:
+    while True:
+        _x_23550 = 1
+        _x_23553 = i_246 + 1
+        _x_23554 = j_247 == _x_23553
+        _x_23555 = True
+        _x_23556 = _x_23554 == True
+        if _x_23556:
+            return j_247
         else:
-            _x_15523 = find_j(arr_306, i_307, _x_15519)
-            return _x_15523
+            _x_23559 = _x_23558.field_2
+            _x_23561 = _x_23559(_x_23560, arr_245, i_246)
+            _x_23565 = j_247 - 1
+            _x_23566 = _x_23559(_x_23560, arr_245, _x_23565)
+            _x_23567 = _x_23561 < _x_23566
+            if _x_23567:
+                _x_23571 = j_247 - 1
+                return _x_23571
+            else:
+                arr_245, i_246, j_247 = arr_245, i_246, _x_23565
+                continue
 
 # Lean: Corpus.Combinatorics.permutationRank.go
-def permutation_rank_go(n_311: int, code: list[int], pos_312: int, acc_313: int) -> int:
-    def _f_15529():
-        return acc_313
-    _alt_15530 = _f_15529
-    def _f_15550(c_315: int, rest_316: list[int]):
-        _x_15534 = 1
-        _x_15537 = pos_312 + 1
-        _x_15544 = n_311 - pos_312
-        _x_15545 = _x_15544 - 1
-        _x_15546 = factorial(_x_15545)
-        _x_15547 = c_315 * _x_15546
-        _x_15548 = acc_313 + _x_15547
-        _x_15549 = permutation_rank_go(n_311, rest_316, _x_15537, _x_15548)
-        return _x_15549
-    _alt_15551 = _f_15550
-    if len(code) == 0:
-        _x_15553 = _alt_15530()
-        return _x_15553
-    else:
-        head_15554 = code[0]
-        tail_15555 = code[1:]
-        _x_15556 = _alt_15551(head_15554, tail_15555)
-        return _x_15556
+def permutation_rank_go(n_248: int, code: list[int], pos_249: int, acc_250: int) -> int:
+    while True:
+        def _f_23576():
+            return acc_250
+        _alt_23577 = _f_23576
+        if len(code) == 0:
+            _x_23600 = _alt_23577()
+            return _x_23600
+        else:
+            head_23601 = code[0]
+            tail_23602 = code[1:]
+            c_252 = head_23601
+            rest_253 = tail_23602
+            _x_23581 = 1
+            _x_23584 = pos_249 + 1
+            _x_23591 = n_248 - pos_249
+            _x_23592 = _x_23591 - 1
+            _x_23593 = factorial(_x_23592)
+            _x_23594 = c_252 * _x_23593
+            _x_23595 = acc_250 + _x_23594
+            n_248, code, pos_249, acc_250 = n_248, rest_253, _x_23584, _x_23595
+            continue
 
 # Lean: Corpus.Combinatorics.nthPermutation.go
-def nth_permutation_go(k_317: int, n_318: int, available: list[int], acc_319: list[int]) -> list[int]:
-    def _f_15560():
-        _x_15559 = list(reversed(acc_319))
-        return _x_15559
-    _alt_15561 = _f_15560
-    def _f_15591(x_15562: list[int]):
-        _x_15566 = len(available)
-        _x_15567 = 1
-        _x_15570 = _x_15566 - 1
-        _x_15571 = factorial(_x_15570)
-        _x_15575 = k_317 // _x_15571
-        _x_15576 = 0
-        _x_15579 = get_d(None, available, _x_15575, 0)
-        _x_15583 = k_317 % _x_15571
-        def _f_15587(x_15584: int):
-            _x_15586 = (lambda a, b: a != b)(_x_15579)
-            return _x_15586
-        _x_15588 = [x for x in available if _f_15587(x)]
-        _x_15589 = [_x_15579] + acc_319
-        _x_15590 = nth_permutation_go(_x_15583, n_318, _x_15588, _x_15589)
-        return _x_15590
-    _alt_15592 = _f_15591
-    if len(available) == 0:
-        _x_15594 = _alt_15561()
-        return _x_15594
-    else:
-        head_15595 = available[0]
-        tail_15596 = available[1:]
-        _x_15597 = [head_15595] + tail_15596
-        _x_15598 = _alt_15592(_x_15597)
-        return _x_15598
+def nth_permutation_go(k_254: int, n_255: int, available: list[int], acc_256: list[int]) -> list[int]:
+    while True:
+        def _f_23607():
+            _x_23606 = list(reversed(acc_256))
+            return _x_23606
+        _alt_23608 = _f_23607
+        if len(available) == 0:
+            _x_23642 = _alt_23608()
+            return _x_23642
+        else:
+            _x_23646 = (lambda h_23643: _uniq_67840(available))(None)
+            return _x_23646
 
 # Lean: Corpus.Combinatorics.fromLehmerCode.go
-def from_lehmer_code_go(code_322: list[int], available_323: list[int], acc_324: list[int]) -> list[int]:
-    def _f_15602():
-        _x_15601 = list(reversed(acc_324))
-        return _x_15601
-    _alt_15603 = _f_15602
-    def _f_15615(c_326: int, rest_327: list[int]):
-        _x_15604 = 0
-        _x_15607 = get_d(None, available_323, c_326, 0)
-        def _f_15611(x_15608: int):
-            _x_15610 = (lambda a, b: a != b)(_x_15607)
-            return _x_15610
-        _x_15612 = [x for x in available_323 if _f_15611(x)]
-        _x_15613 = [_x_15607] + acc_324
-        _x_15614 = from_lehmer_code_go(rest_327, _x_15612, _x_15613)
-        return _x_15614
-    _alt_15616 = _f_15615
-    if len(code_322) == 0:
-        _x_15618 = _alt_15603()
-        return _x_15618
-    else:
-        head_15619 = code_322[0]
-        tail_15620 = code_322[1:]
-        _x_15621 = _alt_15616(head_15619, tail_15620)
-        return _x_15621
+def from_lehmer_code_go(code_258: list[int], available_259: list[int], acc_260: list[int]) -> list[int]:
+    while True:
+        def _f_23650():
+            _x_23649 = list(reversed(acc_260))
+            return _x_23649
+        _alt_23651 = _f_23650
+        if len(code_258) == 0:
+            _x_23667 = _alt_23651()
+            return _x_23667
+        else:
+            head_23668 = code_258[0]
+            tail_23669 = code_258[1:]
+            c_262 = head_23668
+            rest_263 = tail_23669
+            _x_23652 = 0
+            _x_23655 = get_d(None, available_259, c_262, 0)
+            def _f_23660(x_23656: int):
+                _x_23659 = (lambda a, b: a != b)(_x_23655)
+                return _x_23659
+            _x_23661 = [x for x in available_259 if _f_23660(x)]
+            _x_23662 = [_x_23655] + acc_260
+            code_258, available_259, acc_260 = rest_263, _x_23661, _x_23662
+            continue
 
 # Lean: Corpus.Combinatorics.lehmerCode.go
-def lehmer_code_go(perm: list[int], acc_329: list[int]) -> list[int]:
-    def _f_15625():
-        _x_15624 = list(reversed(acc_329))
-        return _x_15624
-    _alt_15626 = _f_15625
-    def _f_15645(x_331: int, rest_332: list[int]):
-        def _f_15638(acc_333: int, y_334: int):
-            _x_15627 = y_334 < x_331
-            if _x_15627:
-                _x_15633 = 1
-                _x_15636 = acc_333 + 1
-                return _x_15636
-            else:
-                return acc_333
-        _x_15639 = 0
-        _x_15642 = functools.reduce(_f_15638, rest_332, 0)
-        _x_15643 = [_x_15642] + acc_329
-        _x_15644 = lehmer_code_go(rest_332, _x_15643)
-        return _x_15644
-    _alt_15646 = _f_15645
-    if len(perm) == 0:
-        _x_15648 = _alt_15626()
-        return _x_15648
-    else:
-        head_15649 = perm[0]
-        tail_15650 = perm[1:]
-        _x_15651 = _alt_15646(head_15649, tail_15650)
-        return _x_15651
+def lehmer_code_go(perm: list[int], acc_264: list[int]) -> list[int]:
+    while True:
+        def _f_23674():
+            _x_23673 = list(reversed(acc_264))
+            return _x_23673
+        _alt_23675 = _f_23674
+        if len(perm) == 0:
+            _x_23697 = _alt_23675()
+            return _x_23697
+        else:
+            head_23698 = perm[0]
+            tail_23699 = perm[1:]
+            x_266 = head_23698
+            rest_267 = tail_23699
+            def _f_23687(acc_268: int, y_269: int):
+                _x_23676 = y_269 < x_266
+                if _x_23676:
+                    _x_23682 = 1
+                    _x_23685 = acc_268 + 1
+                    return _x_23685
+                else:
+                    return acc_268
+            _x_23688 = 0
+            _x_23691 = functools.reduce(_f_23687, rest_267, 0)
+            _x_23692 = [_x_23691] + acc_264
+            perm, acc_264 = rest_267, _x_23692
+            continue
 
 # Lean: Corpus.Combinatorics.countInversions.count
-def count(xs_336: list[int]) -> int:
-    def _f_15657():
-        _x_15654 = 0
+def count(xs_271: list[int]) -> int:
+    def _f_23706():
+        _x_23703 = 0
         return 0
-    _alt_15658 = _f_15657
-    def _f_15677(x_338: int, rest_339: list[int]):
-        def _f_15670(acc_340: int, y_341: int):
-            _x_15662 = y_341 < x_338
-            if _x_15662:
-                _x_15665 = 1
-                _x_15668 = acc_340 + 1
-                return _x_15668
+    _alt_23707 = _f_23706
+    def _f_23726(x_273: int, rest_274: list[int]):
+        def _f_23719(acc_275: int, y_276: int):
+            _x_23711 = y_276 < x_273
+            if _x_23711:
+                _x_23714 = 1
+                _x_23717 = acc_275 + 1
+                return _x_23717
             else:
-                return acc_340
-        _x_15671 = 0
-        _x_15674 = functools.reduce(_f_15670, rest_339, 0)
-        _x_15675 = count(rest_339)
-        _x_15676 = _x_15674 + _x_15675
-        return _x_15676
-    _alt_15678 = _f_15677
-    if len(xs_336) == 0:
-        _x_15680 = _alt_15658()
-        return _x_15680
+                return acc_275
+        _x_23720 = 0
+        _x_23723 = functools.reduce(_f_23719, rest_274, 0)
+        _x_23724 = count(rest_274)
+        _x_23725 = _x_23723 + _x_23724
+        return _x_23725
+    _alt_23727 = _f_23726
+    if len(xs_271) == 0:
+        _x_23729 = _alt_23707()
+        return _x_23729
     else:
-        head_15681 = xs_336[0]
-        tail_15682 = xs_336[1:]
-        _x_15683 = _alt_15678(head_15681, tail_15682)
-        return _x_15683
+        head_23730 = xs_271[0]
+        tail_23731 = xs_271[1:]
+        _x_23732 = _alt_23727(head_23730, tail_23731)
+        return _x_23732
 
 # Lean: Corpus.Combinatorics.partitionCount.p
-def p(n_342: int, k_343: int) -> int:
-    _x_15688 = 0
-    _x_15691 = n_342 == 0
-    _x_15692 = True
-    if _x_15691:
-        _x_15720 = 1
+def p(n_277: int, k_278: int) -> int:
+    _x_23738 = 0
+    _x_23741 = n_277 == 0
+    _x_23742 = True
+    _x_23743 = _x_23741 == True
+    if _x_23743:
+        _x_23771 = 1
         return 1
     else:
-        _x_15695 = k_343 == 0
-        if _x_15695:
-            return 0
+        _x_23745 = k_278 == 0
+        _x_23746 = _x_23745 == True
+        if _x_23746:
+            return 1
         else:
-            _x_15698 = n_342 < k_343
-            if _x_15698:
-                _x_15715 = p(n_342, n_342)
-                return _x_15715
+            _x_23748 = n_277 < k_278
+            if _x_23748:
+                _x_23765 = p(n_277, n_277)
+                return _x_23765
             else:
-                _x_15706 = n_342 - k_343
-                _x_15707 = p(_x_15706, k_343)
-                _x_15708 = 1
-                _x_15711 = k_343 - 1
-                _x_15712 = p(n_342, _x_15711)
-                _x_15713 = _x_15707 + _x_15712
-                return _x_15713
+                _x_23756 = n_277 - k_278
+                _x_23757 = p(_x_23756, k_278)
+                _x_23758 = 1
+                _x_23761 = k_278 - 1
+                _x_23762 = p(n_277, _x_23761)
+                _x_23763 = _x_23757 + _x_23762
+                return _x_23763
+
+# Lean: Corpus.Combinatorics.binomial.go
+def binomial_go(n_279: int, k_280: int, i_281: int, acc_282: int) -> int:
+    while True:
+        _x_23779 = i_281 == k_280
+        _x_23780 = True
+        _x_23781 = _x_23779 == True
+        if _x_23781:
+            return acc_282
+        else:
+            _x_23786 = 1
+            _x_23789 = i_281 + 1
+            _x_23799 = n_279 - i_281
+            _x_23800 = acc_282 * _x_23799
+            _x_23801 = _x_23800 // _x_23789
+            n_279, k_280, i_281, acc_282 = n_279, k_280, _x_23789, _x_23801
+            continue
+
+# Lean: Corpus.Combinatorics.binomial
+def binomial(n_283: int, k_284: int) -> int:
+    _x_23806 = n_283 < k_284
+    if _x_23806:
+        _x_23826 = 0
+        return 0
+    else:
+        _x_23811 = n_283 - k_284
+        _x_23812 = _x_23811 < k_284
+        def _jp_23824(_y_23816: int):
+            _x_23817 = 0
+            _x_23820 = 1
+            _x_23823 = binomial_go(n_283, _y_23816, 0, 1)
+            return _x_23823
+        if _x_23812:
+            _x_23815 = n_283 - k_284
+            return _jp_23824(_x_23815)
+        else:
+            return _jp_23824(k_284)
 
 # Lean: Corpus.Combinatorics.bell.go
-def bell_go(n_344: int, i_345: int, acc_346: int) -> int:
-    _x_15730 = 1
-    _x_15733 = n_344 + 1
-    _x_15734 = i_345 == _x_15733
-    _x_15735 = True
-    if _x_15734:
-        return acc_346
-    else:
-        _x_15738 = i_345 + 1
-        _x_15739 = stirling2(n_344, i_345)
-        _x_15740 = acc_346 + _x_15739
-        _x_15741 = bell_go(n_344, _x_15738, _x_15740)
-        return _x_15741
+def bell_go(n_286: int, i_287: int, acc_288: int) -> int:
+    while True:
+        _x_23837 = 1
+        _x_23840 = n_286 + 1
+        _x_23841 = i_287 == _x_23840
+        _x_23842 = True
+        _x_23843 = _x_23841 == True
+        if _x_23843:
+            return acc_288
+        else:
+            _x_23845 = i_287 + 1
+            _x_23846 = stirling2(n_286, i_287)
+            _x_23847 = acc_288 + _x_23846
+            n_286, i_287, acc_288 = n_286, _x_23845, _x_23847
+            continue
+
+# Lean: Corpus.Combinatorics.factorial.go
+def factorial_go(n_289: int, acc_290: int) -> int:
+    while True:
+        _x_23855 = 0
+        _x_23858 = n_289 == 0
+        _x_23859 = True
+        _x_23860 = _x_23858 == True
+        if _x_23860:
+            return acc_290
+        else:
+            _x_23865 = 1
+            _x_23868 = n_289 - 1
+            _x_23872 = n_289 * acc_290
+            n_289, acc_290 = _x_23868, _x_23872
+            continue
+
+# Lean: Corpus.Combinatorics.factorial
+def factorial(n_291: int) -> int:
+    _x_23877 = 1
+    _x_23880 = factorial_go(n_291, 1)
+    return _x_23880
 
 # Lean: Corpus.Combinatorics.fallingFactorial.go
-def falling_factorial_go(x_347: int, n_348: int, i_349: int, acc_350: int) -> int:
-    _x_15747 = i_349 == n_348
-    _x_15748 = True
-    if _x_15747:
-        return acc_350
-    else:
-        _x_15754 = 1
-        _x_15757 = i_349 + 1
-        _x_15764 = x_347 - i_349
-        _x_15765 = acc_350 * _x_15764
-        _x_15766 = falling_factorial_go(x_347, n_348, _x_15757, _x_15765)
-        return _x_15766
+def falling_factorial_go(x_292: int, n_293: int, i_294: int, acc_295: int) -> int:
+    while True:
+        _x_23885 = i_294 == n_293
+        _x_23886 = True
+        _x_23887 = _x_23885 == True
+        if _x_23887:
+            return acc_295
+        else:
+            _x_23892 = 1
+            _x_23895 = i_294 + 1
+            _x_23902 = x_292 - i_294
+            _x_23903 = acc_295 * _x_23902
+            x_292, n_293, i_294, acc_295 = x_292, n_293, _x_23895, _x_23903
+            continue
 
 # Lean: Corpus.Combinatorics.risingFactorial.go
-def rising_factorial_go(x_351: int, n_352: int, i_353: int, acc_354: int) -> int:
-    _x_15772 = i_353 == n_352
-    _x_15773 = True
-    if _x_15772:
-        return acc_354
-    else:
-        _x_15779 = 1
-        _x_15782 = i_353 + 1
-        _x_15786 = x_351 + i_353
-        _x_15787 = acc_354 * _x_15786
-        _x_15788 = rising_factorial_go(x_351, n_352, _x_15782, _x_15787)
-        return _x_15788
+def rising_factorial_go(x_296: int, n_297: int, i_298: int, acc_299: int) -> int:
+    while True:
+        _x_23911 = i_298 == n_297
+        _x_23912 = True
+        _x_23913 = _x_23911 == True
+        if _x_23913:
+            return acc_299
+        else:
+            _x_23918 = 1
+            _x_23921 = i_298 + 1
+            _x_23925 = x_296 + i_298
+            _x_23926 = acc_299 * _x_23925
+            x_296, n_297, i_298, acc_299 = x_296, n_297, _x_23921, _x_23926
+            continue
 
 # Lean: Corpus.Geometry.segmentsIntersect.onSegment
-def on_segment(p_355: Point2D, q: Point2D, r_356: Point2D) -> bool:
-    def _f_15793():
-        _x_15792 = False
+def on_segment(p_300: Point2D, q: Point2D, r_301: Point2D) -> bool:
+    def _f_23932():
+        _x_23931 = False
         return False
-    _alt_15794 = _f_15793
-    def _f_15803():
-        _x_15796 = min
-        _x_15797 = p_355.point2d_1
-        _x_15798 = r_356.point2d_1
-        _x_15799 = _x_15796(_x_15797, _x_15798)
-        _x_15800 = q.point2d_1
-        _x_15801 = float_dec_le(_x_15799, _x_15800)
-        return _x_15801
-    _alt_15804 = _f_15803
-    _alt_15805 = _f_15793
-    def _f_15814():
-        _x_15806 = q.point2d_1
-        _x_15808 = max
-        _x_15809 = p_355.point2d_1
-        _x_15810 = r_356.point2d_1
-        _x_15811 = _x_15808(_x_15809, _x_15810)
-        _x_15812 = float_dec_le(_x_15806, _x_15811)
-        return _x_15812
-    _alt_15815 = _f_15814
-    _alt_15816 = _f_15793
-    def _f_15825():
-        _x_15818 = min
-        _x_15819 = p_355.point2d_0
-        _x_15820 = r_356.point2d_0
-        _x_15821 = _x_15818(_x_15819, _x_15820)
-        _x_15822 = q.point2d_0
-        _x_15823 = float_dec_le(_x_15821, _x_15822)
-        return _x_15823
-    _alt_15826 = _f_15825
-    _x_15827 = q.point2d_0
-    _x_15829 = max
-    _x_15830 = p_355.point2d_0
-    _x_15831 = r_356.point2d_0
-    _x_15832 = _x_15829(_x_15830, _x_15831)
-    _x_15833 = float_dec_le(_x_15827, _x_15832)
-    def _jp_15857(_y_15839: bool):
-        def _jp_15850(_y_15844: bool):
-            if _y_15844:
-                _x_15848 = _alt_15804()
-                return _x_15848
+    _alt_23933 = _f_23932
+    def _f_23942():
+        _x_23935 = min
+        _x_23936 = p_300.field_1
+        _x_23937 = r_301.field_1
+        _x_23938 = _x_23935(_x_23936, _x_23937)
+        _x_23939 = q.field_1
+        _x_23940 = dec_le(_x_23938, _x_23939)
+        return _x_23940
+    _alt_23943 = _f_23942
+    _alt_23944 = _f_23932
+    def _f_23953():
+        _x_23945 = q.field_1
+        _x_23947 = max
+        _x_23948 = p_300.field_1
+        _x_23949 = r_301.field_1
+        _x_23950 = _x_23947(_x_23948, _x_23949)
+        _x_23951 = dec_le(_x_23945, _x_23950)
+        return _x_23951
+    _alt_23954 = _f_23953
+    _alt_23955 = _f_23932
+    def _f_23964():
+        _x_23957 = min
+        _x_23958 = p_300.field_0
+        _x_23959 = r_301.field_0
+        _x_23960 = _x_23957(_x_23958, _x_23959)
+        _x_23961 = q.field_0
+        _x_23962 = dec_le(_x_23960, _x_23961)
+        return _x_23962
+    _alt_23965 = _f_23964
+    _x_23966 = q.field_0
+    _x_23968 = max
+    _x_23969 = p_300.field_0
+    _x_23970 = r_301.field_0
+    _x_23971 = _x_23968(_x_23969, _x_23970)
+    _x_23972 = dec_le(_x_23966, _x_23971)
+    def _jp_23996(_y_23978: bool):
+        def _jp_23989(_y_23983: bool):
+            if _y_23983:
+                _x_23987 = _alt_23943()
+                return _x_23987
             else:
-                _x_15846 = _alt_15794()
-                return _x_15846
-        def _jp_15856():
-            _x_15855 = _alt_15815()
-            return _jp_15850(_x_15855)
-        def _jp_15853():
-            _x_15852 = _alt_15805()
-            return _jp_15850(_x_15852)
-        if _y_15839:
-            return _jp_15856()
+                _x_23985 = _alt_23933()
+                return _x_23985
+        def _jp_23992():
+            _x_23991 = _alt_23944()
+            return _jp_23989(_x_23991)
+        def _jp_23995():
+            _x_23994 = _alt_23954()
+            return _jp_23989(_x_23994)
+        if _y_23978:
+            return _jp_23995()
         else:
-            return _jp_15853()
-    def _jp_15863():
-        _x_15862 = _alt_15826()
-        return _jp_15857(_x_15862)
-    def _jp_15860():
-        _x_15859 = _alt_15816()
-        return _jp_15857(_x_15859)
-    if _x_15833:
-        return _jp_15863()
+            return _jp_23992()
+    def _jp_23999():
+        _x_23998 = _alt_23955()
+        return _jp_23996(_x_23998)
+    def _jp_24002():
+        _x_24001 = _alt_23965()
+        return _jp_23996(_x_24001)
+    if _x_23972:
+        return _jp_24002()
     else:
-        return _jp_15860()
+        return _jp_23999()
 
 # Lean: Corpus.Geometry.isConvexPolygon.checkSign
-def check_sign(c_361: float, sign: bool | None) -> bool:
-    def _f_15866():
-        _x_15865 = True
+def check_sign(c_306: float, sign: bool | None) -> bool:
+    def _f_24005():
+        _x_24004 = True
         return True
-    _alt_15867 = _f_15866
-    def _f_15891(s_363: bool):
-        _alt_15868 = _f_15866
-        def _f_15878():
-            _x_15872 = 0
-            _x_15875 = float_dec_lt(0, c_361)
-            _x_15877 = _x_15875 == s_363
-            return _x_15877
-        _alt_15879 = _f_15878
-        _x_15882 = 0
-        _x_15885 = c_361 == 0
-        if _x_15885:
-            _x_15889 = _alt_15868()
-            return _x_15889
+    _alt_24006 = _f_24005
+    def _f_24030(s_308: bool):
+        _alt_24007 = _f_24005
+        def _f_24017():
+            _x_24011 = 0
+            _x_24014 = dec_lt(0, c_306)
+            _x_24016 = _x_24014 == s_308
+            return _x_24016
+        _alt_24018 = _f_24017
+        _x_24021 = 0
+        _x_24024 = c_306 == 0
+        if _x_24024:
+            _x_24028 = _alt_24007()
+            return _x_24028
         else:
-            _x_15887 = _alt_15879()
-            return _x_15887
-    _alt_15892 = _f_15891
+            _x_24026 = _alt_24018()
+            return _x_24026
+    _alt_24031 = _f_24030
     if sign is None:
-        _x_15894 = _alt_15867()
-        return _x_15894
+        _x_24033 = _alt_24006()
+        return _x_24033
     else:
-        val_15895 = sign
-        _x_15896 = _alt_15892(val_15895)
-        return _x_15896
+        val_24034 = sign
+        _x_24035 = _alt_24031(val_24034)
+        return _x_24035
 
 # Lean: Corpus.Geometry.isConvexPolygon.sub
-def sub(a_365: Point2D, b_366: Point2D) -> Point2D:
-    _x_15902 = a_365.point2d_0
-    _x_15903 = b_366.point2d_0
-    _x_15904 = _x_15902 - _x_15903
-    _x_15905 = a_365.point2d_1
-    _x_15906 = b_366.point2d_1
-    _x_15907 = _x_15905 - _x_15906
-    _x_15908 = Point2D_mk(_x_15904, _x_15907)
-    return _x_15908
+def sub(a_310: Point2D, b_311: Point2D) -> Point2D:
+    _x_24041 = a_310.field_0
+    _x_24042 = b_311.field_0
+    _x_24043 = _x_24041 - _x_24042
+    _x_24044 = a_310.field_1
+    _x_24045 = b_311.field_1
+    _x_24046 = _x_24044 - _x_24045
+    _x_24047 = Point2D_mk(_x_24043, _x_24046)
+    return _x_24047
 
 # Lean: Corpus.Geometry.isConvexPolygon.check
-def is_convex_polygon_check(first: Point2D, second: Point2D, prev2: Point2D, prev1: Point2D, vs: list[Point2D], sign_367: bool | None) -> bool:
-    def _f_15927():
-        _x_15910 = sub(prev1, prev2)
-        _x_15911 = sub(first, prev1)
-        _x_15912 = cross2d(_x_15910, _x_15911)
-        _x_15913 = sub(second, first)
-        _x_15914 = cross2d(_x_15911, _x_15913)
-        def _f_15916():
-            _x_15915 = False
+def is_convex_polygon_check(first: Point2D, second: Point2D, prev2: Point2D, prev1: Point2D, vs: list[Point2D], sign_312: bool | None) -> bool:
+    def _f_24066():
+        _x_24049 = sub(prev1, prev2)
+        _x_24050 = sub(first, prev1)
+        _x_24051 = cross2d(_x_24049, _x_24050)
+        _x_24052 = sub(second, first)
+        _x_24053 = cross2d(_x_24050, _x_24052)
+        def _f_24055():
+            _x_24054 = False
             return False
-        _alt_15917 = _f_15916
-        def _f_15919():
-            _x_15918 = check_sign(_x_15914, sign_367)
-            return _x_15918
-        _alt_15920 = _f_15919
-        _x_15921 = check_sign(_x_15912, sign_367)
-        if _x_15921:
-            _x_15925 = _alt_15920()
-            return _x_15925
+        _alt_24056 = _f_24055
+        def _f_24058():
+            _x_24057 = check_sign(_x_24053, sign_312)
+            return _x_24057
+        _alt_24059 = _f_24058
+        _x_24060 = check_sign(_x_24051, sign_312)
+        if _x_24060:
+            _x_24064 = _alt_24059()
+            return _x_24064
         else:
-            _x_15923 = _alt_15917()
-            return _x_15923
-    _alt_15928 = _f_15927
-    def _f_15959(v: Point2D, rest_: list[Point2D]):
-        _x_15929 = sub(prev1, prev2)
-        _x_15930 = sub(v, prev1)
-        _x_15931 = cross2d(_x_15929, _x_15930)
-        def _f_15933():
-            _x_15932 = False
+            _x_24062 = _alt_24056()
+            return _x_24062
+    _alt_24067 = _f_24066
+    def _f_24098(v: Point2D, rest_: list[Point2D]):
+        _x_24068 = sub(prev1, prev2)
+        _x_24069 = sub(v, prev1)
+        _x_24070 = cross2d(_x_24068, _x_24069)
+        def _f_24072():
+            _x_24071 = False
             return False
-        _alt_15934 = _f_15933
-        def _f_15951():
-            _x_15937 = 0
-            _x_15940 = _x_15931 == 0
-            _x_15941 = True
-            def _jp_15950(_y_15948: bool | None):
-                _x_15949 = is_convex_polygon_check(first, second, prev1, v, rest_, _y_15948)
-                return _x_15949
-            if _x_15940:
-                return _jp_15950(sign_367)
+        _alt_24073 = _f_24072
+        def _f_24090():
+            _x_24076 = 0
+            _x_24079 = _x_24070 == 0
+            _x_24080 = True
+            _x_24081 = _x_24079 == True
+            def _jp_24089(_y_24087: bool | None):
+                _x_24088 = is_convex_polygon_check(first, second, prev1, v, rest_, _y_24087)
+                return _x_24088
+            if _x_24081:
+                return _jp_24089(sign_312)
             else:
-                _x_15944 = float_dec_lt(0, _x_15931)
-                _x_15946 = _x_15944
-                return _jp_15950(_x_15946)
-        _alt_15952 = _f_15951
-        _x_15953 = check_sign(_x_15931, sign_367)
-        if _x_15953:
-            _x_15957 = _alt_15952()
-            return _x_15957
+                _x_24083 = dec_lt(0, _x_24070)
+                _x_24085 = _x_24083
+                return _jp_24089(_x_24085)
+        _alt_24091 = _f_24090
+        _x_24092 = check_sign(_x_24070, sign_312)
+        if _x_24092:
+            _x_24096 = _alt_24091()
+            return _x_24096
         else:
-            _x_15955 = _alt_15934()
-            return _x_15955
-    _alt_15960 = _f_15959
+            _x_24094 = _alt_24073()
+            return _x_24094
+    _alt_24099 = _f_24098
     if len(vs) == 0:
-        _x_15962 = _alt_15928()
-        return _x_15962
+        _x_24101 = _alt_24067()
+        return _x_24101
     else:
-        head_15963 = vs[0]
-        tail_15964 = vs[1:]
-        _x_15965 = _alt_15960(head_15963, tail_15964)
-        return _x_15965
+        head_24102 = vs[0]
+        tail_24103 = vs[1:]
+        _x_24104 = _alt_24099(head_24102, tail_24103)
+        return _x_24104
 
 # Lean: Corpus.Geometry.polygonArea.go
-def polygon_area_go(vs_374: list[Point2D], first_375: Point2D, prev_376: Point2D, acc_377: float) -> float:
-    def _f_15980():
-        _x_15974 = cross2d(prev_376, first_375)
-        _x_15975 = acc_377 + _x_15974
-        _x_15976 = 2
-        _x_15979 = _x_15975 // 2
-        return _x_15979
-    _alt_15981 = _f_15980
-    def _f_15988(v_379: Point2D, rest_380: list[Point2D]):
-        _x_15985 = cross2d(prev_376, v_379)
-        _x_15986 = acc_377 + _x_15985
-        _x_15987 = polygon_area_go(rest_380, first_375, v_379, _x_15986)
-        return _x_15987
-    _alt_15989 = _f_15988
-    if len(vs_374) == 0:
-        _x_15991 = _alt_15981()
-        return _x_15991
-    else:
-        head_15992 = vs_374[0]
-        tail_15993 = vs_374[1:]
-        _x_15994 = _alt_15989(head_15992, tail_15993)
-        return _x_15994
+def polygon_area_go(vs_319: list[Point2D], first_320: Point2D, prev_321: Point2D, acc_322: float) -> float:
+    while True:
+        def _f_24119():
+            _x_24113 = cross2d(prev_321, first_320)
+            _x_24114 = acc_322 + _x_24113
+            _x_24115 = 2
+            _x_24118 = _x_24114 // 2
+            return _x_24118
+        _alt_24120 = _f_24119
+        if len(vs_319) == 0:
+            _x_24130 = _alt_24120()
+            return _x_24130
+        else:
+            head_24131 = vs_319[0]
+            tail_24132 = vs_319[1:]
+            v_324 = head_24131
+            rest_325 = tail_24132
+            _x_24124 = cross2d(prev_321, v_324)
+            _x_24125 = acc_322 + _x_24124
+            vs_319, first_320, prev_321, acc_322 = rest_325, first_320, v_324, _x_24125
+            continue
 
 # Lean: Corpus.Geometry.pointInTriangle.sign
 def sign(p1: Point2D, p2: Point2D, p3: Point2D) -> float:
-    _x_16003 = p1.point2d_0
-    _x_16004 = p3.point2d_0
-    _x_16005 = _x_16003 - _x_16004
-    _x_16006 = p2.point2d_1
-    _x_16007 = p3.point2d_1
-    _x_16008 = _x_16006 - _x_16007
-    _x_16009 = _x_16005 * _x_16008
-    _x_16010 = p2.point2d_0
-    _x_16011 = _x_16010 - _x_16004
-    _x_16012 = p1.point2d_1
-    _x_16013 = _x_16012 - _x_16007
-    _x_16014 = _x_16011 * _x_16013
-    _x_16015 = _x_16009 - _x_16014
-    return _x_16015
+    _x_24142 = p1.field_0
+    _x_24143 = p3.field_0
+    _x_24144 = _x_24142 - _x_24143
+    _x_24145 = p2.field_1
+    _x_24146 = p3.field_1
+    _x_24147 = _x_24145 - _x_24146
+    _x_24148 = _x_24144 * _x_24147
+    _x_24149 = p2.field_0
+    _x_24150 = _x_24149 - _x_24143
+    _x_24151 = p1.field_1
+    _x_24152 = _x_24151 - _x_24146
+    _x_24153 = _x_24150 * _x_24152
+    _x_24154 = _x_24148 - _x_24153
+    return _x_24154
 
 # Lean: Corpus.NumberTheory.isHarshad.digitSum
-def digit_sum(n_381: int) -> int:
-    _x_16019 = 0
-    _x_16022 = n_381 == 0
-    _x_16023 = True
-    if _x_16022:
+def digit_sum(n_326: int) -> int:
+    _x_24159 = 0
+    _x_24162 = n_326 == 0
+    _x_24163 = True
+    _x_24164 = _x_24162 == True
+    if _x_24164:
         return 0
     else:
-        _x_16032 = 10
-        _x_16035 = n_381 % 10
-        _x_16039 = n_381 // 10
-        _x_16040 = digit_sum(_x_16039)
-        _x_16041 = _x_16035 + _x_16040
-        return _x_16041
+        _x_24172 = 10
+        _x_24175 = n_326 % 10
+        _x_24179 = n_326 // 10
+        _x_24180 = digit_sum(_x_24179)
+        _x_24181 = _x_24175 + _x_24180
+        return _x_24181
 
 # Lean: Corpus.NumberTheory.digitalRoot.digitSum
-def digit_sum(n_382: int) -> int:
-    _x_16047 = 0
-    _x_16050 = n_382 == 0
-    _x_16051 = True
-    if _x_16050:
+def digit_sum(n_327: int) -> int:
+    _x_24189 = 0
+    _x_24192 = n_327 == 0
+    _x_24193 = True
+    _x_24194 = _x_24192 == True
+    if _x_24194:
         return 0
     else:
-        _x_16060 = 10
-        _x_16063 = n_382 % 10
-        _x_16067 = n_382 // 10
-        _x_16068 = digit_sum(_x_16067)
-        _x_16069 = _x_16063 + _x_16068
-        return _x_16069
+        _x_24202 = 10
+        _x_24205 = n_327 % 10
+        _x_24209 = n_327 // 10
+        _x_24210 = digit_sum(_x_24209)
+        _x_24211 = _x_24205 + _x_24210
+        return _x_24211
 
 # Lean: Corpus.NumberTheory.isqrt.go
-def isqrt_go(n_383: int, x_384: int, fuel: int) -> int:
-    def _f_16073():
-        return x_384
-    _alt_16074 = _f_16073
-    def _f_16092(fuel_: int):
-        _x_16081 = n_383 // x_384
-        _x_16082 = x_384 + _x_16081
-        _x_16083 = 2
-        _x_16086 = _x_16082 // 2
-        _x_16087 = x_384 <= _x_16086
-        if _x_16087:
-            return x_384
+def isqrt_go(n_328: int, x_329: int, fuel: int) -> int:
+    while True:
+        def _f_24216():
+            return x_329
+        _alt_24217 = _f_24216
+        if fuel == 0:
+            _x_24238 = _alt_24217()
+            return _x_24238
         else:
-            _x_16089 = isqrt_go(n_383, _x_16086, fuel_)
-            return _x_16089
-    _alt_16093 = _f_16092
-    if fuel == 0:
-        _x_16095 = _alt_16074()
-        return _x_16095
-    else:
-        n_16096 = fuel - 1
-        _x_16097 = _alt_16093(n_16096)
-        return _x_16097
+            n_24239 = fuel - 1
+            fuel_ = n_24239
+            _x_24224 = n_328 // x_329
+            _x_24225 = x_329 + _x_24224
+            _x_24226 = 2
+            _x_24229 = _x_24225 // 2
+            _x_24230 = x_329 <= _x_24229
+            if _x_24230:
+                return x_329
+            else:
+                n_328, x_329, fuel = n_328, _x_24229, fuel_
+                continue
 
 # Lean: Corpus.NumberTheory.totient.gcd
-def totient_gcd(a_387: int, b_388: int) -> int:
-    _x_16102 = 0
-    _x_16105 = b_388 == 0
-    _x_16106 = True
-    if _x_16105:
-        return a_387
-    else:
-        _x_16112 = a_387 % b_388
-        _x_16113 = totient_gcd(b_388, _x_16112)
-        return _x_16113
+def totient_gcd(a_332: int, b_333: int) -> int:
+    while True:
+        _x_24246 = 0
+        _x_24249 = b_333 == 0
+        _x_24250 = True
+        _x_24251 = _x_24249 == True
+        if _x_24251:
+            return a_332
+        else:
+            _x_24256 = a_332 % b_333
+            a_332, b_333 = b_333, _x_24256
+            continue
 
 # Lean: Corpus.NumberTheory.totient.count
-def count(n_389: int, i_390: int, acc_391: int) -> int:
-    _x_16119 = i_390 == n_389
-    _x_16120 = True
-    if _x_16119:
-        return acc_391
-    else:
-        _x_16123 = totient_gcd(i_390, n_389)
-        _x_16124 = 1
-        _x_16127 = _x_16123 == 1
-        if _x_16127:
-            _x_16139 = i_390 + 1
-            _x_16140 = acc_391 + 1
-            _x_16141 = count(n_389, _x_16139, _x_16140)
-            return _x_16141
+def count(n_334: int, i_335: int, acc_336: int) -> int:
+    while True:
+        _x_24264 = i_335 == n_334
+        _x_24265 = True
+        _x_24266 = _x_24264 == True
+        if _x_24266:
+            return acc_336
         else:
-            _x_16133 = i_390 + 1
-            _x_16134 = count(n_389, _x_16133, acc_391)
-            return _x_16134
+            _x_24268 = totient_gcd(i_335, n_334)
+            _x_24269 = 1
+            _x_24272 = _x_24268 == 1
+            _x_24273 = _x_24272 == True
+            if _x_24273:
+                _x_24284 = i_335 + 1
+                _x_24285 = acc_336 + 1
+                n_334, i_335, acc_336 = n_334, _x_24284, _x_24285
+                continue
+            else:
+                _x_24278 = i_335 + 1
+                n_334, i_335, acc_336 = n_334, _x_24278, acc_336
+                continue
 
 # Lean: Corpus.Advanced.Graph.topoSort.loop
-def topo_sort_loop(g: Graph, queue: list[int], in_deg: list[int], result: list[int], fuel_392: int) -> list[int] | None:
-    def _f_16147():
-        _x_16146 = None
-        return _x_16146
-    _alt_16148 = _f_16147
-    def _f_16239(fuel__394: int):
-        def _f_16162():
-            _x_16151 = len(result)
-            _x_16152 = g.advanced_graph_0
-            _x_16153 = _x_16151 == _x_16152
-            _x_16154 = True
-            if _x_16153:
-                _x_16159 = list(reversed(result))
-                _x_16160 = _x_16159
-                return _x_16160
-            else:
-                _x_16157 = None
-                return _x_16157
-        _alt_16163 = _f_16162
-        def _f_16231(v_396: int, rest_397: list[int]):
-            _x_16164 = [v_396] + result
-            def _f_16170(x_16165: tuple[int, int]):
-                _x_16168 = x_16165[0]
-                _x_16169 = _x_16168 == v_396
-                return _x_16169
-            _x_16171 = g.advanced_graph_1
-            _x_16172 = [x for x in _x_16171 if _f_16170(x)]
-            def _f_16174(new_in_deg: list[int], new_queue: list[int]):
-                _x_16173 = topo_sort_loop(g, new_queue, new_in_deg, _x_16164, fuel__394)
-                return _x_16173
-            _alt_16175 = _f_16174
-            def _f_16224(x_16176: tuple[list[int], list[int]], x_16177: tuple[int, int]):
-                def _f_16218(deg: list[int], q_398: list[int]):
-                    def _f_16212(fst_16178: int, w_399: int):
-                        def _f_16201(d_400: int):
-                            _x_16182 = 1
-                            _x_16185 = d_400 - 1
-                            _x_16186 = deg[:w_399] + [_x_16185] + deg[w_399+1:]
-                            _x_16189 = 0
-                            _x_16192 = _x_16185 == 0
-                            _x_16193 = True
-                            if _x_16192:
-                                _x_16198 = [w_399] + q_398
-                                _x_16199 = (_x_16186, _x_16198)
-                                return _x_16199
-                            else:
-                                _x_16196 = (_x_16186, q_398)
-                                return _x_16196
-                        _alt_16202 = _f_16201
-                        def _f_16204():
-                            _x_16203 = (deg, q_398)
-                            return _x_16203
-                        _alt_16205 = _f_16204
-                        _x_16206 = deg[w_399] if 0 <= w_399 < len(deg) else None
-                        if _x_16206 is None:
-                            _x_16208 = _alt_16205()
-                            return _x_16208
-                        else:
-                            val_16209 = _x_16206
-                            _x_16210 = _alt_16202(val_16209)
-                            return _x_16210
-                    _alt_16213 = _f_16212
-                    match x_16177:
-                        case (fst_16214, snd_16215):
-                            _x_16216 = _alt_16213(fst_16214, snd_16215)
-                            return _x_16216
-                _alt_16219 = _f_16218
-                match x_16176:
-                    case (fst_16220, snd_16221):
-                        _x_16222 = _alt_16219(fst_16220, snd_16221)
-                        return _x_16222
-            _x_16225 = (in_deg, rest_397)
-            _x_16226 = functools.reduce(_f_16224, _x_16172, _x_16225)
-            match _x_16226:
-                case (fst_16227, snd_16228):
-                    _x_16229 = _alt_16175(fst_16227, snd_16228)
-                    return _x_16229
-        _alt_16232 = _f_16231
-        if len(queue) == 0:
-            _x_16234 = _alt_16163()
-            return _x_16234
+def topo_sort_loop(g: Graph, queue: list[int], in_deg: list[int], result: list[int], fuel_337: int) -> list[int] | None:
+    while True:
+        def _f_24292():
+            _x_24291 = None
+            return _x_24291
+        _alt_24293 = _f_24292
+        if fuel_337 == 0:
+            _x_24392 = _alt_24293()
+            return _x_24392
         else:
-            head_16235 = queue[0]
-            tail_16236 = queue[1:]
-            _x_16237 = _alt_16232(head_16235, tail_16236)
-            return _x_16237
-    _alt_16240 = _f_16239
-    if fuel_392 == 0:
-        _x_16242 = _alt_16148()
-        return _x_16242
-    else:
-        n_16243 = fuel_392 - 1
-        _x_16244 = _alt_16240(n_16243)
-        return _x_16244
+            n_24393 = fuel_337 - 1
+            fuel__339 = n_24393
+            def _f_24308():
+                _x_24297 = len(result)
+                _x_24298 = g.field_0
+                _x_24299 = _x_24297 == _x_24298
+                _x_24300 = True
+                _x_24301 = _x_24299 == True
+                if _x_24301:
+                    _x_24305 = list(reversed(result))
+                    _x_24306 = _x_24305
+                    return _x_24306
+                else:
+                    _x_24303 = None
+                    return _x_24303
+            _alt_24309 = _f_24308
+            if len(queue) == 0:
+                _x_24384 = _alt_24309()
+                return _x_24384
+            else:
+                head_24385 = queue[0]
+                tail_24386 = queue[1:]
+                v_341 = head_24385
+                rest_342 = tail_24386
+                _x_24310 = [v_341] + result
+                _x_24318 = g.field_1
+                _x_24319 = [x_24311 for x_24311 in _x_24318 if (x_24311[0] == v_341)]
+                def _f_24374(x_24323: tuple[list[int], list[int]], x_24324: tuple[int, int]):
+                    def _f_24368(deg: list[int], q_343: list[int]):
+                        def _f_24362(fst_24325: int, w_344: int):
+                            def _f_24349(d_345: int):
+                                _x_24329 = 1
+                                _x_24332 = d_345 - 1
+                                _x_24333 = set_tr(None, deg, w_344, _x_24332)
+                                _x_24337 = 0
+                                _x_24340 = _x_24332 == 0
+                                _x_24341 = True
+                                _x_24342 = _x_24340 == True
+                                if _x_24342:
+                                    _x_24346 = [w_344] + q_343
+                                    _x_24347 = (_x_24333, _x_24346)
+                                    return _x_24347
+                                else:
+                                    _x_24344 = (_x_24333, q_343)
+                                    return _x_24344
+                            _alt_24350 = _f_24349
+                            def _f_24352():
+                                _x_24351 = (deg, q_343)
+                                return _x_24351
+                            _alt_24353 = _f_24352
+                            _x_24355 = (lambda xs, i: xs[i] if 0 <= i < len(xs) else None)
+                            _x_24356 = _x_24355(deg, w_344)
+                            if _x_24356 is None:
+                                _x_24358 = _alt_24353()
+                                return _x_24358
+                            else:
+                                val_24359 = _x_24356
+                                _x_24360 = _alt_24350(val_24359)
+                                return _x_24360
+                        _alt_24363 = _f_24362
+                        match x_24324:
+                            case (fst_24364, snd_24365):
+                                _x_24366 = _alt_24363(fst_24364, snd_24365)
+                                return _x_24366
+                    _alt_24369 = _f_24368
+                    match x_24323:
+                        case (fst_24370, snd_24371):
+                            _x_24372 = _alt_24369(fst_24370, snd_24371)
+                            return _x_24372
+                _x_24375 = (in_deg, rest_342)
+                _x_24376 = functools.reduce(_f_24374, _x_24319, _x_24375)
+                match _x_24376:
+                    case (fst_24377, snd_24378):
+                        new_in_deg = fst_24377
+                        new_queue = snd_24378
+                        g, queue, in_deg, result, fuel_337 = g, new_queue, new_in_deg, _x_24310, fuel__339
+                        continue
 
 # Lean: Corpus.Advanced.Graph.dfs.loop
-def dfs_loop(g_402: Graph, stack: list[int], visited: list[int], fuel_403: int) -> list[int]:
-    def _f_16248():
-        _x_16247 = list(reversed(visited))
-        return _x_16247
-    _alt_16249 = _f_16248
-    def _f_16279(fuel__405: int):
-        _alt_16250 = _f_16248
-        def _f_16271(v_406: int, rest_407: list[int]):
-            _x_16252 = v_406 in visited
-            _x_16253 = True
-            if _x_16252:
-                _x_16269 = dfs_loop(g_402, rest_407, visited, fuel__405)
-                return _x_16269
-            else:
-                _x_16256 = [v_406] + visited
-                def _f_16260(x_16257: int):
-                    _x_16258 = x_16257 in _x_16256
-                    _x_16259 = not _x_16258
-                    return _x_16259
-                _x_16261 = advanced_graph_neighbors(g_402, v_406)
-                _x_16262 = [x for x in _x_16261 if _f_16260(x)]
-                _x_16266 = _x_16262 + rest_407
-                _x_16267 = dfs_loop(g_402, _x_16266, _x_16256, fuel__405)
-                return _x_16267
-        _alt_16272 = _f_16271
-        if len(stack) == 0:
-            _x_16274 = _alt_16250()
-            return _x_16274
+def dfs_loop(g_347: Graph, stack: list[int], visited: list[int], fuel_348: int) -> list[int]:
+    while True:
+        def _f_24398():
+            _x_24397 = list(reversed(visited))
+            return _x_24397
+        _alt_24399 = _f_24398
+        if fuel_348 == 0:
+            _x_24433 = _alt_24399()
+            return _x_24433
         else:
-            head_16275 = stack[0]
-            tail_16276 = stack[1:]
-            _x_16277 = _alt_16272(head_16275, tail_16276)
-            return _x_16277
-    _alt_16280 = _f_16279
-    if fuel_403 == 0:
-        _x_16282 = _alt_16249()
-        return _x_16282
-    else:
-        n_16283 = fuel_403 - 1
-        _x_16284 = _alt_16280(n_16283)
-        return _x_16284
+            n_24434 = fuel_348 - 1
+            fuel__350 = n_24434
+            _alt_24400 = _f_24398
+            if len(stack) == 0:
+                _x_24425 = _alt_24400()
+                return _x_24425
+            else:
+                head_24426 = stack[0]
+                tail_24427 = stack[1:]
+                v_351 = head_24426
+                rest_352 = tail_24427
+                _x_24403 = v_351 in visited
+                _x_24404 = True
+                _x_24405 = _x_24403 == True
+                if _x_24405:
+                    g_347, stack, visited, fuel_348 = g_347, rest_352, visited, fuel__350
+                    continue
+                else:
+                    _x_24407 = [v_351] + visited
+                    def _f_24411(x_24408: int):
+                        _x_24409 = x_24408 in _x_24407
+                        _x_24410 = not _x_24409
+                        return _x_24410
+                    _x_24412 = advanced_graph_neighbors(g_347, v_351)
+                    _x_24413 = [x for x in _x_24412 if _f_24411(x)]
+                    _x_24417 = _x_24413 + rest_352
+                    g_347, stack, visited, fuel_348 = g_347, _x_24417, _x_24407, fuel__350
+                    continue
 
 # Lean: Corpus.Advanced.Graph.bfs.loop
-def bfs_loop(g_408: Graph, queue_409: list[int], visited_410: list[int], fuel_411: int) -> list[int]:
-    def _f_16288():
-        _x_16287 = list(reversed(visited_410))
-        return _x_16287
-    _alt_16289 = _f_16288
-    def _f_16319(fuel__413: int):
-        _alt_16290 = _f_16288
-        def _f_16311(v_414: int, rest_415: list[int]):
-            _x_16292 = v_414 in visited_410
-            _x_16293 = True
-            if _x_16292:
-                _x_16309 = bfs_loop(g_408, rest_415, visited_410, fuel__413)
-                return _x_16309
-            else:
-                _x_16296 = [v_414] + visited_410
-                def _f_16300(x_16297: int):
-                    _x_16298 = x_16297 in _x_16296
-                    _x_16299 = not _x_16298
-                    return _x_16299
-                _x_16301 = advanced_graph_neighbors(g_408, v_414)
-                _x_16302 = [x for x in _x_16301 if _f_16300(x)]
-                _x_16306 = rest_415 + _x_16302
-                _x_16307 = bfs_loop(g_408, _x_16306, _x_16296, fuel__413)
-                return _x_16307
-        _alt_16312 = _f_16311
-        if len(queue_409) == 0:
-            _x_16314 = _alt_16290()
-            return _x_16314
+def bfs_loop(g_353: Graph, queue_354: list[int], visited_355: list[int], fuel_356: int) -> list[int]:
+    while True:
+        def _f_24439():
+            _x_24438 = list(reversed(visited_355))
+            return _x_24438
+        _alt_24440 = _f_24439
+        if fuel_356 == 0:
+            _x_24474 = _alt_24440()
+            return _x_24474
         else:
-            head_16315 = queue_409[0]
-            tail_16316 = queue_409[1:]
-            _x_16317 = _alt_16312(head_16315, tail_16316)
-            return _x_16317
-    _alt_16320 = _f_16319
-    if fuel_411 == 0:
-        _x_16322 = _alt_16289()
-        return _x_16322
-    else:
-        n_16323 = fuel_411 - 1
-        _x_16324 = _alt_16320(n_16323)
-        return _x_16324
+            n_24475 = fuel_356 - 1
+            fuel__358 = n_24475
+            _alt_24441 = _f_24439
+            if len(queue_354) == 0:
+                _x_24466 = _alt_24441()
+                return _x_24466
+            else:
+                head_24467 = queue_354[0]
+                tail_24468 = queue_354[1:]
+                v_359 = head_24467
+                rest_360 = tail_24468
+                _x_24444 = v_359 in visited_355
+                _x_24445 = True
+                _x_24446 = _x_24444 == True
+                if _x_24446:
+                    g_353, queue_354, visited_355, fuel_356 = g_353, rest_360, visited_355, fuel__358
+                    continue
+                else:
+                    _x_24448 = [v_359] + visited_355
+                    def _f_24452(x_24449: int):
+                        _x_24450 = x_24449 in _x_24448
+                        _x_24451 = not _x_24450
+                        return _x_24451
+                    _x_24453 = advanced_graph_neighbors(g_353, v_359)
+                    _x_24454 = [x for x in _x_24453 if _f_24452(x)]
+                    _x_24458 = rest_360 + _x_24454
+                    g_353, queue_354, visited_355, fuel_356 = g_353, _x_24458, _x_24448, fuel__358
+                    continue
 
 # Lean: Corpus.Advanced.heapSort.extract
-def extract(__418: Any, inst_16327: Any, h: Any, acc_419: list[Any], fuel_420: int) -> list[Any]:
-    def _f_16329():
-        _x_16328 = list(reversed(acc_419))
-        return _x_16328
-    _alt_16330 = _f_16329
-    def _f_16343(fuel__422: int):
-        _alt_16331 = _f_16329
-        def _f_16335(x_423: Any):
-            _x_16332 = pop_min(None, inst_16327, h)
-            _x_16333 = [x_423] + acc_419
-            _x_16334 = extract(None, inst_16327, _x_16332, _x_16333, fuel__422)
-            return _x_16334
-        _alt_16336 = _f_16335
-        _x_16337 = advanced_heap_min(None, h)
-        if _x_16337 is None:
-            _x_16339 = _alt_16331()
-            return _x_16339
+def extract(__363: Any, inst_24479: Any, h: Any, acc_364: list[Any], fuel_365: int) -> list[Any]:
+    while True:
+        def _f_24481():
+            _x_24480 = list(reversed(acc_364))
+            return _x_24480
+        _alt_24482 = _f_24481
+        if fuel_365 == 0:
+            _x_24498 = _alt_24482()
+            return _x_24498
         else:
-            val_16340 = _x_16337
-            _x_16341 = _alt_16336(val_16340)
-            return _x_16341
-    _alt_16344 = _f_16343
-    if fuel_420 == 0:
-        _x_16346 = _alt_16330()
-        return _x_16346
-    else:
-        n_16347 = fuel_420 - 1
-        _x_16348 = _alt_16344(n_16347)
-        return _x_16348
+            n_24499 = fuel_365 - 1
+            fuel__367 = n_24499
+            _alt_24483 = _f_24481
+            _x_24489 = advanced_heap_min(None, h)
+            if _x_24489 is None:
+                _x_24491 = _alt_24483()
+                return _x_24491
+            else:
+                val_24492 = _x_24489
+                x_368 = val_24492
+                _x_24484 = pop_min(None, inst_24479, h)
+                _x_24485 = [x_368] + acc_364
+                return extract(None, inst_24479, _x_24484, _x_24485, fuel__367)
 
 # Lean: Corpus.DataStructures.Trie.hasPrefix.go
-def has_prefix_go(t_424: Trie, chars: list[str]) -> bool:
-    def _f_16353(x_16351: Trie):
-        _x_16352 = True
-        return True
-    _alt_16354 = _f_16353
-    def _f_16385(a_16355: bool, children: list[tuple[str, Trie]], c_425: str, cs: list[str]):
-        def _f_16358(fst_16356: str, child: Trie):
-            _x_16357 = has_prefix_go(child, cs)
-            return _x_16357
-        _alt_16359 = _f_16358
-        def _f_16361():
-            _x_16360 = False
-            return False
-        _alt_16362 = _f_16361
-        def _f_16375(x_16363: tuple[str, Trie]):
-            def _f_16369(ch: str, snd_16364: Trie):
-                _x_16368 = ch == c_425
-                return _x_16368
-            _alt_16370 = _f_16369
-            match x_16363:
-                case (fst_16371, snd_16372):
-                    _x_16373 = _alt_16370(fst_16371, snd_16372)
-                    return _x_16373
-        _x_16376 = next((x for x in children if _f_16375(x)), None)
-        if _x_16376 is None:
-            _x_16378 = _alt_16362()
-            return _x_16378
+def has_prefix_go(t_369: Trie, chars: list[str]) -> bool:
+    while True:
+        def _f_24505(x_24503: Trie):
+            _x_24504 = True
+            return True
+        _alt_24506 = _f_24505
+        if len(chars) == 0:
+            _x_24539 = _alt_24506(t_369)
+            return _x_24539
         else:
-            val_16379 = _x_16376
-            match val_16379:
-                case (fst_16380, snd_16381):
-                    _x_16382 = _alt_16359(fst_16380, snd_16381)
-                    return _x_16382
-    _alt_16386 = _f_16385
-    match t_424:
-        case Trie_node(a_16387, a_16388):
-            if len(chars) == 0:
-                _x_16389 = Trie_node(a_16387, a_16388)
-                _x_16390 = _alt_16354(_x_16389)
-                return _x_16390
-            else:
-                head_16391 = chars[0]
-                tail_16392 = chars[1:]
-                _x_16393 = _alt_16386(a_16387, a_16388, head_16391, tail_16392)
-                return _x_16393
+            head_24540 = chars[0]
+            tail_24541 = chars[1:]
+            match t_369:
+                case Trie_node(a_24542, a_24543):
+                    a_24507 = a_24542
+                    children = a_24543
+                    c_370 = head_24540
+                    cs = tail_24541
+                    def _f_24513():
+                        _x_24512 = False
+                        return False
+                    _alt_24514 = _f_24513
+                    def _f_24527(x_24515: tuple[str, Trie]):
+                        def _f_24521(ch: str, snd_24516: Trie):
+                            _x_24520 = ch == c_370
+                            return _x_24520
+                        _alt_24522 = _f_24521
+                        match x_24515:
+                            case (fst_24523, snd_24524):
+                                _x_24525 = _alt_24522(fst_24523, snd_24524)
+                                return _x_24525
+                    _x_24528 = next((x for x in children if _f_24527(x)), None)
+                    if _x_24528 is None:
+                        _x_24530 = _alt_24514()
+                        return _x_24530
+                    else:
+                        val_24531 = _x_24528
+                        match val_24531:
+                            case (fst_24532, snd_24533):
+                                fst_24508 = fst_24532
+                                child = snd_24533
+                                t_369, chars = child, cs
+                                continue
 
 # Lean: Corpus.DataStructures.Trie.contains.go
-def trie_contains_go(t_427: Trie, chars_428: list[str]) -> bool:
-    def _f_16398(is_end: bool, a_16397: list[tuple[str, Trie]]):
-        return is_end
-    _alt_16399 = _f_16398
-    def _f_16430(a_16400: bool, children_429: list[tuple[str, Trie]], c_430: str, cs_431: list[str]):
-        def _f_16403(fst_16401: str, child_432: Trie):
-            _x_16402 = trie_contains_go(child_432, cs_431)
-            return _x_16402
-        _alt_16404 = _f_16403
-        def _f_16406():
-            _x_16405 = False
-            return False
-        _alt_16407 = _f_16406
-        def _f_16420(x_16408: tuple[str, Trie]):
-            def _f_16414(ch_434: str, snd_16409: Trie):
-                _x_16413 = ch_434 == c_430
-                return _x_16413
-            _alt_16415 = _f_16414
-            match x_16408:
-                case (fst_16416, snd_16417):
-                    _x_16418 = _alt_16415(fst_16416, snd_16417)
-                    return _x_16418
-        _x_16421 = next((x for x in children_429 if _f_16420(x)), None)
-        if _x_16421 is None:
-            _x_16423 = _alt_16407()
-            return _x_16423
-        else:
-            val_16424 = _x_16421
-            match val_16424:
-                case (fst_16425, snd_16426):
-                    _x_16427 = _alt_16404(fst_16425, snd_16426)
-                    return _x_16427
-    _alt_16431 = _f_16430
-    match t_427:
-        case Trie_node(a_16432, a_16433):
-            if len(chars_428) == 0:
-                _x_16434 = _alt_16399(a_16432, a_16433)
-                return _x_16434
-            else:
-                head_16435 = chars_428[0]
-                tail_16436 = chars_428[1:]
-                _x_16437 = _alt_16431(a_16432, a_16433, head_16435, tail_16436)
-                return _x_16437
+def trie_contains_go(t_372: Trie, chars_373: list[str]) -> bool:
+    while True:
+        def _f_24549(is_end: bool, a_24548: list[tuple[str, Trie]]):
+            return is_end
+        _alt_24550 = _f_24549
+        match t_372:
+            case Trie_node(a_24583, a_24584):
+                if len(chars_373) == 0:
+                    _x_24585 = _alt_24550(a_24583, a_24584)
+                    return _x_24585
+                else:
+                    head_24586 = chars_373[0]
+                    tail_24587 = chars_373[1:]
+                    a_24551 = a_24583
+                    children_374 = a_24584
+                    c_375 = head_24586
+                    cs_376 = tail_24587
+                    def _f_24557():
+                        _x_24556 = False
+                        return False
+                    _alt_24558 = _f_24557
+                    def _f_24571(x_24559: tuple[str, Trie]):
+                        def _f_24565(ch_378: str, snd_24560: Trie):
+                            _x_24564 = ch_378 == c_375
+                            return _x_24564
+                        _alt_24566 = _f_24565
+                        match x_24559:
+                            case (fst_24567, snd_24568):
+                                _x_24569 = _alt_24566(fst_24567, snd_24568)
+                                return _x_24569
+                    _x_24572 = next((x for x in children_374 if _f_24571(x)), None)
+                    if _x_24572 is None:
+                        _x_24574 = _alt_24558()
+                        return _x_24574
+                    else:
+                        val_24575 = _x_24572
+                        match val_24575:
+                            case (fst_24576, snd_24577):
+                                fst_24552 = fst_24576
+                                child_379 = snd_24577
+                                t_372, chars_373 = child_379, cs_376
+                                continue
 
 # Lean: Corpus.DataStructures.Trie.insert.go
-def trie_insert_go(t_435: Trie, chars_436: list[str]) -> Trie:
-    def _f_16443(is_end_437: bool, children_438: list[tuple[str, Trie]]):
-        _x_16441 = True
-        _x_16442 = Trie_node(True, children_438)
-        return _x_16442
-    _alt_16444 = _f_16443
-    def _f_16506(is_end_439: bool, children_440: list[tuple[str, Trie]], c_441: str, cs_442: list[str]):
-        def _f_16467(fst_16445: str, child_443: Trie):
-            def _f_16465(x_16446: tuple[str, Trie]):
-                def _f_16459(ch_444: str, t_: Trie):
-                    _x_16450 = ch_444 == c_441
-                    _x_16451 = True
-                    if _x_16450:
-                        _x_16456 = trie_insert_go(t_, cs_442)
-                        _x_16457 = (ch_444, _x_16456)
-                        return _x_16457
+def trie_insert_go(t_380: Trie, chars_381: list[str]) -> Trie:
+    def _f_24594(is_end_382: bool, children_383: list[tuple[str, Trie]]):
+        _x_24592 = True
+        _x_24593 = Trie_node(True, children_383)
+        return _x_24593
+    _alt_24595 = _f_24594
+    def _f_24657(is_end_384: bool, children_385: list[tuple[str, Trie]], c_386: str, cs_387: list[str]):
+        def _f_24618(fst_24596: str, child_388: Trie):
+            def _f_24616(x_24597: tuple[str, Trie]):
+                def _f_24610(ch_389: str, t_: Trie):
+                    _x_24601 = ch_389 == c_386
+                    _x_24602 = True
+                    _x_24603 = _x_24601 == True
+                    if _x_24603:
+                        _x_24607 = trie_insert_go(t_, cs_387)
+                        _x_24608 = (ch_389, _x_24607)
+                        return _x_24608
                     else:
-                        _x_16454 = (ch_444, t_)
-                        return _x_16454
-                _alt_16460 = _f_16459
-                match x_16446:
-                    case (fst_16461, snd_16462):
-                        _x_16463 = _alt_16460(fst_16461, snd_16462)
-                        return _x_16463
-            _x_16466 = [_f_16465(x) for x in children_440]
-            return _x_16466
-        _alt_16468 = _f_16467
-        def _f_16473():
-            _x_16469 = trie_empty()
-            _x_16470 = trie_insert_go(_x_16469, cs_442)
-            _x_16471 = (c_441, _x_16470)
-            _x_16472 = [_x_16471] + children_440
-            return _x_16472
-        _alt_16474 = _f_16473
-        def _f_16487(x_16475: tuple[str, Trie]):
-            def _f_16481(ch_446: str, snd_16476: Trie):
-                _x_16480 = ch_446 == c_441
-                return _x_16480
-            _alt_16482 = _f_16481
-            match x_16475:
-                case (fst_16483, snd_16484):
-                    _x_16485 = _alt_16482(fst_16483, snd_16484)
-                    return _x_16485
-        _x_16488 = next((x for x in children_440 if _f_16487(x)), None)
-        def _jp_16498(_y_16496: list[tuple[str, Trie]]):
-            _x_16497 = Trie_node(is_end_439, _y_16496)
-            return _x_16497
-        def _jp_16501():
-            _x_16500 = _alt_16474()
-            return _jp_16498(_x_16500)
-        def _jp_16505(_y_16502: str, _y_16503: Trie):
-            _x_16504 = _alt_16468(_y_16502, _y_16503)
-            return _jp_16498(_x_16504)
-        if _x_16488 is None:
-            return _jp_16501()
+                        _x_24605 = (ch_389, t_)
+                        return _x_24605
+                _alt_24611 = _f_24610
+                match x_24597:
+                    case (fst_24612, snd_24613):
+                        _x_24614 = _alt_24611(fst_24612, snd_24613)
+                        return _x_24614
+            _x_24617 = [_f_24616(x) for x in children_385]
+            return _x_24617
+        _alt_24619 = _f_24618
+        def _f_24624():
+            _x_24620 = trie_empty()
+            _x_24621 = trie_insert_go(_x_24620, cs_387)
+            _x_24622 = (c_386, _x_24621)
+            _x_24623 = [_x_24622] + children_385
+            return _x_24623
+        _alt_24625 = _f_24624
+        def _f_24638(x_24626: tuple[str, Trie]):
+            def _f_24632(ch_391: str, snd_24627: Trie):
+                _x_24631 = ch_391 == c_386
+                return _x_24631
+            _alt_24633 = _f_24632
+            match x_24626:
+                case (fst_24634, snd_24635):
+                    _x_24636 = _alt_24633(fst_24634, snd_24635)
+                    return _x_24636
+        _x_24639 = next((x for x in children_385 if _f_24638(x)), None)
+        def _jp_24649(_y_24647: list[tuple[str, Trie]]):
+            _x_24648 = Trie_node(is_end_384, _y_24647)
+            return _x_24648
+        def _jp_24652():
+            _x_24651 = _alt_24625()
+            return _jp_24649(_x_24651)
+        def _jp_24656(_y_24653: str, _y_24654: Trie):
+            _x_24655 = _alt_24619(_y_24653, _y_24654)
+            return _jp_24649(_x_24655)
+        if _x_24639 is None:
+            return _jp_24652()
         else:
-            val_16491 = _x_16488
-            match val_16491:
-                case (fst_16492, snd_16493):
-                    return _jp_16505(fst_16492, snd_16493)
-    _alt_16507 = _f_16506
-    match t_435:
-        case Trie_node(a_16508, a_16509):
-            if len(chars_436) == 0:
-                _x_16510 = _alt_16444(a_16508, a_16509)
-                return _x_16510
+            val_24642 = _x_24639
+            match val_24642:
+                case (fst_24643, snd_24644):
+                    return _jp_24656(fst_24643, snd_24644)
+    _alt_24658 = _f_24657
+    match t_380:
+        case Trie_node(a_24659, a_24660):
+            if len(chars_381) == 0:
+                _x_24661 = _alt_24595(a_24659, a_24660)
+                return _x_24661
             else:
-                head_16511 = chars_436[0]
-                tail_16512 = chars_436[1:]
-                _x_16513 = _alt_16507(a_16508, a_16509, head_16511, tail_16512)
-                return _x_16513
+                head_24662 = chars_381[0]
+                tail_24663 = chars_381[1:]
+                _x_24664 = _alt_24658(a_24659, a_24660, head_24662, tail_24663)
+                return _x_24664
 
 # Lean: Corpus.DataStructures.BinaryTree.levelOrder.go
-def level_order_go(__447: Any, queue_448: list[Any], acc_449: list[Any], fuel_450: int) -> list[Any]:
-    def _f_16518():
-        _x_16517 = list(reversed(acc_449))
-        return _x_16517
-    _alt_16519 = _f_16518
-    def _f_16546(fuel__452: int):
-        _alt_16520 = _f_16518
-        def _f_16522(rest_453: list[Any]):
-            _x_16521 = level_order_go(None, rest_453, acc_449, fuel__452)
-            return _x_16521
-        _alt_16523 = _f_16522
-        def _f_16533(v_454: Any, l_455: Any, r_456: Any, rest_457: list[Any]):
-            _x_16527 = []
-            _x_16528 = [r_456] + _x_16527
-            _x_16529 = [l_455] + _x_16528
-            _x_16530 = rest_457 + _x_16529
-            _x_16531 = [v_454] + acc_449
-            _x_16532 = level_order_go(None, _x_16530, _x_16531, fuel__452)
-            return _x_16532
-        _alt_16534 = _f_16533
-        if len(queue_448) == 0:
-            _x_16536 = _alt_16520()
-            return _x_16536
+def level_order_go(__392: Any, queue_393: list[Any], acc_394: list[Any], fuel_395: int) -> list[Any]:
+    while True:
+        def _f_24669():
+            _x_24668 = list(reversed(acc_394))
+            return _x_24668
+        _alt_24670 = _f_24669
+        if fuel_395 == 0:
+            _x_24700 = _alt_24670()
+            return _x_24700
         else:
-            head_16537 = queue_448[0]
-            tail_16538 = queue_448[1:]
-            match head_16537:
-                case BinaryTree_empty():
-                    _x_16539 = _alt_16523(tail_16538)
-                    return _x_16539
-                case BinaryTree_node(a_16540, a_16541, a_16542):
-                    _x_16543 = _alt_16534(a_16540, a_16541, a_16542, tail_16538)
-                    return _x_16543
-    _alt_16547 = _f_16546
-    if fuel_450 == 0:
-        _x_16549 = _alt_16519()
-        return _x_16549
-    else:
-        n_16550 = fuel_450 - 1
-        _x_16551 = _alt_16547(n_16550)
-        return _x_16551
+            n_24701 = fuel_395 - 1
+            fuel__397 = n_24701
+            _alt_24671 = _f_24669
+            if len(queue_393) == 0:
+                _x_24687 = _alt_24671()
+                return _x_24687
+            else:
+                head_24688 = queue_393[0]
+                tail_24689 = queue_393[1:]
+                match head_24688:
+                    case BinaryTree_empty():
+                        rest_398 = tail_24689
+                        return level_order_go(None, rest_398, acc_394, fuel__397)
+                    case BinaryTree_node(a_24691, a_24692, a_24693):
+                        v_399 = a_24691
+                        l_400 = a_24692
+                        r_401 = a_24693
+                        rest_402 = tail_24689
+                        _x_24678 = []
+                        _x_24679 = [r_401] + _x_24678
+                        _x_24680 = [l_400] + _x_24679
+                        _x_24681 = rest_402 + _x_24680
+                        _x_24682 = [v_399] + acc_394
+                        return level_order_go(None, _x_24681, _x_24682, fuel__397)
+
+# Lean: Corpus.Games.RPS.ctorIdx
+def ctor_idx(x_403: RPS) -> int:
+    match x_403:
+        case rock():
+            _x_24705 = 0
+            return _x_24705
+        case paper():
+            _x_24706 = 1
+            return _x_24706
+        case scissors():
+            _x_24707 = 2
+            return _x_24707
+
+# Lean: Corpus.Games.instBEqRPS.beq
+def beq(x_24710: RPS, y_24711: RPS) -> bool:
+    _x_24715 = ctor_idx(x_24710)
+    _x_24716 = ctor_idx(y_24711)
+    _x_24717 = _x_24715 == _x_24716
+    return _x_24717
+
+# Lean: Corpus.Games.instBEqRPS
+def inst_beq_rps() -> Any:
+    _x_24720 = BEq_mk(_x_24719)
+    return _x_24720
 
 # Lean: Corpus.Games.rollDice.go
-def roll_dice_go(sides: int, n_458: int, seed: int, acc_459: list[int]) -> tuple[list[int], int]:
-    def _f_16556():
-        _x_16554 = list(reversed(acc_459))
-        _x_16555 = (_x_16554, seed)
-        return _x_16555
-    _alt_16557 = _f_16556
-    def _f_16594(n_: int):
-        _x_16567 = 1103515245
-        _x_16570 = seed * 1103515245
-        _x_16571 = 12345
-        _x_16574 = _x_16570 + 12345
-        _x_16579 = 2
-        _x_16582 = 31
-        _x_16585 = 2 ** 31
-        _x_16586 = _x_16574 % _x_16585
-        _x_16587 = _x_16586 % sides
-        _x_16588 = 1
-        _x_16591 = _x_16587 + 1
-        _x_16592 = [_x_16591] + acc_459
-        _x_16593 = roll_dice_go(sides, n_, _x_16586, _x_16592)
-        return _x_16593
-    _alt_16595 = _f_16594
-    if n_458 == 0:
-        _x_16597 = _alt_16557()
-        return _x_16597
-    else:
-        n_16598 = n_458 - 1
-        _x_16599 = _alt_16595(n_16598)
-        return _x_16599
+def roll_dice_go(sides: int, n_404: int, seed: int, acc_405: list[int]) -> tuple[list[int], int]:
+    while True:
+        def _f_24723():
+            _x_24721 = list(reversed(acc_405))
+            _x_24722 = (_x_24721, seed)
+            return _x_24722
+        _alt_24724 = _f_24723
+        if n_404 == 0:
+            _x_24764 = _alt_24724()
+            return _x_24764
+        else:
+            n_24765 = n_404 - 1
+            n_ = n_24765
+            _x_24734 = 1103515245
+            _x_24737 = seed * 1103515245
+            _x_24738 = 12345
+            _x_24741 = _x_24737 + 12345
+            _x_24746 = 2
+            _x_24749 = 31
+            _x_24752 = 2 ** 31
+            _x_24753 = _x_24741 % _x_24752
+            _x_24754 = _x_24753 % sides
+            _x_24755 = 1
+            _x_24758 = _x_24754 + 1
+            _x_24759 = [_x_24758] + acc_405
+            sides, n_404, seed, acc_405 = sides, n_, _x_24753, _x_24759
+            continue
 
 # Lean: Corpus.Games.BlackjackHand.bestValue.adjust
-def best_value_adjust(value_461: int, aces: int) -> int:
-    def _f_16602():
-        return value_461
-    _alt_16603 = _f_16602
-    def _f_16619(aces_: int):
-        _x_16604 = 21
-        _x_16607 = value_461 <= 21
-        if _x_16607:
-            return value_461
+def best_value_adjust(value_407: int, aces: int) -> int:
+    while True:
+        def _f_24769():
+            return value_407
+        _alt_24770 = _f_24769
+        if aces == 0:
+            _x_24789 = _alt_24770()
+            return _x_24789
         else:
-            _x_16612 = 10
-            _x_16615 = value_461 - 10
-            _x_16616 = best_value_adjust(_x_16615, aces_)
-            return _x_16616
-    _alt_16620 = _f_16619
-    if aces == 0:
-        _x_16622 = _alt_16603()
-        return _x_16622
-    else:
-        n_16623 = aces - 1
-        _x_16624 = _alt_16620(n_16623)
-        return _x_16624
+            n_24790 = aces - 1
+            aces_ = n_24790
+            _x_24771 = 21
+            _x_24774 = value_407 <= 21
+            if _x_24774:
+                return value_407
+            else:
+                _x_24779 = 10
+                _x_24782 = value_407 - 10
+                value_407, aces = _x_24782, aces_
+                continue
+
+# Lean: Corpus.Games.Rank.ctorIdx
+def ctor_idx(x_409: Rank) -> int:
+    match x_409:
+        case ace():
+            _x_24794 = 0
+            return _x_24794
+        case two():
+            _x_24795 = 1
+            return _x_24795
+        case three():
+            _x_24796 = 2
+            return _x_24796
+        case four():
+            _x_24797 = 3
+            return _x_24797
+        case five():
+            _x_24798 = 4
+            return _x_24798
+        case six():
+            _x_24799 = 5
+            return _x_24799
+        case seven():
+            _x_24800 = 6
+            return _x_24800
+        case eight():
+            _x_24801 = 7
+            return _x_24801
+        case nine():
+            _x_24802 = 8
+            return _x_24802
+        case ten():
+            _x_24803 = 9
+            return _x_24803
+        case jack():
+            _x_24804 = 10
+            return _x_24804
+        case queen():
+            _x_24805 = 11
+            return _x_24805
+        case king():
+            _x_24806 = 12
+            return _x_24806
+
+# Lean: Corpus.Games.instBEqRank.beq
+def beq(x_24809: Rank, y_24810: Rank) -> bool:
+    _x_24814 = ctor_idx(x_24809)
+    _x_24815 = ctor_idx(y_24810)
+    _x_24816 = _x_24814 == _x_24815
+    return _x_24816
+
+# Lean: Corpus.Games.instBEqRank
+def inst_beq_rank() -> Any:
+    _x_24819 = BEq_mk(_x_24818)
+    return _x_24819
+
+# Lean: Corpus.Games.Player.ctorIdx
+def ctor_idx(x_410: Player) -> int:
+    match x_410:
+        case X():
+            _x_24820 = 0
+            return _x_24820
+        case O():
+            _x_24821 = 1
+            return _x_24821
+
+# Lean: Corpus.Games.instBEqPlayer.beq
+def beq(x_24824: Player, y_24825: Player) -> bool:
+    _x_24829 = ctor_idx(x_24824)
+    _x_24830 = ctor_idx(y_24825)
+    _x_24831 = _x_24829 == _x_24830
+    return _x_24831
+
+# Lean: Corpus.Games.instBEqPlayer
+def inst_beq_player() -> Any:
+    _x_24834 = BEq_mk(_x_24833)
+    return _x_24834
 
 # Lean: Corpus.Strings.words.go
-def words_go(chars_463: list[str], current: list[str], acc_464: list[str]) -> list[str]:
-    def _f_16638():
-        _x_16627 = len(current) == 0
-        _x_16628 = True
-        if _x_16627:
-            _x_16636 = list(reversed(acc_464))
-            return _x_16636
-        else:
-            _x_16631 = list(reversed(current))
-            _x_16632 = ''.join(_x_16631)
-            _x_16633 = [_x_16632] + acc_464
-            _x_16634 = list(reversed(_x_16633))
-            return _x_16634
-    _alt_16639 = _f_16638
-    def _f_16665(c_466: str, cs_467: list[str]):
-        _x_16643 = 32
-        _x_16644 = chr(_x_16643)
-        _x_16645 = c_466 == _x_16644
-        _x_16646 = True
-        if _x_16645:
-            _x_16652 = len(current) == 0
-            if _x_16652:
-                _x_16661 = []
-                _x_16662 = words_go(cs_467, _x_16661, acc_464)
-                return _x_16662
+def words_go(chars_411: list[str], current: list[str], acc_412: list[str]) -> list[str]:
+    while True:
+        def _f_24846():
+            _x_24835 = len(current) == 0
+            _x_24836 = True
+            _x_24837 = _x_24835 == True
+            if _x_24837:
+                _x_24844 = list(reversed(acc_412))
+                return _x_24844
             else:
-                _x_16655 = []
-                _x_16656 = list(reversed(current))
-                _x_16657 = ''.join(_x_16656)
-                _x_16658 = [_x_16657] + acc_464
-                _x_16659 = words_go(cs_467, _x_16655, _x_16658)
-                return _x_16659
+                _x_24839 = list(reversed(current))
+                _x_24840 = ''.join(_x_24839)
+                _x_24841 = [_x_24840] + acc_412
+                _x_24842 = list(reversed(_x_24841))
+                return _x_24842
+        _alt_24847 = _f_24846
+        if len(chars_411) == 0:
+            _x_24876 = _alt_24847()
+            return _x_24876
         else:
-            _x_16649 = [c_466] + current
-            _x_16650 = words_go(cs_467, _x_16649, acc_464)
-            return _x_16650
-    _alt_16666 = _f_16665
-    if len(chars_463) == 0:
-        _x_16668 = _alt_16639()
-        return _x_16668
-    else:
-        head_16669 = chars_463[0]
-        tail_16670 = chars_463[1:]
-        _x_16671 = _alt_16666(head_16669, tail_16670)
-        return _x_16671
+            head_24877 = chars_411[0]
+            tail_24878 = chars_411[1:]
+            c_414 = head_24877
+            cs_415 = tail_24878
+            _x_24851 = 32
+            _x_24852 = chr(_x_24851)
+            _x_24853 = c_414 == _x_24852
+            _x_24854 = True
+            _x_24855 = _x_24853 == True
+            if _x_24855:
+                _x_24860 = len(current) == 0
+                _x_24861 = _x_24860 == True
+                if _x_24861:
+                    _x_24869 = []
+                    chars_411, current, acc_412 = cs_415, _x_24869, acc_412
+                    continue
+                else:
+                    _x_24863 = []
+                    _x_24864 = list(reversed(current))
+                    _x_24865 = ''.join(_x_24864)
+                    _x_24866 = [_x_24865] + acc_412
+                    chars_411, current, acc_412 = cs_415, _x_24863, _x_24866
+                    continue
+            else:
+                _x_24857 = [c_414] + current
+                chars_411, current, acc_412 = cs_415, _x_24857, acc_412
+                continue
 
 # Lean: Corpus.Strings.splitOn.go
-def split_on_go(sep: str, chars_468: list[str], current_469: list[str], acc_470: list[str]) -> list[str]:
-    def _f_16678():
-        _x_16674 = list(reversed(current_469))
-        _x_16675 = ''.join(_x_16674)
-        _x_16676 = [_x_16675] + acc_470
-        _x_16677 = list(reversed(_x_16676))
-        return _x_16677
-    _alt_16679 = _f_16678
-    def _f_16707(cs_472: list[str]):
-        _x_16680 = ''.join(cs_472)
-        _x_16681 = starts_with(_x_16680, sep)
-        _x_16682 = True
-        if _x_16681:
-            _x_16699 = len(sep)
-            _x_16700 = (lambda n, xs: xs[n:])(cs_472)
-            _x_16701 = []
-            _x_16702 = list(reversed(current_469))
-            _x_16703 = ''.join(_x_16702)
-            _x_16704 = [_x_16703] + acc_470
-            _x_16705 = split_on_go(sep, _x_16700, _x_16701, _x_16704)
-            return _x_16705
+def split_on_go(sep: str, chars_416: list[str], current_417: list[str], acc_418: list[str]) -> list[str]:
+    while True:
+        def _f_24886():
+            _x_24882 = list(reversed(current_417))
+            _x_24883 = ''.join(_x_24882)
+            _x_24884 = [_x_24883] + acc_418
+            _x_24885 = list(reversed(_x_24884))
+            return _x_24885
+        _alt_24887 = _f_24886
+        if len(chars_416) == 0:
+            _x_24919 = _alt_24887()
+            return _x_24919
         else:
-            def _f_16687(c_473: str, cs_: list[str]):
-                _x_16685 = [c_473] + current_469
-                _x_16686 = split_on_go(sep, cs_, _x_16685, acc_470)
-                return _x_16686
-            _alt_16688 = _f_16687
-            def _f_16690():
-                _x_16689 = list(reversed(acc_470))
-                return _x_16689
-            _alt_16691 = _f_16690
-            if len(cs_472) == 0:
-                _x_16693 = _alt_16691()
-                return _x_16693
-            else:
-                head_16694 = cs_472[0]
-                tail_16695 = cs_472[1:]
-                _x_16696 = _alt_16688(head_16694, tail_16695)
-                return _x_16696
-    _alt_16708 = _f_16707
-    if len(chars_468) == 0:
-        _x_16710 = _alt_16679()
-        return _x_16710
-    else:
-        head_16711 = chars_468[0]
-        tail_16712 = chars_468[1:]
-        _x_16713 = [head_16711] + tail_16712
-        _x_16714 = _alt_16708(_x_16713)
-        return _x_16714
+            _x_24923 = (lambda h_24920: _uniq_71773(chars_416))(None)
+            return _x_24923
 
 # Lean: Corpus.Strings.count.go
-def count_go(sub: str, chars_475: list[str], cnt: int) -> int:
-    def _f_16717():
-        return cnt
-    _alt_16718 = _f_16717
-    def _f_16736(c_477: str, cs_478: list[str]):
-        _x_16719 = [c_477] + cs_478
-        _x_16720 = ''.join(_x_16719)
-        _x_16721 = starts_with(_x_16720, sub)
-        _x_16722 = True
-        if _x_16721:
-            _x_16730 = 1
-            _x_16733 = cnt + 1
-            _x_16734 = count_go(sub, cs_478, _x_16733)
-            return _x_16734
+def count_go(sub: str, chars_420: list[str], cnt: int) -> int:
+    while True:
+        def _f_24926():
+            return cnt
+        _alt_24927 = _f_24926
+        if len(chars_420) == 0:
+            _x_24949 = _alt_24927()
+            return _x_24949
         else:
-            _x_16725 = count_go(sub, cs_478, cnt)
-            return _x_16725
-    _alt_16737 = _f_16736
-    if len(chars_475) == 0:
-        _x_16739 = _alt_16718()
-        return _x_16739
-    else:
-        head_16740 = chars_475[0]
-        tail_16741 = chars_475[1:]
-        _x_16742 = _alt_16737(head_16740, tail_16741)
-        return _x_16742
+            head_24950 = chars_420[0]
+            tail_24951 = chars_420[1:]
+            c_422 = head_24950
+            cs_423 = tail_24951
+            _x_24928 = [c_422] + cs_423
+            _x_24929 = ''.join(_x_24928)
+            _x_24931 = starts_with(None, _x_24929, sub, _x_24930)
+            _x_24932 = True
+            _x_24933 = _x_24931 == True
+            if _x_24933:
+                _x_24940 = 1
+                _x_24943 = cnt + 1
+                sub, chars_420, cnt = sub, cs_423, _x_24943
+                continue
+            else:
+                sub, chars_420, cnt = sub, cs_423, cnt
+                continue
 
 # Lean: Corpus.Strings.indexOf.go
-def index_of_go(sub_479: str, chars_480: list[str], idx_481: int) -> int | None:
-    def _f_16759():
-        _x_16747 = len(sub_479)
-        _x_16748 = 0
-        _x_16751 = _x_16747 == 0
-        _x_16752 = True
-        if _x_16751:
-            _x_16757 = idx_481
-            return _x_16757
+def index_of_go(sub_424: str, chars_425: list[str], idx_426: int) -> int | None:
+    while True:
+        def _f_24970():
+            _x_24958 = len(sub_424)
+            _x_24959 = 0
+            _x_24962 = _x_24958 == 0
+            _x_24963 = True
+            _x_24964 = _x_24962 == True
+            if _x_24964:
+                _x_24968 = idx_426
+                return _x_24968
+            else:
+                _x_24966 = None
+                return _x_24966
+        _alt_24971 = _f_24970
+        if len(chars_425) == 0:
+            _x_24993 = _alt_24971()
+            return _x_24993
         else:
-            _x_16755 = None
-            return _x_16755
-    _alt_16760 = _f_16759
-    def _f_16778(c_483: str, cs_484: list[str]):
-        _x_16761 = [c_483] + cs_484
-        _x_16762 = ''.join(_x_16761)
-        _x_16763 = starts_with(_x_16762, sub_479)
-        _x_16764 = True
-        if _x_16763:
-            _x_16776 = idx_481
-            return _x_16776
-        else:
-            _x_16770 = 1
-            _x_16773 = idx_481 + 1
-            _x_16774 = index_of_go(sub_479, cs_484, _x_16773)
-            return _x_16774
-    _alt_16779 = _f_16778
-    if len(chars_480) == 0:
-        _x_16781 = _alt_16760()
-        return _x_16781
-    else:
-        head_16782 = chars_480[0]
-        tail_16783 = chars_480[1:]
-        _x_16784 = _alt_16779(head_16782, tail_16783)
-        return _x_16784
+            head_24994 = chars_425[0]
+            tail_24995 = chars_425[1:]
+            c_428 = head_24994
+            cs_429 = tail_24995
+            _x_24972 = [c_428] + cs_429
+            _x_24973 = ''.join(_x_24972)
+            _x_24975 = starts_with(None, _x_24973, sub_424, _x_24974)
+            _x_24976 = True
+            _x_24977 = _x_24975 == True
+            if _x_24977:
+                _x_24988 = idx_426
+                return _x_24988
+            else:
+                _x_24982 = 1
+                _x_24985 = idx_426 + 1
+                sub_424, chars_425, idx_426 = sub_424, cs_429, _x_24985
+                continue
 
 # Lean: Corpus.Strings.contains.go
-def strings_contains_go(sub_485: str, chars_486: list[str]) -> bool:
-    def _f_16794():
-        _x_16789 = len(sub_485)
-        _x_16790 = 0
-        _x_16793 = _x_16789 == 0
-        return _x_16793
-    _alt_16795 = _f_16794
-    def _f_16805(c_488: str, cs_489: list[str]):
-        _x_16796 = [c_488] + cs_489
-        _x_16797 = ''.join(_x_16796)
-        _x_16798 = starts_with(_x_16797, sub_485)
-        _x_16799 = True
-        if _x_16798:
-            return True
+def strings_contains_go(sub_430: str, chars_431: list[str]) -> bool:
+    while True:
+        def _f_25007():
+            _x_25002 = len(sub_430)
+            _x_25003 = 0
+            _x_25006 = _x_25002 == 0
+            return _x_25006
+        _alt_25008 = _f_25007
+        if len(chars_431) == 0:
+            _x_25023 = _alt_25008()
+            return _x_25023
         else:
-            _x_16802 = strings_contains_go(sub_485, cs_489)
-            return _x_16802
-    _alt_16806 = _f_16805
-    if len(chars_486) == 0:
-        _x_16808 = _alt_16795()
-        return _x_16808
-    else:
-        head_16809 = chars_486[0]
-        tail_16810 = chars_486[1:]
-        _x_16811 = _alt_16806(head_16809, tail_16810)
-        return _x_16811
+            head_25024 = chars_431[0]
+            tail_25025 = chars_431[1:]
+            c_433 = head_25024
+            cs_434 = tail_25025
+            _x_25009 = [c_433] + cs_434
+            _x_25010 = ''.join(_x_25009)
+            _x_25012 = starts_with(None, _x_25010, sub_430, _x_25011)
+            _x_25013 = True
+            _x_25014 = _x_25012 == True
+            if _x_25014:
+                _x_25018 = True
+                return True
+            else:
+                sub_430, chars_431 = sub_430, cs_434
+                continue
 
 # Lean: Corpus.Strings.replicate.go
-def strings_replicate_go(s_490: str, n_491: int, acc_492: str) -> str:
-    def _f_16814():
-        return acc_492
-    _alt_16815 = _f_16814
-    def _f_16821(n__494: int):
-        _x_16819 = acc_492 + s_490
-        _x_16820 = strings_replicate_go(s_490, n__494, _x_16819)
-        return _x_16820
-    _alt_16822 = _f_16821
-    if n_491 == 0:
-        _x_16824 = _alt_16815()
-        return _x_16824
-    else:
-        n_16825 = n_491 - 1
-        _x_16826 = _alt_16822(n_16825)
-        return _x_16826
+def strings_replicate_go(s_435: str, n_436: int, acc_437: str) -> str:
+    while True:
+        def _f_25029():
+            return acc_437
+        _alt_25030 = _f_25029
+        if n_436 == 0:
+            _x_25039 = _alt_25030()
+            return _x_25039
+        else:
+            n_25040 = n_436 - 1
+            n__439 = n_25040
+            _x_25034 = acc_437 + s_435
+            s_435, n_436, acc_437 = s_435, n__439, _x_25034
+            continue
 
 # Lean: Corpus.Math.digitalRoot.go
-def digital_root_go(n_495: int, fuel_496: int) -> int:
-    def _f_16829():
-        return n_495
-    _alt_16830 = _f_16829
-    def _f_16840(fuel__498: int):
-        _x_16831 = 10
-        _x_16834 = digit_sum(n_495, 10)
-        _x_16835 = _x_16834 < 10
-        if _x_16835:
-            return _x_16834
+def digital_root_go(n_440: int, fuel_441: int) -> int:
+    while True:
+        def _f_25044():
+            return n_440
+        _alt_25045 = _f_25044
+        if fuel_441 == 0:
+            _x_25058 = _alt_25045()
+            return _x_25058
         else:
-            _x_16837 = digital_root_go(_x_16834, fuel__498)
-            return _x_16837
-    _alt_16841 = _f_16840
-    if fuel_496 == 0:
-        _x_16843 = _alt_16830()
-        return _x_16843
-    else:
-        n_16844 = fuel_496 - 1
-        _x_16845 = _alt_16841(n_16844)
-        return _x_16845
+            n_25059 = fuel_441 - 1
+            fuel__443 = n_25059
+            _x_25046 = 10
+            _x_25049 = digit_sum(n_440, 10)
+            _x_25050 = _x_25049 < 10
+            if _x_25050:
+                return _x_25049
+            else:
+                n_440, fuel_441 = _x_25049, fuel__443
+                continue
 
 # Lean: Corpus.Math.digits.go
-def digits_go(base: int, n_500: int, acc_501: list[int]) -> list[int]:
-    _x_16850 = 0
-    _x_16853 = n_500 == 0
-    _x_16854 = True
-    if _x_16853:
-        _x_16868 = len(acc_501) == 0
-        if _x_16868:
-            _x_16872 = []
-            _x_16873 = [0] + _x_16872
-            return _x_16873
+def digits_go(base: int, n_445: int, acc_446: list[int]) -> list[int]:
+    while True:
+        _x_25066 = 0
+        _x_25069 = n_445 == 0
+        _x_25070 = True
+        _x_25071 = _x_25069 == True
+        if _x_25071:
+            _x_25084 = len(acc_446) == 0
+            _x_25085 = _x_25084 == True
+            if _x_25085:
+                _x_25088 = []
+                _x_25089 = [0] + _x_25088
+                return _x_25089
+            else:
+                return acc_446
         else:
-            return acc_501
-    else:
-        _x_16860 = n_500 // base
-        _x_16864 = n_500 % base
-        _x_16865 = [_x_16864] + acc_501
-        _x_16866 = digits_go(base, _x_16860, _x_16865)
-        return _x_16866
+            _x_25076 = n_445 // base
+            _x_25080 = n_445 % base
+            _x_25081 = [_x_25080] + acc_446
+            base, n_445, acc_446 = base, _x_25076, _x_25081
+            continue
 
 # Lean: Corpus.Math.isqrt.go
-def isqrt_go(n_502: int, x_503: int, fuel_504: int) -> int:
-    def _f_16877():
-        return x_503
-    _alt_16878 = _f_16877
-    def _f_16896(fuel__506: int):
-        _x_16885 = n_502 // x_503
-        _x_16886 = x_503 + _x_16885
-        _x_16887 = 2
-        _x_16890 = _x_16886 // 2
-        _x_16891 = x_503 <= _x_16890
-        if _x_16891:
-            return x_503
+def isqrt_go(n_447: int, x_448: int, fuel_449: int) -> int:
+    while True:
+        def _f_25093():
+            return x_448
+        _alt_25094 = _f_25093
+        if fuel_449 == 0:
+            _x_25115 = _alt_25094()
+            return _x_25115
         else:
-            _x_16893 = isqrt_go(n_502, _x_16890, fuel__506)
-            return _x_16893
-    _alt_16897 = _f_16896
-    if fuel_504 == 0:
-        _x_16899 = _alt_16878()
-        return _x_16899
-    else:
-        n_16900 = fuel_504 - 1
-        _x_16901 = _alt_16897(n_16900)
-        return _x_16901
+            n_25116 = fuel_449 - 1
+            fuel__451 = n_25116
+            _x_25101 = n_447 // x_448
+            _x_25102 = x_448 + _x_25101
+            _x_25103 = 2
+            _x_25106 = _x_25102 // 2
+            _x_25107 = x_448 <= _x_25106
+            if _x_25107:
+                return x_448
+            else:
+                n_447, x_448, fuel_449 = n_447, _x_25106, fuel__451
+                continue
 
 # Lean: Corpus.Math.binomial.go
-def binomial_go(n_507: int, k_508: int, num: int, den: int, i_509: int) -> int:
-    _x_16904 = k_508 < i_509
-    if _x_16904:
-        _x_16928 = num // den
-        return _x_16928
-    else:
-        _x_16915 = n_507 - i_509
-        _x_16916 = 1
-        _x_16919 = _x_16915 + 1
-        _x_16920 = num * _x_16919
-        _x_16921 = den * i_509
-        _x_16922 = i_509 + 1
-        _x_16923 = binomial_go(n_507, k_508, _x_16920, _x_16921, _x_16922)
-        return _x_16923
+def binomial_go(n_452: int, k_453: int, num: int, den: int, i_454: int) -> int:
+    while True:
+        _x_25120 = k_453 < i_454
+        if _x_25120:
+            _x_25144 = num // den
+            return _x_25144
+        else:
+            _x_25131 = n_452 - i_454
+            _x_25132 = 1
+            _x_25135 = _x_25131 + 1
+            _x_25136 = num * _x_25135
+            _x_25137 = den * i_454
+            _x_25138 = i_454 + 1
+            n_452, k_453, num, den, i_454 = n_452, k_453, _x_25136, _x_25137, _x_25138
+            continue
 
 # Lean: Corpus.Math.tribonacci.go
-def tribonacci_go(a_510: int, b_511: int, c_512: int, k_513: int) -> int:
-    def _f_16931():
-        return a_510
-    _alt_16932 = _f_16931
-    def _f_16939(k__515: int):
-        _x_16936 = a_510 + b_511
-        _x_16937 = _x_16936 + c_512
-        _x_16938 = tribonacci_go(b_511, c_512, _x_16937, k__515)
-        return _x_16938
-    _alt_16940 = _f_16939
-    if k_513 == 0:
-        _x_16942 = _alt_16932()
-        return _x_16942
-    else:
-        n_16943 = k_513 - 1
-        _x_16944 = _alt_16940(n_16943)
-        return _x_16944
+def tribonacci_go(a_455: int, b_456: int, c_457: int, k_458: int) -> int:
+    while True:
+        def _f_25147():
+            return a_455
+        _alt_25148 = _f_25147
+        if k_458 == 0:
+            _x_25158 = _alt_25148()
+            return _x_25158
+        else:
+            n_25159 = k_458 - 1
+            k__460 = n_25159
+            _x_25152 = a_455 + b_456
+            _x_25153 = _x_25152 + c_457
+            a_455, b_456, c_457, k_458 = b_456, c_457, _x_25153, k__460
+            continue
 
 # Lean: Corpus.Math.lucas.go
-def lucas_go(a_516: int, b_517: int, k_518: int) -> int:
-    def _f_16947():
-        return a_516
-    _alt_16948 = _f_16947
-    def _f_16954(k__520: int):
-        _x_16952 = a_516 + b_517
-        _x_16953 = lucas_go(b_517, _x_16952, k__520)
-        return _x_16953
-    _alt_16955 = _f_16954
-    if k_518 == 0:
-        _x_16957 = _alt_16948()
-        return _x_16957
-    else:
-        n_16958 = k_518 - 1
-        _x_16959 = _alt_16955(n_16958)
-        return _x_16959
+def lucas_go(a_461: int, b_462: int, k_463: int) -> int:
+    while True:
+        def _f_25163():
+            return a_461
+        _alt_25164 = _f_25163
+        if k_463 == 0:
+            _x_25173 = _alt_25164()
+            return _x_25173
+        else:
+            n_25174 = k_463 - 1
+            k__465 = n_25174
+            _x_25168 = a_461 + b_462
+            a_461, b_462, k_463 = b_462, _x_25168, k__465
+            continue
 
 # Lean: Corpus.Math.fibonacci.go
-def math_fibonacci_go(a_521: int, b_522: int, k_523: int) -> int:
-    def _f_16962():
-        return a_521
-    _alt_16963 = _f_16962
-    def _f_16969(k__525: int):
-        _x_16967 = a_521 + b_522
-        _x_16968 = math_fibonacci_go(b_522, _x_16967, k__525)
-        return _x_16968
-    _alt_16970 = _f_16969
-    if k_523 == 0:
-        _x_16972 = _alt_16963()
-        return _x_16972
-    else:
-        n_16973 = k_523 - 1
-        _x_16974 = _alt_16970(n_16973)
-        return _x_16974
+def math_fibonacci_go(a_466: int, b_467: int, k_468: int) -> int:
+    while True:
+        def _f_25178():
+            return a_466
+        _alt_25179 = _f_25178
+        if k_468 == 0:
+            _x_25188 = _alt_25179()
+            return _x_25188
+        else:
+            n_25189 = k_468 - 1
+            k__470 = n_25189
+            _x_25183 = a_466 + b_467
+            a_466, b_467, k_468 = b_467, _x_25183, k__470
+            continue
 
 # Lean: Corpus.Math.divisors.go
-def divisors_go(n_526: int, d_527: int, acc_528: list[int]) -> list[int]:
-    _x_16980 = d_527 * d_527
-    _x_16981 = n_526 < _x_16980
-    if _x_16981:
-        return acc_528
-    else:
-        _x_16988 = n_526 % d_527
-        _x_16989 = 0
-        _x_16992 = _x_16988 == 0
-        _x_16993 = True
-        if _x_16992:
-            _x_17005 = _x_16980 == n_526
-            if _x_17005:
-                _x_17026 = 1
-                _x_17029 = d_527 + 1
-                _x_17030 = [d_527] + acc_528
-                _x_17031 = divisors_go(n_526, _x_17029, _x_17030)
-                return _x_17031
-            else:
-                _x_17011 = 1
-                _x_17014 = d_527 + 1
-                _x_17018 = n_526 // d_527
-                _x_17019 = [_x_17018] + acc_528
-                _x_17020 = [d_527] + _x_17019
-                _x_17021 = divisors_go(n_526, _x_17014, _x_17020)
-                return _x_17021
+def divisors_go(n_471: int, d_472: int, acc_473: list[int]) -> list[int]:
+    while True:
+        _x_25196 = d_472 * d_472
+        _x_25197 = n_471 < _x_25196
+        if _x_25197:
+            return acc_473
         else:
-            _x_16999 = 1
-            _x_17002 = d_527 + 1
-            _x_17003 = divisors_go(n_526, _x_17002, acc_528)
-            return _x_17003
+            _x_25205 = n_471 % d_472
+            _x_25206 = 0
+            _x_25209 = _x_25205 == 0
+            _x_25210 = True
+            _x_25211 = _x_25209 == True
+            if _x_25211:
+                _x_25222 = _x_25196 == n_471
+                _x_25223 = _x_25222 == True
+                if _x_25223:
+                    _x_25243 = 1
+                    _x_25246 = d_472 + 1
+                    _x_25247 = [d_472] + acc_473
+                    n_471, d_472, acc_473 = n_471, _x_25246, _x_25247
+                    continue
+                else:
+                    _x_25228 = 1
+                    _x_25231 = d_472 + 1
+                    _x_25235 = n_471 // d_472
+                    _x_25236 = [_x_25235] + acc_473
+                    _x_25237 = [d_472] + _x_25236
+                    n_471, d_472, acc_473 = n_471, _x_25231, _x_25237
+                    continue
+            else:
+                _x_25216 = 1
+                _x_25219 = d_472 + 1
+                n_471, d_472, acc_473 = n_471, _x_25219, acc_473
+                continue
 
 # Lean: Corpus.Math.primeFactors.go
-def math_prime_factors_go(n_529: int, d_530: int, acc_531: list[int], fuel_532: int) -> list[int]:
-    def _f_17038():
-        _x_17037 = list(reversed(acc_531))
-        return _x_17037
-    _alt_17039 = _f_17038
-    def _f_17084(fuel__534: int):
-        _x_17040 = 1
-        _x_17043 = n_529 <= 1
-        if _x_17043:
-            _x_17082 = list(reversed(acc_531))
-            return _x_17082
+def math_prime_factors_go(n_474: int, d_475: int, acc_476: list[int], fuel_477: int) -> list[int]:
+    while True:
+        def _f_25255():
+            _x_25254 = list(reversed(acc_476))
+            return _x_25254
+        _alt_25256 = _f_25255
+        if fuel_477 == 0:
+            _x_25305 = _alt_25256()
+            return _x_25305
         else:
-            _x_17048 = d_530 * d_530
-            _x_17049 = n_529 < _x_17048
-            if _x_17049:
-                _x_17078 = [n_529] + acc_531
-                _x_17079 = list(reversed(_x_17078))
-                return _x_17079
+            n_25306 = fuel_477 - 1
+            fuel__479 = n_25306
+            _x_25257 = 1
+            _x_25260 = n_474 <= 1
+            if _x_25260:
+                _x_25300 = list(reversed(acc_476))
+                return _x_25300
             else:
-                _x_17056 = n_529 % d_530
-                _x_17057 = 0
-                _x_17060 = _x_17056 == 0
-                _x_17061 = True
-                if _x_17060:
-                    _x_17073 = n_529 // d_530
-                    _x_17074 = [d_530] + acc_531
-                    _x_17075 = math_prime_factors_go(_x_17073, d_530, _x_17074, fuel__534)
-                    return _x_17075
+                _x_25265 = d_475 * d_475
+                _x_25266 = n_474 < _x_25265
+                if _x_25266:
+                    _x_25296 = [n_474] + acc_476
+                    _x_25297 = list(reversed(_x_25296))
+                    return _x_25297
                 else:
-                    _x_17067 = d_530 + 1
-                    _x_17068 = math_prime_factors_go(n_529, _x_17067, acc_531, fuel__534)
-                    return _x_17068
-    _alt_17085 = _f_17084
-    if fuel_532 == 0:
-        _x_17087 = _alt_17039()
-        return _x_17087
-    else:
-        n_17088 = fuel_532 - 1
-        _x_17089 = _alt_17085(n_17088)
-        return _x_17089
+                    _x_25274 = n_474 % d_475
+                    _x_25275 = 0
+                    _x_25278 = _x_25274 == 0
+                    _x_25279 = True
+                    _x_25280 = _x_25278 == True
+                    if _x_25280:
+                        _x_25291 = n_474 // d_475
+                        _x_25292 = [d_475] + acc_476
+                        n_474, d_475, acc_476, fuel_477 = _x_25291, d_475, _x_25292, fuel__479
+                        continue
+                    else:
+                        _x_25285 = d_475 + 1
+                        n_474, d_475, acc_476, fuel_477 = n_474, _x_25285, acc_476, fuel__479
+                        continue
 
 # Lean: Corpus.Math.isPrime.check
-def math_is_prime_check(n_535: int, d_536: int, fuel_537: int) -> bool:
-    def _f_17093():
-        _x_17092 = True
-        return True
-    _alt_17094 = _f_17093
-    def _f_17128(fuel__539: int):
-        _x_17098 = d_536 * d_536
-        _x_17099 = n_535 < _x_17098
-        if _x_17099:
-            _x_17126 = True
+def math_is_prime_check(n_480: int, d_481: int, fuel_482: int) -> bool:
+    while True:
+        def _f_25311():
+            _x_25310 = True
             return True
+        _alt_25312 = _f_25311
+        if fuel_482 == 0:
+            _x_25350 = _alt_25312()
+            return _x_25350
         else:
-            _x_17106 = n_535 % d_536
-            _x_17107 = 0
-            _x_17110 = _x_17106 == 0
-            _x_17111 = True
-            if _x_17110:
-                _x_17123 = False
-                return False
+            n_25351 = fuel_482 - 1
+            fuel__484 = n_25351
+            _x_25316 = d_481 * d_481
+            _x_25317 = n_480 < _x_25316
+            if _x_25317:
+                _x_25345 = True
+                return True
             else:
-                _x_17117 = 1
-                _x_17120 = d_536 + 1
-                _x_17121 = math_is_prime_check(n_535, _x_17120, fuel__539)
-                return _x_17121
-    _alt_17129 = _f_17128
-    if fuel_537 == 0:
-        _x_17131 = _alt_17094()
-        return _x_17131
-    else:
-        n_17132 = fuel_537 - 1
-        _x_17133 = _alt_17129(n_17132)
-        return _x_17133
+                _x_25325 = n_480 % d_481
+                _x_25326 = 0
+                _x_25329 = _x_25325 == 0
+                _x_25330 = True
+                _x_25331 = _x_25329 == True
+                if _x_25331:
+                    _x_25342 = False
+                    return False
+                else:
+                    _x_25336 = 1
+                    _x_25339 = d_481 + 1
+                    n_480, d_481, fuel_482 = n_480, _x_25339, fuel__484
+                    continue
 
 # Lean: Corpus.Math.modPow.go
-def mod_pow_go(m_540: int, b_541: int, e_542: int, acc_543: int) -> int:
-    def _f_17140():
-        _x_17139 = acc_543 % m_540
-        return _x_17139
-    _alt_17141 = _f_17140
-    def _f_17183(x_17142: int):
-        _x_17148 = 2
-        _x_17151 = e_542 % 2
-        _x_17152 = 0
-        _x_17155 = _x_17151 == 0
-        _x_17156 = True
-        if _x_17155:
-            _x_17175 = b_541 * b_541
-            _x_17176 = _x_17175 % m_540
-            _x_17180 = e_542 // 2
-            _x_17181 = mod_pow_go(m_540, _x_17176, _x_17180, acc_543)
-            return _x_17181
+def mod_pow_go(m_485: int, b_486: int, e_487: int, acc_488: int) -> int:
+    while True:
+        def _f_25359():
+            _x_25358 = acc_488 % m_485
+            return _x_25358
+        _alt_25360 = _f_25359
+        _x_25405 = 0
+        _x_25408 = e_487 == 0
+        if _x_25408:
+            _x_25411 = _alt_25360()
+            return _x_25411
         else:
-            _x_17162 = b_541 * b_541
-            _x_17163 = _x_17162 % m_540
-            _x_17167 = e_542 // 2
-            _x_17168 = acc_543 * b_541
-            _x_17169 = _x_17168 % m_540
-            _x_17170 = mod_pow_go(m_540, _x_17163, _x_17167, _x_17169)
-            return _x_17170
-    _alt_17184 = _f_17183
-    _x_17185 = 0
-    if e_542:
-        _x_17189 = _alt_17184(e_542)
-        return _x_17189
-    else:
-        _x_17191 = _alt_17141()
-        return _x_17191
+            x_25361 = e_487
+            _x_25368 = 2
+            _x_25371 = e_487 % 2
+            _x_25372 = 0
+            _x_25375 = _x_25371 == 0
+            _x_25376 = True
+            _x_25377 = _x_25375 == True
+            if _x_25377:
+                _x_25395 = b_486 * b_486
+                _x_25396 = _x_25395 % m_485
+                _x_25400 = e_487 // 2
+                m_485, b_486, e_487, acc_488 = m_485, _x_25396, _x_25400, acc_488
+                continue
+            else:
+                _x_25382 = b_486 * b_486
+                _x_25383 = _x_25382 % m_485
+                _x_25387 = e_487 // 2
+                _x_25388 = acc_488 * b_486
+                _x_25389 = _x_25388 % m_485
+                m_485, b_486, e_487, acc_488 = m_485, _x_25383, _x_25387, _x_25389
+                continue
 
 # Lean: Corpus.Math.fastPow.go
-def fast_pow_go(b_545: int, e_546: int, acc_547: int) -> int:
-    def _f_17194():
-        return acc_547
-    _alt_17195 = _f_17194
-    def _f_17234(x_17196: int):
-        _x_17202 = 2
-        _x_17205 = e_546 % 2
-        _x_17206 = 0
-        _x_17209 = _x_17205 == 0
-        _x_17210 = True
-        if _x_17209:
-            _x_17227 = b_545 * b_545
-            _x_17231 = e_546 // 2
-            _x_17232 = fast_pow_go(_x_17227, _x_17231, acc_547)
-            return _x_17232
+def fast_pow_go(b_490: int, e_491: int, acc_492: int) -> int:
+    while True:
+        def _f_25415():
+            return acc_492
+        _alt_25416 = _f_25415
+        _x_25458 = 0
+        _x_25461 = e_491 == 0
+        if _x_25461:
+            _x_25464 = _alt_25416()
+            return _x_25464
         else:
-            _x_17216 = b_545 * b_545
-            _x_17220 = e_546 // 2
-            _x_17221 = acc_547 * b_545
-            _x_17222 = fast_pow_go(_x_17216, _x_17220, _x_17221)
-            return _x_17222
-    _alt_17235 = _f_17234
-    _x_17236 = 0
-    if e_546:
-        _x_17240 = _alt_17235(e_546)
-        return _x_17240
-    else:
-        _x_17242 = _alt_17195()
-        return _x_17242
+            x_25417 = e_491
+            _x_25424 = 2
+            _x_25427 = e_491 % 2
+            _x_25428 = 0
+            _x_25431 = _x_25427 == 0
+            _x_25432 = True
+            _x_25433 = _x_25431 == True
+            if _x_25433:
+                _x_25449 = b_490 * b_490
+                _x_25453 = e_491 // 2
+                b_490, e_491, acc_492 = _x_25449, _x_25453, acc_492
+                continue
+            else:
+                _x_25438 = b_490 * b_490
+                _x_25442 = e_491 // 2
+                _x_25443 = acc_492 * b_490
+                b_490, e_491, acc_492 = _x_25438, _x_25442, _x_25443
+                continue
 
 # Lean: Corpus.Algorithms.reverse.go
-def algorithms_reverse_go(__549: Any, xs_550: list[Any], acc_551: list[Any]) -> list[Any]:
-    def _f_17245():
-        return acc_551
-    _alt_17246 = _f_17245
-    def _f_17249(x_553: Any, xs__554: list[Any]):
-        _x_17247 = [x_553] + acc_551
-        _x_17248 = algorithms_reverse_go(None, xs__554, _x_17247)
-        return _x_17248
-    _alt_17250 = _f_17249
-    if len(xs_550) == 0:
-        _x_17252 = _alt_17246()
-        return _x_17252
-    else:
-        head_17253 = xs_550[0]
-        tail_17254 = xs_550[1:]
-        _x_17255 = _alt_17250(head_17253, tail_17254)
-        return _x_17255
+def algorithms_reverse_go(__494: Any, xs_495: list[Any], acc_496: list[Any]) -> list[Any]:
+    while True:
+        def _f_25468():
+            return acc_496
+        _alt_25469 = _f_25468
+        if len(xs_495) == 0:
+            _x_25475 = _alt_25469()
+            return _x_25475
+        else:
+            head_25476 = xs_495[0]
+            tail_25477 = xs_495[1:]
+            x_498 = head_25476
+            xs__499 = tail_25477
+            _x_25470 = [x_498] + acc_496
+            return algorithms_reverse_go(None, xs__499, _x_25470)
 
 # Lean: Corpus.Algorithms.power.go
-def power_go(b_555: int, e_556: int, acc_557: int) -> int:
-    def _f_17258():
-        return acc_557
-    _alt_17259 = _f_17258
-    def _f_17298(x_17260: int):
-        _x_17266 = 2
-        _x_17269 = e_556 % 2
-        _x_17270 = 0
-        _x_17273 = _x_17269 == 0
-        _x_17274 = True
-        if _x_17273:
-            _x_17291 = b_555 * b_555
-            _x_17295 = e_556 // 2
-            _x_17296 = power_go(_x_17291, _x_17295, acc_557)
-            return _x_17296
+def power_go(b_500: int, e_501: int, acc_502: int) -> int:
+    while True:
+        def _f_25481():
+            return acc_502
+        _alt_25482 = _f_25481
+        _x_25524 = 0
+        _x_25527 = e_501 == 0
+        if _x_25527:
+            _x_25530 = _alt_25482()
+            return _x_25530
         else:
-            _x_17280 = b_555 * b_555
-            _x_17284 = e_556 // 2
-            _x_17285 = acc_557 * b_555
-            _x_17286 = power_go(_x_17280, _x_17284, _x_17285)
-            return _x_17286
-    _alt_17299 = _f_17298
-    _x_17300 = 0
-    if e_556:
-        _x_17304 = _alt_17299(e_556)
-        return _x_17304
-    else:
-        _x_17306 = _alt_17259()
-        return _x_17306
+            x_25483 = e_501
+            _x_25490 = 2
+            _x_25493 = e_501 % 2
+            _x_25494 = 0
+            _x_25497 = _x_25493 == 0
+            _x_25498 = True
+            _x_25499 = _x_25497 == True
+            if _x_25499:
+                _x_25515 = b_500 * b_500
+                _x_25519 = e_501 // 2
+                b_500, e_501, acc_502 = _x_25515, _x_25519, acc_502
+                continue
+            else:
+                _x_25504 = b_500 * b_500
+                _x_25508 = e_501 // 2
+                _x_25509 = acc_502 * b_500
+                b_500, e_501, acc_502 = _x_25504, _x_25508, _x_25509
+                continue
 
 # Lean: Corpus.Algorithms.fibonacci.go
-def algorithms_fibonacci_go(a_559: int, b_560: int, k_561: int) -> int:
-    def _f_17309():
-        return a_559
-    _alt_17310 = _f_17309
-    def _f_17316(k__563: int):
-        _x_17314 = a_559 + b_560
-        _x_17315 = algorithms_fibonacci_go(b_560, _x_17314, k__563)
-        return _x_17315
-    _alt_17317 = _f_17316
-    if k_561 == 0:
-        _x_17319 = _alt_17310()
-        return _x_17319
-    else:
-        n_17320 = k_561 - 1
-        _x_17321 = _alt_17317(n_17320)
-        return _x_17321
+def algorithms_fibonacci_go(a_504: int, b_505: int, k_506: int) -> int:
+    while True:
+        def _f_25534():
+            return a_504
+        _alt_25535 = _f_25534
+        if k_506 == 0:
+            _x_25544 = _alt_25535()
+            return _x_25544
+        else:
+            n_25545 = k_506 - 1
+            k__508 = n_25545
+            _x_25539 = a_504 + b_505
+            a_504, b_505, k_506 = b_505, _x_25539, k__508
+            continue
 
 # Lean: Corpus.Algorithms.primeFactors.go
-def algorithms_prime_factors_go(n_564: int, d_565: int, acc_566: list[int], fuel_567: int) -> list[int]:
-    def _f_17325():
-        _x_17324 = list(reversed(acc_566))
-        return _x_17324
-    _alt_17326 = _f_17325
-    def _f_17371(fuel__569: int):
-        _x_17327 = 1
-        _x_17330 = n_564 <= 1
-        if _x_17330:
-            _x_17369 = list(reversed(acc_566))
-            return _x_17369
+def algorithms_prime_factors_go(n_509: int, d_510: int, acc_511: list[int], fuel_512: int) -> list[int]:
+    while True:
+        def _f_25550():
+            _x_25549 = list(reversed(acc_511))
+            return _x_25549
+        _alt_25551 = _f_25550
+        if fuel_512 == 0:
+            _x_25600 = _alt_25551()
+            return _x_25600
         else:
-            _x_17335 = d_565 * d_565
-            _x_17336 = n_564 < _x_17335
-            if _x_17336:
-                _x_17365 = [n_564] + acc_566
-                _x_17366 = list(reversed(_x_17365))
-                return _x_17366
+            n_25601 = fuel_512 - 1
+            fuel__514 = n_25601
+            _x_25552 = 1
+            _x_25555 = n_509 <= 1
+            if _x_25555:
+                _x_25595 = list(reversed(acc_511))
+                return _x_25595
             else:
-                _x_17343 = n_564 % d_565
-                _x_17344 = 0
-                _x_17347 = _x_17343 == 0
-                _x_17348 = True
-                if _x_17347:
-                    _x_17360 = n_564 // d_565
-                    _x_17361 = [d_565] + acc_566
-                    _x_17362 = algorithms_prime_factors_go(_x_17360, d_565, _x_17361, fuel__569)
-                    return _x_17362
+                _x_25560 = d_510 * d_510
+                _x_25561 = n_509 < _x_25560
+                if _x_25561:
+                    _x_25591 = [n_509] + acc_511
+                    _x_25592 = list(reversed(_x_25591))
+                    return _x_25592
                 else:
-                    _x_17354 = d_565 + 1
-                    _x_17355 = algorithms_prime_factors_go(n_564, _x_17354, acc_566, fuel__569)
-                    return _x_17355
-    _alt_17372 = _f_17371
-    if fuel_567 == 0:
-        _x_17374 = _alt_17326()
-        return _x_17374
-    else:
-        n_17375 = fuel_567 - 1
-        _x_17376 = _alt_17372(n_17375)
-        return _x_17376
+                    _x_25569 = n_509 % d_510
+                    _x_25570 = 0
+                    _x_25573 = _x_25569 == 0
+                    _x_25574 = True
+                    _x_25575 = _x_25573 == True
+                    if _x_25575:
+                        _x_25586 = n_509 // d_510
+                        _x_25587 = [d_510] + acc_511
+                        n_509, d_510, acc_511, fuel_512 = _x_25586, d_510, _x_25587, fuel__514
+                        continue
+                    else:
+                        _x_25580 = d_510 + 1
+                        n_509, d_510, acc_511, fuel_512 = n_509, _x_25580, acc_511, fuel__514
+                        continue
 
 # Lean: Corpus.Algorithms.isPrime.check
-def algorithms_is_prime_check(n_570: int, d_571: int, fuel_572: int) -> bool:
-    def _f_17380():
-        _x_17379 = True
-        return True
-    _alt_17381 = _f_17380
-    def _f_17415(fuel__574: int):
-        _x_17385 = d_571 * d_571
-        _x_17386 = n_570 < _x_17385
-        if _x_17386:
-            _x_17413 = True
+def algorithms_is_prime_check(n_515: int, d_516: int, fuel_517: int) -> bool:
+    while True:
+        def _f_25606():
+            _x_25605 = True
             return True
+        _alt_25607 = _f_25606
+        if fuel_517 == 0:
+            _x_25645 = _alt_25607()
+            return _x_25645
         else:
-            _x_17393 = n_570 % d_571
-            _x_17394 = 0
-            _x_17397 = _x_17393 == 0
-            _x_17398 = True
-            if _x_17397:
-                _x_17410 = False
-                return False
+            n_25646 = fuel_517 - 1
+            fuel__519 = n_25646
+            _x_25611 = d_516 * d_516
+            _x_25612 = n_515 < _x_25611
+            if _x_25612:
+                _x_25640 = True
+                return True
             else:
-                _x_17404 = 1
-                _x_17407 = d_571 + 1
-                _x_17408 = algorithms_is_prime_check(n_570, _x_17407, fuel__574)
-                return _x_17408
-    _alt_17416 = _f_17415
-    if fuel_572 == 0:
-        _x_17418 = _alt_17381()
-        return _x_17418
-    else:
-        n_17419 = fuel_572 - 1
-        _x_17420 = _alt_17416(n_17419)
-        return _x_17420
+                _x_25620 = n_515 % d_516
+                _x_25621 = 0
+                _x_25624 = _x_25620 == 0
+                _x_25625 = True
+                _x_25626 = _x_25624 == True
+                if _x_25626:
+                    _x_25637 = False
+                    return False
+                else:
+                    _x_25631 = 1
+                    _x_25634 = d_516 + 1
+                    n_515, d_516, fuel_517 = n_515, _x_25634, fuel__519
+                    continue
 
 # Lean: Corpus.Algorithms.binarySearch.go
-def binary_search_go(arr_575: list[int], target: int, lo: int, hi_576: int, fuel_577: int) -> int | None:
-    def _f_17424():
-        _x_17423 = None
-        return _x_17423
-    _alt_17425 = _f_17424
-    def _f_17480(fuel__579: int):
-        _x_17426 = hi_576 <= lo
-        if _x_17426:
-            _x_17478 = None
-            return _x_17478
+def binary_search_go(arr_520: list[int], target: int, lo: int, hi_521: int, fuel_522: int) -> int | None:
+    while True:
+        def _f_25651():
+            _x_25650 = None
+            return _x_25650
+        _alt_25652 = _f_25651
+        if fuel_522 == 0:
+            _x_25707 = _alt_25652()
+            return _x_25707
         else:
-            _x_17437 = hi_576 - lo
-            _x_17438 = 2
-            _x_17441 = _x_17437 // 2
-            _x_17442 = lo + _x_17441
-            _alt_17443 = _f_17424
-            def _f_17463(v_581: int):
-                _x_17446 = v_581 == target
-                _x_17447 = True
-                if _x_17446:
-                    _x_17461 = _x_17442
-                    return _x_17461
-                else:
-                    _x_17450 = v_581 < target
-                    if _x_17450:
-                        _x_17454 = 1
-                        _x_17457 = _x_17442 + 1
-                        _x_17458 = binary_search_go(arr_575, target, _x_17457, hi_576, fuel__579)
-                        return _x_17458
-                    else:
-                        _x_17452 = binary_search_go(arr_575, target, lo, _x_17442, fuel__579)
-                        return _x_17452
-            _alt_17464 = _f_17463
-            def _f_17468(xs_582: list[int], i_583: int):
-                _x_17466 = len(xs_582)
-                _x_17467 = i_583 < _x_17466
-                return _x_17467
-            _x_17470 = (lambda xs, i: xs[i] if 0 <= i < len(xs) else None)
-            _x_17471 = _x_17470(arr_575, _x_17442)
-            if _x_17471 is None:
-                _x_17473 = _alt_17443()
-                return _x_17473
+            n_25708 = fuel_522 - 1
+            fuel__524 = n_25708
+            _x_25653 = hi_521 <= lo
+            if _x_25653:
+                _x_25702 = None
+                return _x_25702
             else:
-                val_17474 = _x_17471
-                _x_17475 = _alt_17464(val_17474)
-                return _x_17475
-    _alt_17481 = _f_17480
-    if fuel_577 == 0:
-        _x_17483 = _alt_17425()
-        return _x_17483
-    else:
-        n_17484 = fuel_577 - 1
-        _x_17485 = _alt_17481(n_17484)
-        return _x_17485
+                _x_25664 = hi_521 - lo
+                _x_25665 = 2
+                _x_25668 = _x_25664 // 2
+                _x_25669 = lo + _x_25668
+                _alt_25670 = _f_25651
+                _x_25694 = (lambda xs, i: xs[i] if 0 <= i < len(xs) else None)
+                _x_25695 = _x_25694(arr_520, _x_25669)
+                if _x_25695 is None:
+                    _x_25697 = _alt_25670()
+                    return _x_25697
+                else:
+                    val_25698 = _x_25695
+                    v_526 = val_25698
+                    _x_25674 = v_526 == target
+                    _x_25675 = True
+                    _x_25676 = _x_25674 == True
+                    if _x_25676:
+                        _x_25689 = _x_25669
+                        return _x_25689
+                    else:
+                        _x_25678 = v_526 < target
+                        if _x_25678:
+                            _x_25682 = 1
+                            _x_25685 = _x_25669 + 1
+                            arr_520, target, lo, hi_521, fuel_522 = arr_520, target, _x_25685, hi_521, fuel__524
+                            continue
+                        else:
+                            arr_520, target, lo, hi_521, fuel_522 = arr_520, target, lo, _x_25669, fuel__524
+                            continue
 
 # Lean: Corpus.Algorithms.linearSearch.go
-def linear_search_go(target_584: int, xs_585: list[int], idx_586: int) -> int | None:
-    def _f_17489():
-        _x_17488 = None
-        return _x_17488
-    _alt_17490 = _f_17489
-    def _f_17508(x_588: int, xs__589: list[int]):
-        _x_17493 = x_588 == target_584
-        _x_17494 = True
-        if _x_17493:
-            _x_17506 = idx_586
-            return _x_17506
+def linear_search_go(target_527: int, xs_528: list[int], idx_529: int) -> int | None:
+    while True:
+        def _f_25713():
+            _x_25712 = None
+            return _x_25712
+        _alt_25714 = _f_25713
+        if len(xs_528) == 0:
+            _x_25736 = _alt_25714()
+            return _x_25736
         else:
-            _x_17500 = 1
-            _x_17503 = idx_586 + 1
-            _x_17504 = linear_search_go(target_584, xs__589, _x_17503)
-            return _x_17504
-    _alt_17509 = _f_17508
-    if len(xs_585) == 0:
-        _x_17511 = _alt_17490()
-        return _x_17511
-    else:
-        head_17512 = xs_585[0]
-        tail_17513 = xs_585[1:]
-        _x_17514 = _alt_17509(head_17512, tail_17513)
-        return _x_17514
+            head_25737 = xs_528[0]
+            tail_25738 = xs_528[1:]
+            x_531 = head_25737
+            xs__532 = tail_25738
+            _x_25718 = x_531 == target_527
+            _x_25719 = True
+            _x_25720 = _x_25718 == True
+            if _x_25720:
+                _x_25731 = idx_529
+                return _x_25731
+            else:
+                _x_25725 = 1
+                _x_25728 = idx_529 + 1
+                target_527, xs_528, idx_529 = target_527, xs__532, _x_25728
+                continue
 
 # Lean: Corpus.Algorithms.insertionSort.insert
-def insertion_sort_insert(x_590: int, sorted_591: list[int]) -> list[int]:
-    def _f_17519():
-        _x_17517 = []
-        _x_17518 = [x_590] + _x_17517
-        return _x_17518
-    _alt_17520 = _f_17519
-    def _f_17529(y_593: int, ys_594: list[int]):
-        _x_17521 = x_590 <= y_593
-        if _x_17521:
-            _x_17526 = [y_593] + ys_594
-            _x_17527 = [x_590] + _x_17526
-            return _x_17527
+def insertion_sort_insert(x_533: int, sorted_534: list[int]) -> list[int]:
+    def _f_25744():
+        _x_25742 = []
+        _x_25743 = [x_533] + _x_25742
+        return _x_25743
+    _alt_25745 = _f_25744
+    def _f_25754(y_536: int, ys_537: list[int]):
+        _x_25746 = x_533 <= y_536
+        if _x_25746:
+            _x_25751 = [y_536] + ys_537
+            _x_25752 = [x_533] + _x_25751
+            return _x_25752
         else:
-            _x_17523 = insertion_sort_insert(x_590, ys_594)
-            _x_17524 = [y_593] + _x_17523
-            return _x_17524
-    _alt_17530 = _f_17529
-    if len(sorted_591) == 0:
-        _x_17532 = _alt_17520()
-        return _x_17532
+            _x_25748 = insertion_sort_insert(x_533, ys_537)
+            _x_25749 = [y_536] + _x_25748
+            return _x_25749
+    _alt_25755 = _f_25754
+    if len(sorted_534) == 0:
+        _x_25757 = _alt_25745()
+        return _x_25757
     else:
-        head_17533 = sorted_591[0]
-        tail_17534 = sorted_591[1:]
-        _x_17535 = _alt_17530(head_17533, tail_17534)
-        return _x_17535
+        head_25758 = sorted_534[0]
+        tail_25759 = sorted_534[1:]
+        _x_25760 = _alt_25755(head_25758, tail_25759)
+        return _x_25760
 
 # Lean: Corpus.Algorithms.insertionSort.sort
-def insertion_sort_sort(unsorted: list[int], acc_595: list[int]) -> list[int]:
-    def _f_17538():
-        return acc_595
-    _alt_17539 = _f_17538
-    def _f_17542(x_597: int, xs_598: list[int]):
-        _x_17540 = insertion_sort_insert(x_597, acc_595)
-        _x_17541 = insertion_sort_sort(xs_598, _x_17540)
-        return _x_17541
-    _alt_17543 = _f_17542
-    if len(unsorted) == 0:
-        _x_17545 = _alt_17539()
-        return _x_17545
-    else:
-        head_17546 = unsorted[0]
-        tail_17547 = unsorted[1:]
-        _x_17548 = _alt_17543(head_17546, tail_17547)
-        return _x_17548
+def insertion_sort_sort(unsorted: list[int], acc_538: list[int]) -> list[int]:
+    while True:
+        def _f_25763():
+            return acc_538
+        _alt_25764 = _f_25763
+        if len(unsorted) == 0:
+            _x_25770 = _alt_25764()
+            return _x_25770
+        else:
+            head_25771 = unsorted[0]
+            tail_25772 = unsorted[1:]
+            x_540 = head_25771
+            xs_541 = tail_25772
+            _x_25765 = insertion_sort_insert(x_540, acc_538)
+            unsorted, acc_538 = xs_541, _x_25765
+            continue
 
 # Lean: Corpus.Algorithms.insertionSort
-def insertion_sort(xs_599: list[int]) -> list[int]:
-    _x_17551 = []
-    _x_17552 = insertion_sort_sort(xs_599, _x_17551)
-    return _x_17552
+def insertion_sort(xs_542: list[int]) -> list[int]:
+    _x_25776 = []
+    _x_25777 = insertion_sort_sort(xs_542, _x_25776)
+    return _x_25777
 
 # Lean: Corpus.Algorithms.merge
-def algorithms_merge(xs_600: list[int], ys_601: list[int]) -> list[int]:
-    def _f_17554(ys_602: list[int]):
-        return ys_602
-    _alt_17555 = _f_17554
-    _alt_17556 = _f_17554
-    def _f_17567(x_603: int, xs__604: list[int], y_605: int, ys__606: list[int]):
-        _x_17557 = x_603 <= y_605
-        if _x_17557:
-            _x_17563 = [y_605] + ys__606
-            _x_17564 = algorithms_merge(xs__604, _x_17563)
-            _x_17565 = [x_603] + _x_17564
-            return _x_17565
+def algorithms_merge(xs_543: list[int], ys_544: list[int]) -> list[int]:
+    _alt_25780 = (lambda ys_545: ys_545)
+    _alt_25781 = (lambda ys_545: ys_545)
+    def _f_25792(x_546: int, xs__547: list[int], y_548: int, ys__549: list[int]):
+        _x_25782 = x_546 <= y_548
+        if _x_25782:
+            _x_25788 = [y_548] + ys__549
+            _x_25789 = algorithms_merge(xs__547, _x_25788)
+            _x_25790 = [x_546] + _x_25789
+            return _x_25790
         else:
-            _x_17559 = [x_603] + xs__604
-            _x_17560 = algorithms_merge(_x_17559, ys__606)
-            _x_17561 = [y_605] + _x_17560
-            return _x_17561
-    _alt_17568 = _f_17567
-    if len(xs_600) == 0:
-        if len(ys_601) == 0:
-            _x_17569 = []
-            _x_17570 = _alt_17555(_x_17569)
-            return _x_17570
-        else:
-            head_17571 = ys_601[0]
-            tail_17572 = ys_601[1:]
-            _x_17573 = [head_17571] + tail_17572
-            _x_17574 = _alt_17555(_x_17573)
-            return _x_17574
+            _x_25784 = [x_546] + xs__547
+            _x_25785 = algorithms_merge(_x_25784, ys__549)
+            _x_25786 = [y_548] + _x_25785
+            return _x_25786
+    _alt_25793 = _f_25792
+    if len(xs_543) == 0:
+        _x_25794 = _alt_25780(ys_544)
+        return _x_25794
     else:
-        head_17576 = xs_600[0]
-        tail_17577 = xs_600[1:]
-        if len(ys_601) == 0:
-            _x_17578 = [head_17576] + tail_17577
-            _x_17579 = _alt_17556(_x_17578)
-            return _x_17579
+        head_25795 = xs_543[0]
+        tail_25796 = xs_543[1:]
+        if len(ys_544) == 0:
+            _x_25797 = [head_25795] + tail_25796
+            _x_25798 = _alt_25781(_x_25797)
+            return _x_25798
         else:
-            head_17580 = ys_601[0]
-            tail_17581 = ys_601[1:]
-            _x_17582 = _alt_17568(head_17576, tail_17577, head_17580, tail_17581)
-            return _x_17582
+            head_25799 = ys_544[0]
+            tail_25800 = ys_544[1:]
+            _x_25801 = _alt_25793(head_25795, tail_25796, head_25799, tail_25800)
+            return _x_25801
 
 # Lean: Corpus.Algorithms.split
-def algorithms_split(xs_607: list[int]) -> tuple[list[int], list[int]]:
-    def _f_17588():
-        _x_17586 = []
-        _x_17587 = (_x_17586, _x_17586)
-        return _x_17587
-    _alt_17589 = _f_17588
-    def _f_17593(x_609: int):
-        _x_17590 = []
-        _x_17591 = [x_609] + _x_17590
-        _x_17592 = (_x_17591, _x_17590)
-        return _x_17592
-    _alt_17594 = _f_17593
-    def _f_17605(x_610: int, y_611: int, rest_612: list[int]):
-        def _f_17598(l_613: list[int], r_614: list[int]):
-            _x_17595 = [x_610] + l_613
-            _x_17596 = [y_611] + r_614
-            _x_17597 = (_x_17595, _x_17596)
-            return _x_17597
-        _alt_17599 = _f_17598
-        _x_17600 = algorithms_split(rest_612)
-        match _x_17600:
-            case (fst_17601, snd_17602):
-                _x_17603 = _alt_17599(fst_17601, snd_17602)
-                return _x_17603
-    _alt_17606 = _f_17605
-    if len(xs_607) == 0:
-        _x_17608 = _alt_17589()
-        return _x_17608
+def algorithms_split(xs_550: list[int]) -> tuple[list[int], list[int]]:
+    def _f_25807():
+        _x_25805 = []
+        _x_25806 = (_x_25805, _x_25805)
+        return _x_25806
+    _alt_25808 = _f_25807
+    def _f_25812(x_552: int):
+        _x_25809 = []
+        _x_25810 = [x_552] + _x_25809
+        _x_25811 = (_x_25810, _x_25809)
+        return _x_25811
+    _alt_25813 = _f_25812
+    def _f_25824(x_553: int, y_554: int, rest_555: list[int]):
+        def _f_25817(l_556: list[int], r_557: list[int]):
+            _x_25814 = [x_553] + l_556
+            _x_25815 = [y_554] + r_557
+            _x_25816 = (_x_25814, _x_25815)
+            return _x_25816
+        _alt_25818 = _f_25817
+        _x_25819 = algorithms_split(rest_555)
+        match _x_25819:
+            case (fst_25820, snd_25821):
+                _x_25822 = _alt_25818(fst_25820, snd_25821)
+                return _x_25822
+    _alt_25825 = _f_25824
+    if len(xs_550) == 0:
+        _x_25827 = _alt_25808()
+        return _x_25827
     else:
-        head_17609 = xs_607[0]
-        tail_17610 = xs_607[1:]
-        if len(tail_17610) == 0:
-            _x_17611 = _alt_17594(head_17609)
-            return _x_17611
+        head_25828 = xs_550[0]
+        tail_25829 = xs_550[1:]
+        if len(tail_25829) == 0:
+            _x_25830 = _alt_25813(head_25828)
+            return _x_25830
         else:
-            head_17612 = tail_17610[0]
-            tail_17613 = tail_17610[1:]
-            _x_17614 = _alt_17606(head_17609, head_17612, tail_17613)
-            return _x_17614
+            head_25831 = tail_25829[0]
+            tail_25832 = tail_25829[1:]
+            _x_25833 = _alt_25825(head_25828, head_25831, tail_25832)
+            return _x_25833
 
 # Lean: Corpus.Algorithms.mergeSort
-def merge_sort(xs_615: list[int]) -> list[int]:
-    def _f_17619():
-        _x_17618 = []
-        return _x_17618
-    _alt_17620 = _f_17619
-    def _f_17623(x_617: int):
-        _x_17621 = []
-        _x_17622 = [x_617] + _x_17621
-        return _x_17622
-    _alt_17624 = _f_17623
-    def _f_17636(x_17625: list[int]):
-        def _f_17629(l_618: list[int], r_619: list[int]):
-            _x_17626 = merge_sort(l_618)
-            _x_17627 = merge_sort(r_619)
-            _x_17628 = algorithms_merge(_x_17626, _x_17627)
-            return _x_17628
-        _alt_17630 = _f_17629
-        _x_17631 = algorithms_split(xs_615)
-        match _x_17631:
-            case (fst_17632, snd_17633):
-                _x_17634 = _alt_17630(fst_17632, snd_17633)
-                return _x_17634
-    _alt_17637 = _f_17636
-    if len(xs_615) == 0:
-        _x_17639 = _alt_17620()
-        return _x_17639
+def merge_sort(xs_558: list[int]) -> list[int]:
+    def _f_25838():
+        _x_25837 = []
+        return _x_25837
+    _alt_25839 = _f_25838
+    def _f_25842(x_560: int):
+        _x_25840 = []
+        _x_25841 = [x_560] + _x_25840
+        return _x_25841
+    _alt_25843 = _f_25842
+    def _f_25855(x_25844: list[int]):
+        def _f_25848(l_561: list[int], r_562: list[int]):
+            _x_25845 = merge_sort(l_561)
+            _x_25846 = merge_sort(r_562)
+            _x_25847 = algorithms_merge(_x_25845, _x_25846)
+            return _x_25847
+        _alt_25849 = _f_25848
+        _x_25850 = algorithms_split(xs_558)
+        match _x_25850:
+            case (fst_25851, snd_25852):
+                _x_25853 = _alt_25849(fst_25851, snd_25852)
+                return _x_25853
+    _alt_25856 = _f_25855
+    if len(xs_558) == 0:
+        _x_25858 = _alt_25839()
+        return _x_25858
     else:
-        head_17640 = xs_615[0]
-        tail_17641 = xs_615[1:]
-        if len(tail_17641) == 0:
-            _x_17642 = _alt_17624(head_17640)
-            return _x_17642
+        head_25859 = xs_558[0]
+        tail_25860 = xs_558[1:]
+        if len(tail_25860) == 0:
+            _x_25861 = _alt_25843(head_25859)
+            return _x_25861
         else:
-            head_17643 = tail_17641[0]
-            tail_17644 = tail_17641[1:]
-            _x_17645 = [head_17643] + tail_17644
-            _x_17646 = [head_17640] + _x_17645
-            _x_17647 = _alt_17637(_x_17646)
-            return _x_17647
+            def _f_25865(h_25862: Any):
+                _x_25863 = [head_25859] + tail_25860
+                _x_25864 = _alt_25856(_x_25863)
+                return _x_25864
+            _x_25866 = _f_25865(None)
+            return _x_25866
 
 # Lean: Corpus.Algorithms.linearSearch
-def linear_search(xs_620: list[int], target_621: int) -> int | None:
-    _x_17651 = 0
-    _x_17654 = linear_search_go(target_621, xs_620, 0)
-    return _x_17654
+def linear_search(xs_563: list[int], target_564: int) -> int | None:
+    _x_25870 = 0
+    _x_25873 = linear_search_go(target_564, xs_563, 0)
+    return _x_25873
 
 # Lean: Corpus.Algorithms.binarySearch
-def binary_search(arr_622: list[int], target_623: int) -> int | None:
-    _x_17656 = 0
-    _x_17659 = len(arr_622)
-    _x_17660 = binary_search_go(arr_622, target_623, 0, _x_17659, _x_17659)
-    return _x_17660
+def binary_search(arr_565: list[int], target_566: int) -> int | None:
+    _x_25875 = 0
+    _x_25878 = len(arr_565)
+    _x_25879 = binary_search_go(arr_565, target_566, 0, _x_25878, _x_25878)
+    return _x_25879
 
 # Lean: Corpus.Algorithms.gcd
-def algorithms_gcd(a_624: int, b_625: int) -> int:
-    _x_17664 = 0
-    _x_17667 = b_625 == 0
-    _x_17668 = True
-    if _x_17667:
-        return a_624
-    else:
-        _x_17674 = a_624 % b_625
-        _x_17675 = algorithms_gcd(b_625, _x_17674)
-        return _x_17675
+def algorithms_gcd(a_567: int, b_568: int) -> int:
+    while True:
+        _x_25884 = 0
+        _x_25887 = b_568 == 0
+        _x_25888 = True
+        _x_25889 = _x_25887 == True
+        if _x_25889:
+            return a_567
+        else:
+            _x_25894 = a_567 % b_568
+            a_567, b_568 = b_568, _x_25894
+            continue
 
 # Lean: Corpus.Algorithms.lcm
-def algorithms_lcm(a_626: int, b_627: int) -> int:
-    def _f_17680():
-        _x_17679 = True
+def algorithms_lcm(a_569: int, b_570: int) -> int:
+    def _f_25900():
+        _x_25899 = True
         return True
-    _alt_17681 = _f_17680
-    def _f_17688():
-        _x_17684 = 0
-        _x_17687 = b_627 == 0
-        return _x_17687
-    _alt_17689 = _f_17688
-    _x_17692 = 0
-    _x_17695 = a_626 == 0
-    def _jp_17715(_y_17700: bool):
-        _x_17701 = True
-        if _y_17700:
+    _alt_25901 = _f_25900
+    def _f_25909():
+        _x_25905 = 0
+        _x_25908 = b_570 == 0
+        return _x_25908
+    _alt_25910 = _f_25909
+    _x_25914 = 0
+    _x_25917 = a_569 == 0
+    def _jp_25938(_y_25922: bool):
+        _x_25923 = True
+        _x_25924 = _y_25922 == True
+        if _x_25924:
             return 0
         else:
-            _x_17710 = algorithms_gcd(a_626, b_627)
-            _x_17711 = a_626 // _x_17710
-            _x_17712 = _x_17711 * b_627
-            return _x_17712
-    def _jp_17718():
-        _x_17717 = _alt_17689()
-        return _jp_17715(_x_17717)
-    def _jp_17721():
-        _x_17720 = _alt_17681()
-        return _jp_17715(_x_17720)
-    if _x_17695:
-        return _jp_17721()
+            _x_25932 = algorithms_gcd(a_569, b_570)
+            _x_25933 = a_569 // _x_25932
+            _x_25934 = _x_25933 * b_570
+            return _x_25934
+    def _jp_25941():
+        _x_25940 = _alt_25910()
+        return _jp_25938(_x_25940)
+    def _jp_25944():
+        _x_25943 = _alt_25901()
+        return _jp_25938(_x_25943)
+    if _x_25917:
+        return _jp_25944()
     else:
-        return _jp_17718()
+        return _jp_25941()
 
 # Lean: Corpus.Algorithms.isPrime
-def algorithms_is_prime(n_630: int) -> bool:
-    _x_17723 = 2
-    _x_17726 = n_630 < 2
-    if _x_17726:
-        _x_17730 = False
+def algorithms_is_prime(n_573: int) -> bool:
+    _x_25946 = 2
+    _x_25949 = n_573 < 2
+    if _x_25949:
+        _x_25953 = False
         return False
     else:
-        _x_17728 = algorithms_is_prime_check(n_630, 2, n_630)
-        return _x_17728
+        _x_25951 = algorithms_is_prime_check(n_573, 2, n_573)
+        return _x_25951
 
 # Lean: Corpus.Algorithms.primeFactors
-def algorithms_prime_factors(n_631: int) -> list[int]:
-    _x_17733 = 2
-    _x_17736 = []
-    _x_17737 = algorithms_prime_factors_go(n_631, 2, _x_17736, n_631)
-    return _x_17737
+def algorithms_prime_factors(n_574: int) -> list[int]:
+    _x_25956 = 2
+    _x_25959 = []
+    _x_25960 = algorithms_prime_factors_go(n_574, 2, _x_25959, n_574)
+    return _x_25960
 
 # Lean: Corpus.Algorithms.fibonacci
-def algorithms_fibonacci(n_632: int) -> int:
-    _x_17739 = 0
-    _x_17742 = 1
-    _x_17745 = algorithms_fibonacci_go(0, 1, n_632)
-    return _x_17745
+def algorithms_fibonacci(n_575: int) -> int:
+    _x_25962 = 0
+    _x_25965 = 1
+    _x_25968 = algorithms_fibonacci_go(0, 1, n_575)
+    return _x_25968
 
 # Lean: Corpus.Algorithms.power
-def power(base_633: int, exp_634: int) -> int:
-    _x_17747 = 1
-    _x_17750 = power_go(base_633, exp_634, 1)
-    return _x_17750
+def power(base_576: int, exp_577: int) -> int:
+    _x_25970 = 1
+    _x_25973 = power_go(base_576, exp_577, 1)
+    return _x_25973
 
 # Lean: Corpus.Algorithms.reverse
-def algorithms_reverse(__635: Any, xs_636: list[Any]) -> list[Any]:
-    _x_17752 = []
-    _x_17753 = algorithms_reverse_go(None, xs_636, _x_17752)
-    return _x_17753
+def algorithms_reverse(__578: Any, xs_579: list[Any]) -> list[Any]:
+    _x_25975 = []
+    _x_25976 = algorithms_reverse_go(None, xs_579, _x_25975)
+    return _x_25976
 
 # Lean: Corpus.Algorithms.take
-def algorithms_take(__637: Any, n_638: int, xs_639: list[Any]) -> list[Any]:
-    def _f_17757(x_17755: list[Any]):
-        _x_17756 = []
-        return _x_17756
-    _alt_17758 = _f_17757
-    def _f_17761(x_17759: int):
-        _x_17760 = []
-        return _x_17760
-    _alt_17762 = _f_17761
-    def _f_17765(n__640: int, x_641: Any, xs__642: list[Any]):
-        _x_17763 = algorithms_take(None, n__640, xs__642)
-        _x_17764 = [x_641] + _x_17763
-        return _x_17764
-    _alt_17766 = _f_17765
-    if n_638 == 0:
-        if len(xs_639) == 0:
-            _x_17767 = []
-            _x_17768 = _alt_17758(_x_17767)
-            return _x_17768
-        else:
-            head_17769 = xs_639[0]
-            tail_17770 = xs_639[1:]
-            _x_17771 = [head_17769] + tail_17770
-            _x_17772 = _alt_17758(_x_17771)
-            return _x_17772
+def algorithms_take(__580: Any, n_581: int, xs_582: list[Any]) -> list[Any]:
+    def _f_25980(x_25978: list[Any]):
+        _x_25979 = []
+        return _x_25979
+    _alt_25981 = _f_25980
+    def _f_25984(x_25982: int):
+        _x_25983 = []
+        return _x_25983
+    _alt_25985 = _f_25984
+    def _f_25988(n__583: int, x_584: Any, xs__585: list[Any]):
+        _x_25986 = algorithms_take(None, n__583, xs__585)
+        _x_25987 = [x_584] + _x_25986
+        return _x_25987
+    _alt_25989 = _f_25988
+    if n_581 == 0:
+        _x_25990 = _alt_25981(xs_582)
+        return _x_25990
     else:
-        n_17774 = n_638 - 1
-        if len(xs_639) == 0:
-            _x_17775 = n_17774 + 1
-            _x_17776 = _alt_17762(_x_17775)
-            return _x_17776
+        n_25991 = n_581 - 1
+        if len(xs_582) == 0:
+            _x_25992 = n_25991 + 1
+            _x_25993 = _alt_25985(_x_25992)
+            return _x_25993
         else:
-            head_17777 = xs_639[0]
-            tail_17778 = xs_639[1:]
-            _x_17779 = _alt_17766(n_17774, head_17777, tail_17778)
-            return _x_17779
+            head_25994 = xs_582[0]
+            tail_25995 = xs_582[1:]
+            _x_25996 = _alt_25989(n_25991, head_25994, tail_25995)
+            return _x_25996
 
 # Lean: Corpus.Algorithms.drop
-def algorithms_drop(__643: Any, n_644: int, xs_645: list[Any]) -> list[Any]:
-    def _f_17783(xs_646: list[Any]):
-        return xs_646
-    _alt_17784 = _f_17783
-    def _f_17787(x_17785: int):
-        _x_17786 = []
-        return _x_17786
-    _alt_17788 = _f_17787
-    def _f_17791(n__647: int, head_17789: Any, xs__648: list[Any]):
-        _x_17790 = algorithms_drop(None, n__647, xs__648)
-        return _x_17790
-    _alt_17792 = _f_17791
-    if n_644 == 0:
-        if len(xs_645) == 0:
-            _x_17793 = []
-            _x_17794 = _alt_17784(_x_17793)
-            return _x_17794
+def algorithms_drop(__586: Any, n_587: int, xs_588: list[Any]) -> list[Any]:
+    while True:
+        _alt_26001 = (lambda xs_589: xs_589)
+        def _f_26004(x_26002: int):
+            _x_26003 = []
+            return _x_26003
+        _alt_26005 = _f_26004
+        if n_587 == 0:
+            _x_26010 = _alt_26001(xs_588)
+            return _x_26010
         else:
-            head_17795 = xs_645[0]
-            tail_17796 = xs_645[1:]
-            _x_17797 = [head_17795] + tail_17796
-            _x_17798 = _alt_17784(_x_17797)
-            return _x_17798
-    else:
-        n_17800 = n_644 - 1
-        if len(xs_645) == 0:
-            _x_17801 = n_17800 + 1
-            _x_17802 = _alt_17788(_x_17801)
-            return _x_17802
-        else:
-            head_17803 = xs_645[0]
-            tail_17804 = xs_645[1:]
-            _x_17805 = _alt_17792(n_17800, head_17803, tail_17804)
-            return _x_17805
+            n_26011 = n_587 - 1
+            if len(xs_588) == 0:
+                _x_26012 = n_26011 + 1
+                _x_26013 = _alt_26005(_x_26012)
+                return _x_26013
+            else:
+                head_26014 = xs_588[0]
+                tail_26015 = xs_588[1:]
+                n__590 = n_26011
+                head_26006 = head_26014
+                xs__591 = tail_26015
+                return algorithms_drop(None, n__590, xs__591)
 
 # Lean: Corpus.Algorithms.filter
-def algorithms_filter(__649: Any, p_650: Callable[[Any], bool], xs_651: list[Any]) -> list[Any]:
-    def _f_17810():
-        _x_17809 = []
-        return _x_17809
-    _alt_17811 = _f_17810
-    def _f_17821(x_653: Any, xs__654: list[Any]):
-        _x_17812 = p_650(x_653)
-        _x_17813 = True
-        if _x_17812:
-            _x_17818 = algorithms_filter(None, p_650, xs__654)
-            _x_17819 = [x_653] + _x_17818
-            return _x_17819
+def algorithms_filter(__592: Any, p_593: Callable[[Any], bool], xs_594: list[Any]) -> list[Any]:
+    def _f_26021():
+        _x_26020 = []
+        return _x_26020
+    _alt_26022 = _f_26021
+    def _f_26032(x_596: Any, xs__597: list[Any]):
+        _x_26023 = p_593(x_596)
+        _x_26024 = True
+        _x_26025 = _x_26023 == True
+        if _x_26025:
+            _x_26029 = algorithms_filter(None, p_593, xs__597)
+            _x_26030 = [x_596] + _x_26029
+            return _x_26030
         else:
-            _x_17816 = algorithms_filter(None, p_650, xs__654)
-            return _x_17816
-    _alt_17822 = _f_17821
-    if len(xs_651) == 0:
-        _x_17824 = _alt_17811()
-        return _x_17824
+            _x_26027 = algorithms_filter(None, p_593, xs__597)
+            return _x_26027
+    _alt_26033 = _f_26032
+    if len(xs_594) == 0:
+        _x_26035 = _alt_26022()
+        return _x_26035
     else:
-        head_17825 = xs_651[0]
-        tail_17826 = xs_651[1:]
-        _x_17827 = _alt_17822(head_17825, tail_17826)
-        return _x_17827
+        head_26036 = xs_594[0]
+        tail_26037 = xs_594[1:]
+        _x_26038 = _alt_26033(head_26036, tail_26037)
+        return _x_26038
 
 # Lean: Corpus.Algorithms.map
-def algorithms_map(__655: Any, __656: Any, f: Callable[[Any], Any], xs_657: list[Any]) -> list[Any]:
-    def _f_17831():
-        _x_17830 = []
-        return _x_17830
-    _alt_17832 = _f_17831
-    def _f_17836(x_659: Any, xs__660: list[Any]):
-        _x_17833 = f(x_659)
-        _x_17834 = algorithms_map(None, None, f, xs__660)
-        _x_17835 = [_x_17833] + _x_17834
-        return _x_17835
-    _alt_17837 = _f_17836
-    if len(xs_657) == 0:
-        _x_17839 = _alt_17832()
-        return _x_17839
+def algorithms_map(__598: Any, __599: Any, f: Callable[[Any], Any], xs_600: list[Any]) -> list[Any]:
+    def _f_26042():
+        _x_26041 = []
+        return _x_26041
+    _alt_26043 = _f_26042
+    def _f_26047(x_602: Any, xs__603: list[Any]):
+        _x_26044 = f(x_602)
+        _x_26045 = algorithms_map(None, None, f, xs__603)
+        _x_26046 = [_x_26044] + _x_26045
+        return _x_26046
+    _alt_26048 = _f_26047
+    if len(xs_600) == 0:
+        _x_26050 = _alt_26043()
+        return _x_26050
     else:
-        head_17840 = xs_657[0]
-        tail_17841 = xs_657[1:]
-        _x_17842 = _alt_17837(head_17840, tail_17841)
-        return _x_17842
+        head_26051 = xs_600[0]
+        tail_26052 = xs_600[1:]
+        _x_26053 = _alt_26048(head_26051, tail_26052)
+        return _x_26053
 
 # Lean: Corpus.Algorithms.foldl
-def algorithms_foldl(__661: Any, __662: Any, f_663: Callable[[Any, Any], Any], init: Any, xs_664: list[Any]) -> Any:
-    def _f_17845():
-        return init
-    _alt_17846 = _f_17845
-    def _f_17849(x_666: Any, xs__667: list[Any]):
-        _x_17847 = f_663(init, x_666)
-        _x_17848 = algorithms_foldl(None, None, f_663, _x_17847, xs__667)
-        return _x_17848
-    _alt_17850 = _f_17849
-    if len(xs_664) == 0:
-        _x_17852 = _alt_17846()
-        return _x_17852
-    else:
-        head_17853 = xs_664[0]
-        tail_17854 = xs_664[1:]
-        _x_17855 = _alt_17850(head_17853, tail_17854)
-        return _x_17855
+def algorithms_foldl(__604: Any, __605: Any, f_606: Callable[[Any, Any], Any], init: Any, xs_607: list[Any]) -> Any:
+    while True:
+        def _f_26056():
+            return init
+        _alt_26057 = _f_26056
+        if len(xs_607) == 0:
+            _x_26063 = _alt_26057()
+            return _x_26063
+        else:
+            head_26064 = xs_607[0]
+            tail_26065 = xs_607[1:]
+            x_609 = head_26064
+            xs__610 = tail_26065
+            _x_26058 = f_606(init, x_609)
+            return algorithms_foldl(None, None, f_606, _x_26058, xs__610)
 
 # Lean: Corpus.Algorithms.foldr
-def algorithms_foldr(__668: Any, __669: Any, f_670: Callable[[Any, Any], Any], init_671: Any, xs_672: list[Any]) -> Any:
-    def _f_17858():
-        return init_671
-    _alt_17859 = _f_17858
-    def _f_17862(x_674: Any, xs__675: list[Any]):
-        _x_17860 = algorithms_foldr(None, None, f_670, init_671, xs__675)
-        _x_17861 = f_670(x_674, _x_17860)
-        return _x_17861
-    _alt_17863 = _f_17862
-    if len(xs_672) == 0:
-        _x_17865 = _alt_17859()
-        return _x_17865
+def algorithms_foldr(__611: Any, __612: Any, f_613: Callable[[Any, Any], Any], init_614: Any, xs_615: list[Any]) -> Any:
+    def _f_26069():
+        return init_614
+    _alt_26070 = _f_26069
+    def _f_26073(x_617: Any, xs__618: list[Any]):
+        _x_26071 = algorithms_foldr(None, None, f_613, init_614, xs__618)
+        _x_26072 = f_613(x_617, _x_26071)
+        return _x_26072
+    _alt_26074 = _f_26073
+    if len(xs_615) == 0:
+        _x_26076 = _alt_26070()
+        return _x_26076
     else:
-        head_17866 = xs_672[0]
-        tail_17867 = xs_672[1:]
-        _x_17868 = _alt_17863(head_17866, tail_17867)
-        return _x_17868
+        head_26077 = xs_615[0]
+        tail_26078 = xs_615[1:]
+        _x_26079 = _alt_26074(head_26077, tail_26078)
+        return _x_26079
 
 # Lean: Corpus.Algorithms.zip
-def algorithms_zip(__676: Any, __677: Any, xs_678: list[Any], ys_679: list[Any]) -> list[tuple[Any, Any]]:
-    def _f_17873(x_17871: list[Any]):
-        _x_17872 = []
-        return _x_17872
-    _alt_17874 = _f_17873
-    def _f_17877(x_17875: list[Any]):
-        _x_17876 = []
-        return _x_17876
-    _alt_17878 = _f_17877
-    def _f_17882(x_680: Any, xs__681: list[Any], y_682: Any, ys__683: list[Any]):
-        _x_17879 = (x_680, y_682)
-        _x_17880 = algorithms_zip(None, None, xs__681, ys__683)
-        _x_17881 = [_x_17879] + _x_17880
-        return _x_17881
-    _alt_17883 = _f_17882
-    if len(xs_678) == 0:
-        if len(ys_679) == 0:
-            _x_17884 = []
-            _x_17885 = _alt_17874(_x_17884)
-            return _x_17885
-        else:
-            head_17886 = ys_679[0]
-            tail_17887 = ys_679[1:]
-            _x_17888 = [head_17886] + tail_17887
-            _x_17889 = _alt_17874(_x_17888)
-            return _x_17889
+def algorithms_zip(__619: Any, __620: Any, xs_621: list[Any], ys_622: list[Any]) -> list[tuple[Any, Any]]:
+    def _f_26084(x_26082: list[Any]):
+        _x_26083 = []
+        return _x_26083
+    _alt_26085 = _f_26084
+    def _f_26088(x_26086: list[Any]):
+        _x_26087 = []
+        return _x_26087
+    _alt_26089 = _f_26088
+    def _f_26093(x_623: Any, xs__624: list[Any], y_625: Any, ys__626: list[Any]):
+        _x_26090 = (x_623, y_625)
+        _x_26091 = algorithms_zip(None, None, xs__624, ys__626)
+        _x_26092 = [_x_26090] + _x_26091
+        return _x_26092
+    _alt_26094 = _f_26093
+    if len(xs_621) == 0:
+        _x_26095 = _alt_26085(ys_622)
+        return _x_26095
     else:
-        head_17891 = xs_678[0]
-        tail_17892 = xs_678[1:]
-        if len(ys_679) == 0:
-            _x_17893 = [head_17891] + tail_17892
-            _x_17894 = _alt_17878(_x_17893)
-            return _x_17894
+        head_26096 = xs_621[0]
+        tail_26097 = xs_621[1:]
+        if len(ys_622) == 0:
+            _x_26098 = [head_26096] + tail_26097
+            _x_26099 = _alt_26089(_x_26098)
+            return _x_26099
         else:
-            head_17895 = ys_679[0]
-            tail_17896 = ys_679[1:]
-            _x_17897 = _alt_17883(head_17891, tail_17892, head_17895, tail_17896)
-            return _x_17897
+            head_26100 = ys_622[0]
+            tail_26101 = ys_622[1:]
+            _x_26102 = _alt_26094(head_26096, tail_26097, head_26100, tail_26101)
+            return _x_26102
 
 # Lean: Corpus.Algorithms.unzip
-def unzip(__684: Any, __685: Any, xys: list[tuple[Any, Any]]) -> tuple[list[Any], list[Any]]:
-    def _f_17904():
-        _x_17901 = []
-        _x_17902 = []
-        _x_17903 = (_x_17901, _x_17902)
-        return _x_17903
-    _alt_17905 = _f_17904
-    def _f_17916(x_687: Any, y_688: Any, rest_689: list[tuple[Any, Any]]):
-        def _f_17909(xs_690: list[Any], ys_691: list[Any]):
-            _x_17906 = [x_687] + xs_690
-            _x_17907 = [y_688] + ys_691
-            _x_17908 = (_x_17906, _x_17907)
-            return _x_17908
-        _alt_17910 = _f_17909
-        _x_17911 = unzip(None, None, rest_689)
-        match _x_17911:
-            case (fst_17912, snd_17913):
-                _x_17914 = _alt_17910(fst_17912, snd_17913)
-                return _x_17914
-    _alt_17917 = _f_17916
+def unzip(__627: Any, __628: Any, xys: list[tuple[Any, Any]]) -> tuple[list[Any], list[Any]]:
+    def _f_26109():
+        _x_26106 = []
+        _x_26107 = []
+        _x_26108 = (_x_26106, _x_26107)
+        return _x_26108
+    _alt_26110 = _f_26109
+    def _f_26121(x_630: Any, y_631: Any, rest_632: list[tuple[Any, Any]]):
+        def _f_26114(xs_633: list[Any], ys_634: list[Any]):
+            _x_26111 = [x_630] + xs_633
+            _x_26112 = [y_631] + ys_634
+            _x_26113 = (_x_26111, _x_26112)
+            return _x_26113
+        _alt_26115 = _f_26114
+        _x_26116 = unzip(None, None, rest_632)
+        match _x_26116:
+            case (fst_26117, snd_26118):
+                _x_26119 = _alt_26115(fst_26117, snd_26118)
+                return _x_26119
+    _alt_26122 = _f_26121
     if len(xys) == 0:
-        _x_17919 = _alt_17905()
-        return _x_17919
+        _x_26124 = _alt_26110()
+        return _x_26124
     else:
-        head_17920 = xys[0]
-        tail_17921 = xys[1:]
-        match head_17920:
-            case (fst_17922, snd_17923):
-                _x_17924 = _alt_17917(fst_17922, snd_17923, tail_17921)
-                return _x_17924
+        head_26125 = xys[0]
+        tail_26126 = xys[1:]
+        match head_26125:
+            case (fst_26127, snd_26128):
+                _x_26129 = _alt_26122(fst_26127, snd_26128, tail_26126)
+                return _x_26129
 
 # Lean: Corpus.Algorithms.concat
-def algorithms_concat(__692: Any, xss: list[list[Any]]) -> list[Any]:
-    def _f_17929():
-        _x_17928 = []
-        return _x_17928
-    _alt_17930 = _f_17929
-    def _f_17936(xs_694: list[Any], xss_: list[list[Any]]):
-        _x_17934 = algorithms_concat(None, xss_)
-        _x_17935 = xs_694 + _x_17934
-        return _x_17935
-    _alt_17937 = _f_17936
+def algorithms_concat(__635: Any, xss: list[list[Any]]) -> list[Any]:
+    def _f_26134():
+        _x_26133 = []
+        return _x_26133
+    _alt_26135 = _f_26134
+    def _f_26141(xs_637: list[Any], xss_: list[list[Any]]):
+        _x_26139 = algorithms_concat(None, xss_)
+        _x_26140 = xs_637 + _x_26139
+        return _x_26140
+    _alt_26142 = _f_26141
     if len(xss) == 0:
-        _x_17939 = _alt_17930()
-        return _x_17939
+        _x_26144 = _alt_26135()
+        return _x_26144
     else:
-        head_17940 = xss[0]
-        tail_17941 = xss[1:]
-        _x_17942 = _alt_17937(head_17940, tail_17941)
-        return _x_17942
+        head_26145 = xss[0]
+        tail_26146 = xss[1:]
+        _x_26147 = _alt_26142(head_26145, tail_26146)
+        return _x_26147
 
 # Lean: Corpus.Algorithms.intersperse
-def intersperse(__695: Any, sep_696: Any, xs_697: list[Any]) -> list[Any]:
-    def _f_17946():
-        _x_17945 = []
-        return _x_17945
-    _alt_17947 = _f_17946
-    def _f_17950(x_699: Any):
-        _x_17948 = []
-        _x_17949 = [x_699] + _x_17948
-        return _x_17949
-    _alt_17951 = _f_17950
-    def _f_17955(x_700: Any, xs__701: list[Any]):
-        _x_17952 = intersperse(None, sep_696, xs__701)
-        _x_17953 = [sep_696] + _x_17952
-        _x_17954 = [x_700] + _x_17953
-        return _x_17954
-    _alt_17956 = _f_17955
-    if len(xs_697) == 0:
-        _x_17958 = _alt_17947()
-        return _x_17958
+def intersperse(__638: Any, sep_639: Any, xs_640: list[Any]) -> list[Any]:
+    def _f_26151():
+        _x_26150 = []
+        return _x_26150
+    _alt_26152 = _f_26151
+    def _f_26155(x_642: Any):
+        _x_26153 = []
+        _x_26154 = [x_642] + _x_26153
+        return _x_26154
+    _alt_26156 = _f_26155
+    def _f_26160(x_643: Any, xs__644: list[Any]):
+        _x_26157 = intersperse(None, sep_639, xs__644)
+        _x_26158 = [sep_639] + _x_26157
+        _x_26159 = [x_643] + _x_26158
+        return _x_26159
+    _alt_26161 = _f_26160
+    if len(xs_640) == 0:
+        _x_26163 = _alt_26152()
+        return _x_26163
     else:
-        head_17959 = xs_697[0]
-        tail_17960 = xs_697[1:]
-        if len(tail_17960) == 0:
-            _x_17961 = _alt_17951(head_17959)
-            return _x_17961
+        head_26164 = xs_640[0]
+        tail_26165 = xs_640[1:]
+        if len(tail_26165) == 0:
+            _x_26166 = _alt_26156(head_26164)
+            return _x_26166
         else:
-            head_17962 = tail_17960[0]
-            tail_17963 = tail_17960[1:]
-            _x_17964 = [head_17962] + tail_17963
-            _x_17965 = _alt_17956(head_17959, _x_17964)
-            return _x_17965
+            _x_26170 = (lambda h_26167: _alt_26161(head_26164, tail_26165))(None)
+            return _x_26170
 
 # Lean: Corpus.Algorithms.span
-def span(__702: Any, p_703: Callable[[Any], bool], xs_704: list[Any]) -> tuple[list[Any], list[Any]]:
-    def _f_17971():
-        _x_17969 = []
-        _x_17970 = (_x_17969, _x_17969)
-        return _x_17970
-    _alt_17972 = _f_17971
-    def _f_17990(x_706: Any, xs__707: list[Any]):
-        _x_17973 = p_703(x_706)
-        _x_17974 = True
-        if _x_17973:
-            def _f_17982(ys_708: list[Any], zs: list[Any]):
-                _x_17980 = [x_706] + ys_708
-                _x_17981 = (_x_17980, zs)
-                return _x_17981
-            _alt_17983 = _f_17982
-            _x_17984 = span(None, p_703, xs__707)
-            match _x_17984:
-                case (fst_17985, snd_17986):
-                    _x_17987 = _alt_17983(fst_17985, snd_17986)
-                    return _x_17987
+def span(__645: Any, p_646: Callable[[Any], bool], xs_647: list[Any]) -> tuple[list[Any], list[Any]]:
+    def _f_26176():
+        _x_26174 = []
+        _x_26175 = (_x_26174, _x_26174)
+        return _x_26175
+    _alt_26177 = _f_26176
+    def _f_26195(x_649: Any, xs__650: list[Any]):
+        _x_26178 = p_646(x_649)
+        _x_26179 = True
+        _x_26180 = _x_26178 == True
+        if _x_26180:
+            def _f_26187(ys_651: list[Any], zs: list[Any]):
+                _x_26185 = [x_649] + ys_651
+                _x_26186 = (_x_26185, zs)
+                return _x_26186
+            _alt_26188 = _f_26187
+            _x_26189 = span(None, p_646, xs__650)
+            match _x_26189:
+                case (fst_26190, snd_26191):
+                    _x_26192 = _alt_26188(fst_26190, snd_26191)
+                    return _x_26192
         else:
-            _x_17977 = []
-            _x_17978 = (_x_17977, xs_704)
-            return _x_17978
-    _alt_17991 = _f_17990
-    if len(xs_704) == 0:
-        _x_17993 = _alt_17972()
-        return _x_17993
+            _x_26182 = []
+            _x_26183 = (_x_26182, xs_647)
+            return _x_26183
+    _alt_26196 = _f_26195
+    if len(xs_647) == 0:
+        _x_26198 = _alt_26177()
+        return _x_26198
     else:
-        head_17994 = xs_704[0]
-        tail_17995 = xs_704[1:]
-        _x_17996 = _alt_17991(head_17994, tail_17995)
-        return _x_17996
+        head_26199 = xs_647[0]
+        tail_26200 = xs_647[1:]
+        _x_26201 = _alt_26196(head_26199, tail_26200)
+        return _x_26201
 
 # Lean: Corpus.Algorithms.partition
-def partition(__709: Any, p_710: Callable[[Any], bool], xs_711: list[Any]) -> tuple[list[Any], list[Any]]:
-    def _f_18001():
-        _x_17999 = []
-        _x_18000 = (_x_17999, _x_17999)
-        return _x_18000
-    _alt_18002 = _f_18001
-    def _f_18020(x_713: Any, xs__714: list[Any]):
-        def _f_18013(yes: list[Any], no: list[Any]):
-            _x_18003 = p_710(x_713)
-            _x_18004 = True
-            if _x_18003:
-                _x_18010 = [x_713] + yes
-                _x_18011 = (_x_18010, no)
-                return _x_18011
+def partition(__652: Any, p_653: Callable[[Any], bool], xs_654: list[Any]) -> tuple[list[Any], list[Any]]:
+    def _f_26206():
+        _x_26204 = []
+        _x_26205 = (_x_26204, _x_26204)
+        return _x_26205
+    _alt_26207 = _f_26206
+    def _f_26225(x_656: Any, xs__657: list[Any]):
+        def _f_26218(yes: list[Any], no: list[Any]):
+            _x_26208 = p_653(x_656)
+            _x_26209 = True
+            _x_26210 = _x_26208 == True
+            if _x_26210:
+                _x_26215 = [x_656] + yes
+                _x_26216 = (_x_26215, no)
+                return _x_26216
             else:
-                _x_18007 = [x_713] + no
-                _x_18008 = (yes, _x_18007)
-                return _x_18008
-        _alt_18014 = _f_18013
-        _x_18015 = partition(None, p_710, xs__714)
-        match _x_18015:
-            case (fst_18016, snd_18017):
-                _x_18018 = _alt_18014(fst_18016, snd_18017)
-                return _x_18018
-    _alt_18021 = _f_18020
-    if len(xs_711) == 0:
-        _x_18023 = _alt_18002()
-        return _x_18023
+                _x_26212 = [x_656] + no
+                _x_26213 = (yes, _x_26212)
+                return _x_26213
+        _alt_26219 = _f_26218
+        _x_26220 = partition(None, p_653, xs__657)
+        match _x_26220:
+            case (fst_26221, snd_26222):
+                _x_26223 = _alt_26219(fst_26221, snd_26222)
+                return _x_26223
+    _alt_26226 = _f_26225
+    if len(xs_654) == 0:
+        _x_26228 = _alt_26207()
+        return _x_26228
     else:
-        head_18024 = xs_711[0]
-        tail_18025 = xs_711[1:]
-        _x_18026 = _alt_18021(head_18024, tail_18025)
-        return _x_18026
+        head_26229 = xs_654[0]
+        tail_26230 = xs_654[1:]
+        _x_26231 = _alt_26226(head_26229, tail_26230)
+        return _x_26231
 
 # Lean: Corpus.Algorithms.groupBy
-def group_by(__715: Any, eq: Callable[[Any, Any], bool], xs_716: list[Any]) -> list[list[Any]]:
-    def _f_18030():
-        _x_18029 = []
-        return _x_18029
-    _alt_18031 = _f_18030
-    def _f_18043(x_718: Any, xs__719: list[Any]):
-        def _f_18035(same: list[Any], rest_720: list[Any]):
-            _x_18032 = [x_718] + same
-            _x_18033 = group_by(None, eq, rest_720)
-            _x_18034 = [_x_18032] + _x_18033
-            return _x_18034
-        _alt_18036 = _f_18035
-        _x_18037 = eq(x_718)
-        _x_18038 = span(None, _x_18037, xs__719)
-        match _x_18038:
-            case (fst_18039, snd_18040):
-                _x_18041 = _alt_18036(fst_18039, snd_18040)
-                return _x_18041
-    _alt_18044 = _f_18043
-    if len(xs_716) == 0:
-        _x_18046 = _alt_18031()
-        return _x_18046
+def group_by(__658: Any, eq: Callable[[Any, Any], bool], xs_659: list[Any]) -> list[list[Any]]:
+    def _f_26235():
+        _x_26234 = []
+        return _x_26234
+    _alt_26236 = _f_26235
+    def _f_26248(x_661: Any, xs__662: list[Any]):
+        def _f_26240(same: list[Any], rest_663: list[Any]):
+            _x_26237 = [x_661] + same
+            _x_26238 = group_by(None, eq, rest_663)
+            _x_26239 = [_x_26237] + _x_26238
+            return _x_26239
+        _alt_26241 = _f_26240
+        _x_26242 = eq(x_661)
+        _x_26243 = span(None, _x_26242, xs__662)
+        match _x_26243:
+            case (fst_26244, snd_26245):
+                _x_26246 = _alt_26241(fst_26244, snd_26245)
+                return _x_26246
+    _alt_26249 = _f_26248
+    if len(xs_659) == 0:
+        _x_26251 = _alt_26236()
+        return _x_26251
     else:
-        head_18047 = xs_716[0]
-        tail_18048 = xs_716[1:]
-        _x_18049 = _alt_18044(head_18047, tail_18048)
-        return _x_18049
+        head_26252 = xs_659[0]
+        tail_26253 = xs_659[1:]
+        _x_26254 = _alt_26249(head_26252, tail_26253)
+        return _x_26254
 
 # Lean: Corpus.Algorithms.isPalindrome
-def algorithms_is_palindrome(s_721: str) -> bool:
-    _x_18052 = list(s_721)
-    _x_18057 = list(reversed(_x_18052))
-    _x_18058 = _x_18052 == _x_18057
-    return _x_18058
+def algorithms_is_palindrome(s_664: str) -> bool:
+    _x_26257 = list(s_664)
+    _x_26262 = list(reversed(_x_26257))
+    _x_26263 = _x_26257 == _x_26262
+    return _x_26263
 
 # Lean: Corpus.Algorithms.countChar
-def algorithms_count_char(c_723: str, s_724: str) -> int:
-    def _f_18076(acc_725: int, x_726: str):
-        _x_18063 = x_726 == c_723
-        _x_18064 = True
-        if _x_18063:
-            _x_18071 = 1
-            _x_18074 = acc_725 + 1
-            return _x_18074
+def algorithms_count_char(c_666: str, s_667: str) -> int:
+    def _f_26281(acc_668: int, x_669: str):
+        _x_26268 = x_669 == c_666
+        _x_26269 = True
+        _x_26270 = _x_26268 == True
+        if _x_26270:
+            _x_26276 = 1
+            _x_26279 = acc_668 + 1
+            return _x_26279
         else:
-            return acc_725
-    _x_18077 = 0
-    _x_18080 = list(s_724)
-    _x_18081 = functools.reduce(_f_18076, _x_18080, 0)
-    return _x_18081
+            return acc_668
+    _x_26282 = 0
+    _x_26285 = list(s_667)
+    _x_26286 = functools.reduce(_f_26281, _x_26285, 0)
+    return _x_26286
 
 # Lean: Corpus.Algorithms.replaceChar
-def replace_char(old: str, new: str, s_727: str) -> str:
-    def _f_18092(c_728: str):
-        _x_18086 = c_728 == old
-        _x_18087 = True
-        if _x_18086:
+def replace_char(old: str, new: str, s_670: str) -> str:
+    def _f_26297(c_671: str):
+        _x_26291 = c_671 == old
+        _x_26292 = True
+        _x_26293 = _x_26291 == True
+        if _x_26293:
             return new
         else:
-            return c_728
-    _x_18093 = list(s_727)
-    _x_18094 = [_f_18092(x) for x in _x_18093]
-    _x_18095 = ''.join(_x_18094)
-    return _x_18095
+            return c_671
+    _x_26298 = list(s_670)
+    _x_26299 = [_f_26297(x) for x in _x_26298]
+    _x_26300 = ''.join(_x_26299)
+    return _x_26300
 
 # Lean: Corpus.Math.abs
-def math_abs(x_729: int) -> int:
-    _x_18097 = 0
-    _x_18100 = x_729 < 0
-    if _x_18100:
-        _x_18105 = -x_729
-        return _x_18105
+def math_abs(x_672: int) -> int:
+    _x_26302 = 0
+    _x_26305 = x_672 < 0
+    if _x_26305:
+        _x_26310 = -x_672
+        return _x_26310
     else:
-        return x_729
+        return x_672
 
 # Lean: Corpus.Math.sign
-def sign(x_730: int) -> int:
-    _x_18108 = 0
-    _x_18111 = x_730 < 0
-    if _x_18111:
-        _x_18123 = 1
-        _x_18126 = -1
-        return _x_18126
+def sign(x_673: int) -> int:
+    _x_26313 = 0
+    _x_26316 = x_673 < 0
+    if _x_26316:
+        _x_26329 = 1
+        _x_26332 = -1
+        return _x_26332
     else:
-        _x_18113 = 0 < x_730
-        if _x_18113:
-            _x_18116 = 1
+        _x_26318 = 0 < x_673
+        if _x_26318:
+            _x_26322 = 1
             return 1
         else:
-            return 0
+            return 1
 
 # Lean: Corpus.Math.min
-def math_min(a_731: int, b_732: int) -> int:
-    _x_18129 = a_731 <= b_732
-    if _x_18129:
-        return a_731
+def math_min(a_674: int, b_675: int) -> int:
+    _x_26335 = a_674 <= b_675
+    if _x_26335:
+        return a_674
     else:
-        return b_732
+        return b_675
 
 # Lean: Corpus.Math.max
-def math_max(a_733: int, b_734: int) -> int:
-    _x_18134 = b_734 <= a_733
-    if _x_18134:
-        return a_733
+def math_max(a_676: int, b_677: int) -> int:
+    _x_26340 = b_677 <= a_676
+    if _x_26340:
+        return a_676
     else:
-        return b_734
+        return b_677
 
 # Lean: Corpus.Math.clamp
-def clamp(lo_735: int, hi_736: int, x_737: int) -> int:
-    _x_18139 = math_max(lo_735, x_737)
-    _x_18140 = math_min(hi_736, _x_18139)
-    return _x_18140
+def clamp(lo_678: int, hi_679: int, x_680: int) -> int:
+    _x_26345 = math_max(lo_678, x_680)
+    _x_26346 = math_min(hi_679, _x_26345)
+    return _x_26346
 
 # Lean: Corpus.Math.divMod
-def div_mod(a_738: int, b_739: int) -> tuple[int, int]:
-    _x_18145 = a_738 // b_739
-    _x_18149 = a_738 % b_739
-    _x_18150 = (_x_18145, _x_18149)
-    return _x_18150
+def div_mod(a_681: int, b_682: int) -> tuple[int, int]:
+    _x_26351 = a_681 // b_682
+    _x_26355 = a_681 % b_682
+    _x_26356 = (_x_26351, _x_26355)
+    return _x_26356
 
 # Lean: Corpus.Math.pow
-def pow(base_740: int, exp_741: int) -> int:
-    def _f_18155():
-        _x_18152 = 1
+def pow(base_683: int, exp_684: int) -> int:
+    def _f_26361():
+        _x_26358 = 1
         return 1
-    _alt_18156 = _f_18155
-    def _f_18162(n_743: int):
-        _x_18160 = pow(base_740, n_743)
-        _x_18161 = base_740 * _x_18160
-        return _x_18161
-    _alt_18163 = _f_18162
-    if exp_741 == 0:
-        _x_18165 = _alt_18156()
-        return _x_18165
+    _alt_26362 = _f_26361
+    def _f_26368(n_686: int):
+        _x_26366 = pow(base_683, n_686)
+        _x_26367 = base_683 * _x_26366
+        return _x_26367
+    _alt_26369 = _f_26368
+    if exp_684 == 0:
+        _x_26371 = _alt_26362()
+        return _x_26371
     else:
-        n_18166 = exp_741 - 1
-        _x_18167 = _alt_18163(n_18166)
-        return _x_18167
+        n_26372 = exp_684 - 1
+        _x_26373 = _alt_26369(n_26372)
+        return _x_26373
 
 # Lean: Corpus.Math.fastPow
-def fast_pow(base_744: int, exp_745: int) -> int:
-    _x_18170 = 1
-    _x_18173 = fast_pow_go(base_744, exp_745, 1)
-    return _x_18173
+def fast_pow(base_687: int, exp_688: int) -> int:
+    _x_26376 = 1
+    _x_26379 = fast_pow_go(base_687, exp_688, 1)
+    return _x_26379
 
 # Lean: Corpus.Math.modPow
-def mod_pow(base_746: int, exp_747: int, m_748: int) -> int:
-    _x_18178 = base_746 % m_748
-    _x_18179 = 1
-    _x_18182 = mod_pow_go(m_748, _x_18178, exp_747, 1)
-    return _x_18182
+def mod_pow(base_689: int, exp_690: int, m_691: int) -> int:
+    _x_26384 = base_689 % m_691
+    _x_26385 = 1
+    _x_26388 = mod_pow_go(m_691, _x_26384, exp_690, 1)
+    return _x_26388
 
 # Lean: Corpus.Math.gcd
-def math_gcd(a_749: int, b_750: int) -> int:
-    _x_18186 = 0
-    _x_18189 = b_750 == 0
-    _x_18190 = True
-    if _x_18189:
-        return a_749
-    else:
-        _x_18196 = a_749 % b_750
-        _x_18197 = math_gcd(b_750, _x_18196)
-        return _x_18197
+def math_gcd(a_692: int, b_693: int) -> int:
+    while True:
+        _x_26393 = 0
+        _x_26396 = b_693 == 0
+        _x_26397 = True
+        _x_26398 = _x_26396 == True
+        if _x_26398:
+            return a_692
+        else:
+            _x_26403 = a_692 % b_693
+            a_692, b_693 = b_693, _x_26403
+            continue
 
 # Lean: Corpus.Math.lcm
-def math_lcm(a_751: int, b_752: int) -> int:
-    def _f_18202():
-        _x_18201 = True
+def math_lcm(a_694: int, b_695: int) -> int:
+    def _f_26409():
+        _x_26408 = True
         return True
-    _alt_18203 = _f_18202
-    def _f_18210():
-        _x_18206 = 0
-        _x_18209 = b_752 == 0
-        return _x_18209
-    _alt_18211 = _f_18210
-    _x_18214 = 0
-    _x_18217 = a_751 == 0
-    def _jp_18237(_y_18222: bool):
-        _x_18223 = True
-        if _y_18222:
+    _alt_26410 = _f_26409
+    def _f_26418():
+        _x_26414 = 0
+        _x_26417 = b_695 == 0
+        return _x_26417
+    _alt_26419 = _f_26418
+    _x_26423 = 0
+    _x_26426 = a_694 == 0
+    def _jp_26447(_y_26431: bool):
+        _x_26432 = True
+        _x_26433 = _y_26431 == True
+        if _x_26433:
             return 0
         else:
-            _x_18232 = math_gcd(a_751, b_752)
-            _x_18233 = a_751 // _x_18232
-            _x_18234 = _x_18233 * b_752
-            return _x_18234
-    def _jp_18243():
-        _x_18242 = _alt_18203()
-        return _jp_18237(_x_18242)
-    def _jp_18240():
-        _x_18239 = _alt_18211()
-        return _jp_18237(_x_18239)
-    if _x_18217:
-        return _jp_18243()
+            _x_26441 = math_gcd(a_694, b_695)
+            _x_26442 = a_694 // _x_26441
+            _x_26443 = _x_26442 * b_695
+            return _x_26443
+    def _jp_26450():
+        _x_26449 = _alt_26419()
+        return _jp_26447(_x_26449)
+    def _jp_26453():
+        _x_26452 = _alt_26410()
+        return _jp_26447(_x_26452)
+    if _x_26426:
+        return _jp_26453()
     else:
-        return _jp_18240()
+        return _jp_26450()
 
 # Lean: Corpus.Math.coprime
-def coprime(a_755: int, b_756: int) -> bool:
-    _x_18247 = math_gcd(a_755, b_756)
-    _x_18248 = 1
-    _x_18251 = _x_18247 == 1
-    return _x_18251
+def coprime(a_698: int, b_699: int) -> bool:
+    _x_26458 = math_gcd(a_698, b_699)
+    _x_26459 = 1
+    _x_26462 = _x_26458 == 1
+    return _x_26462
 
 # Lean: Corpus.Math.isPrime
-def math_is_prime(n_757: int) -> bool:
-    _x_18253 = 2
-    _x_18256 = n_757 < 2
-    if _x_18256:
-        _x_18260 = False
+def math_is_prime(n_700: int) -> bool:
+    _x_26464 = 2
+    _x_26467 = n_700 < 2
+    if _x_26467:
+        _x_26471 = False
         return False
     else:
-        _x_18258 = math_is_prime_check(n_757, 2, n_757)
-        return _x_18258
+        _x_26469 = math_is_prime_check(n_700, 2, n_700)
+        return _x_26469
 
 # Lean: Corpus.Math.primeFactors
-def math_prime_factors(n_758: int) -> list[int]:
-    _x_18263 = 2
-    _x_18266 = []
-    _x_18267 = math_prime_factors_go(n_758, 2, _x_18266, n_758)
-    return _x_18267
+def math_prime_factors(n_701: int) -> list[int]:
+    _x_26474 = 2
+    _x_26477 = []
+    _x_26478 = math_prime_factors_go(n_701, 2, _x_26477, n_701)
+    return _x_26478
 
 # Lean: Corpus.Math.divisors
-def divisors(n_759: int) -> list[int]:
-    _x_18269 = 1
-    _x_18272 = []
-    _x_18273 = divisors_go(n_759, 1, _x_18272)
-    _x_18274 = list(reversed(_x_18273))
-    return _x_18274
+def divisors(n_702: int) -> list[int]:
+    _x_26480 = 1
+    _x_26483 = []
+    _x_26484 = divisors_go(n_702, 1, _x_26483)
+    _x_26485 = list(reversed(_x_26484))
+    return _x_26485
 
 # Lean: Corpus.Math.numDivisors
-def num_divisors(n_760: int) -> int:
-    _x_18276 = divisors(n_760)
-    _x_18277 = len(_x_18276)
-    return _x_18277
+def num_divisors(n_703: int) -> int:
+    _x_26487 = divisors(n_703)
+    _x_26488 = len(_x_26487)
+    return _x_26488
 
 # Lean: Corpus.Math.sumDivisors
-def sum_divisors(n_761: int) -> int:
-    def _f_18285(x1_18279: int, x2_18280: int):
-        _x_18284 = x1_18279 + x2_18280
-        return _x_18284
-    _x_18286 = 0
-    _x_18289 = divisors(n_761)
-    _x_18290 = functools.reduce(_f_18285, _x_18289, 0)
-    return _x_18290
+def sum_divisors(n_704: int) -> int:
+    def _f_26496(x1_26490: int, x2_26491: int):
+        _x_26495 = x1_26490 + x2_26491
+        return _x_26495
+    _x_26497 = 0
+    _x_26500 = divisors(n_704)
+    _x_26501 = functools.reduce(_f_26496, _x_26500, 0)
+    return _x_26501
 
 # Lean: Corpus.Math.fibonacci
-def math_fibonacci(n_762: int) -> int:
-    _x_18292 = 0
-    _x_18295 = 1
-    _x_18298 = math_fibonacci_go(0, 1, n_762)
-    return _x_18298
+def math_fibonacci(n_705: int) -> int:
+    _x_26503 = 0
+    _x_26506 = 1
+    _x_26509 = math_fibonacci_go(0, 1, n_705)
+    return _x_26509
 
 # Lean: Corpus.Math.lucas
-def lucas(n_763: int) -> int:
-    _x_18300 = 2
-    _x_18303 = 1
-    _x_18306 = lucas_go(2, 1, n_763)
-    return _x_18306
+def lucas(n_706: int) -> int:
+    _x_26511 = 2
+    _x_26514 = 1
+    _x_26517 = lucas_go(2, 1, n_706)
+    return _x_26517
 
 # Lean: Corpus.Math.tribonacci
-def tribonacci(n_764: int) -> int:
-    _x_18308 = 0
-    _x_18311 = 1
-    _x_18314 = tribonacci_go(0, 0, 1, n_764)
-    return _x_18314
+def tribonacci(n_707: int) -> int:
+    _x_26519 = 0
+    _x_26522 = 1
+    _x_26525 = tribonacci_go(0, 0, 1, n_707)
+    return _x_26525
 
 # Lean: Corpus.Math.factorial
-def factorial(n_765: int) -> int:
-    def _f_18319():
-        _x_18316 = 1
+def factorial(n_708: int) -> int:
+    def _f_26530():
+        _x_26527 = 1
         return 1
-    _alt_18320 = _f_18319
-    def _f_18333(n__767: int):
-        _x_18327 = 1
-        _x_18330 = n__767 + 1
-        _x_18331 = factorial(n__767)
-        _x_18332 = _x_18330 * _x_18331
-        return _x_18332
-    _alt_18334 = _f_18333
-    if n_765 == 0:
-        _x_18336 = _alt_18320()
-        return _x_18336
+    _alt_26531 = _f_26530
+    def _f_26544(n__710: int):
+        _x_26538 = 1
+        _x_26541 = n__710 + 1
+        _x_26542 = factorial(n__710)
+        _x_26543 = _x_26541 * _x_26542
+        return _x_26543
+    _alt_26545 = _f_26544
+    if n_708 == 0:
+        _x_26547 = _alt_26531()
+        return _x_26547
     else:
-        n_18337 = n_765 - 1
-        _x_18338 = _alt_18334(n_18337)
-        return _x_18338
+        n_26548 = n_708 - 1
+        _x_26549 = _alt_26545(n_26548)
+        return _x_26549
 
 # Lean: Corpus.Math.binomial
-def binomial(n_768: int, k_769: int) -> int:
-    _x_18341 = n_768 < k_769
-    if _x_18341:
-        _x_18348 = 0
+def binomial(n_711: int, k_712: int) -> int:
+    _x_26552 = n_711 < k_712
+    if _x_26552:
+        _x_26559 = 0
         return 0
     else:
-        _x_18343 = 1
-        _x_18346 = binomial_go(n_768, k_769, 1, 1, 1)
-        return _x_18346
+        _x_26554 = 1
+        _x_26557 = binomial_go(n_711, k_712, 1, 1, 1)
+        return _x_26557
 
 # Lean: Corpus.Math.catalan
-def catalan(n_770: int) -> int:
-    _x_18359 = 2
-    _x_18362 = 2 * n_770
-    _x_18363 = binomial(_x_18362, n_770)
-    _x_18367 = 1
-    _x_18370 = n_770 + 1
-    _x_18371 = _x_18363 // _x_18370
-    return _x_18371
+def catalan(n_713: int) -> int:
+    _x_26570 = 2
+    _x_26573 = 2 * n_713
+    _x_26574 = binomial(_x_26573, n_713)
+    _x_26578 = 1
+    _x_26581 = n_713 + 1
+    _x_26582 = _x_26574 // _x_26581
+    return _x_26582
 
 # Lean: Corpus.Math.permutations
-def permutations(n_771: int, k_772: int) -> int:
-    _x_18373 = n_771 < k_772
-    if _x_18373:
-        _x_18386 = 0
+def permutations(n_714: int, k_715: int) -> int:
+    _x_26584 = n_714 < k_715
+    if _x_26584:
+        _x_26597 = 0
         return 0
     else:
-        _x_18378 = factorial(n_771)
-        _x_18382 = n_771 - k_772
-        _x_18383 = factorial(_x_18382)
-        _x_18384 = _x_18378 // _x_18383
-        return _x_18384
+        _x_26589 = factorial(n_714)
+        _x_26593 = n_714 - k_715
+        _x_26594 = factorial(_x_26593)
+        _x_26595 = _x_26589 // _x_26594
+        return _x_26595
 
 # Lean: Corpus.Math.triangularNumber
-def triangular_number(n_773: int) -> int:
-    _x_18400 = 1
-    _x_18403 = n_773 + 1
-    _x_18404 = n_773 * _x_18403
-    _x_18405 = 2
-    _x_18408 = _x_18404 // 2
-    return _x_18408
+def triangular_number(n_716: int) -> int:
+    _x_26611 = 1
+    _x_26614 = n_716 + 1
+    _x_26615 = n_716 * _x_26614
+    _x_26616 = 2
+    _x_26619 = _x_26615 // 2
+    return _x_26619
 
 # Lean: Corpus.Math.squareNumber
-def square_number(n_774: int) -> int:
-    _x_18413 = n_774 * n_774
-    return _x_18413
+def square_number(n_717: int) -> int:
+    _x_26624 = n_717 * n_717
+    return _x_26624
 
 # Lean: Corpus.Math.pentagonalNumber
-def pentagonal_number(n_775: int) -> int:
-    _x_18424 = 3
-    _x_18427 = 3 * n_775
-    _x_18428 = 1
-    _x_18431 = _x_18427 - 1
-    _x_18432 = n_775 * _x_18431
-    _x_18433 = 2
-    _x_18436 = _x_18432 // 2
-    return _x_18436
+def pentagonal_number(n_718: int) -> int:
+    _x_26635 = 3
+    _x_26638 = 3 * n_718
+    _x_26639 = 1
+    _x_26642 = _x_26638 - 1
+    _x_26643 = n_718 * _x_26642
+    _x_26644 = 2
+    _x_26647 = _x_26643 // 2
+    return _x_26647
 
 # Lean: Corpus.Math.hexagonalNumber
-def hexagonal_number(n_776: int) -> int:
-    _x_18444 = 2
-    _x_18447 = 2 * n_776
-    _x_18448 = 1
-    _x_18451 = _x_18447 - 1
-    _x_18452 = n_776 * _x_18451
-    return _x_18452
+def hexagonal_number(n_719: int) -> int:
+    _x_26655 = 2
+    _x_26658 = 2 * n_719
+    _x_26659 = 1
+    _x_26662 = _x_26658 - 1
+    _x_26663 = n_719 * _x_26662
+    return _x_26663
 
 # Lean: Corpus.Math.isTriangular
-def is_triangular(n_777: int) -> bool:
-    _x_18466 = 8
-    _x_18469 = 8 * n_777
-    _x_18470 = 1
-    _x_18473 = _x_18469 + 1
-    _x_18474 = isqrt(_x_18473)
-    _x_18475 = _x_18474 - 1
-    _x_18476 = 2
-    _x_18479 = _x_18475 // 2
-    _x_18482 = _x_18479 + 1
-    _x_18483 = _x_18479 * _x_18482
-    _x_18484 = _x_18483 // 2
-    _x_18485 = _x_18484 == n_777
-    return _x_18485
+def is_triangular(n_720: int) -> bool:
+    _x_26677 = 8
+    _x_26680 = 8 * n_720
+    _x_26681 = 1
+    _x_26684 = _x_26680 + 1
+    _x_26685 = isqrt(_x_26684)
+    _x_26686 = _x_26685 - 1
+    _x_26687 = 2
+    _x_26690 = _x_26686 // 2
+    _x_26694 = _x_26690 + 1
+    _x_26695 = _x_26690 * _x_26694
+    _x_26696 = _x_26695 // 2
+    _x_26697 = _x_26696 == n_720
+    return _x_26697
 
 # Lean: Corpus.Math.isSquare
-def is_square(n_779: int) -> bool:
-    _x_18487 = isqrt(n_779)
-    _x_18493 = _x_18487 * _x_18487
-    _x_18494 = _x_18493 == n_779
-    return _x_18494
+def is_square(n_722: int) -> bool:
+    _x_26699 = isqrt(n_722)
+    _x_26706 = _x_26699 * _x_26699
+    _x_26707 = _x_26706 == n_722
+    return _x_26707
 
 # Lean: Corpus.Math.isqrt
-def isqrt(n_781: int) -> int:
-    _x_18498 = 0
-    _x_18501 = n_781 == 0
-    _x_18502 = True
-    if _x_18501:
+def isqrt(n_724: int) -> int:
+    _x_26712 = 0
+    _x_26715 = n_724 == 0
+    _x_26716 = True
+    _x_26717 = _x_26715 == True
+    if _x_26717:
         return 0
     else:
-        _x_18505 = isqrt_go(n_781, n_781, n_781)
-        return _x_18505
+        _x_26719 = isqrt_go(n_724, n_724, n_724)
+        return _x_26719
 
 # Lean: Corpus.Math.digits
-def digits(n_782: int, base_783: int) -> list[int]:
-    _x_18509 = 2
-    _x_18512 = base_783 < 2
-    if _x_18512:
-        _x_18517 = []
-        return _x_18517
+def digits(n_725: int, base_726: int) -> list[int]:
+    _x_26724 = 2
+    _x_26727 = base_726 < 2
+    if _x_26727:
+        _x_26732 = []
+        return _x_26732
     else:
-        _x_18514 = []
-        _x_18515 = digits_go(base_783, n_782, _x_18514)
-        return _x_18515
+        _x_26729 = []
+        _x_26730 = digits_go(base_726, n_725, _x_26729)
+        return _x_26730
 
 # Lean: Corpus.Math.fromDigits
-def from_digits(ds: list[int], base_784: int) -> int:
-    def _f_18528(acc_785: int, d_786: int):
-        _x_18526 = acc_785 * base_784
-        _x_18527 = _x_18526 + d_786
-        return _x_18527
-    _x_18529 = 0
-    _x_18532 = functools.reduce(_f_18528, ds, 0)
-    return _x_18532
+def from_digits(ds: list[int], base_727: int) -> int:
+    def _f_26743(acc_728: int, d_729: int):
+        _x_26741 = acc_728 * base_727
+        _x_26742 = _x_26741 + d_729
+        return _x_26742
+    _x_26744 = 0
+    _x_26747 = functools.reduce(_f_26743, ds, 0)
+    return _x_26747
 
 # Lean: Corpus.Math.numDigits
-def num_digits(n_787: int, base_788: int) -> int:
-    _x_18534 = digits(n_787, base_788)
-    _x_18535 = len(_x_18534)
-    return _x_18535
+def num_digits(n_730: int, base_731: int) -> int:
+    _x_26749 = digits(n_730, base_731)
+    _x_26750 = len(_x_26749)
+    return _x_26750
 
 # Lean: Corpus.Math.numDigits10
-def num_digits10(n_789: int) -> int:
-    _x_18537 = 10
-    _x_18540 = num_digits(n_789, 10)
-    return _x_18540
+def num_digits10(n_732: int) -> int:
+    _x_26752 = 10
+    _x_26755 = num_digits(n_732, 10)
+    return _x_26755
 
 # Lean: Corpus.Math.digitSum
-def digit_sum(n_790: int, base_791: int) -> int:
-    def _f_18548(x1_18542: int, x2_18543: int):
-        _x_18547 = x1_18542 + x2_18543
-        return _x_18547
-    _x_18549 = 0
-    _x_18552 = digits(n_790, base_791)
-    _x_18553 = functools.reduce(_f_18548, _x_18552, 0)
-    return _x_18553
+def digit_sum(n_733: int, base_734: int) -> int:
+    def _f_26763(x1_26757: int, x2_26758: int):
+        _x_26762 = x1_26757 + x2_26758
+        return _x_26762
+    _x_26764 = 0
+    _x_26767 = digits(n_733, base_734)
+    _x_26768 = functools.reduce(_f_26763, _x_26767, 0)
+    return _x_26768
 
 # Lean: Corpus.Math.digitSum10
-def digit_sum10(n_792: int) -> int:
-    _x_18555 = 10
-    _x_18558 = digit_sum(n_792, 10)
-    return _x_18558
+def digit_sum10(n_735: int) -> int:
+    _x_26770 = 10
+    _x_26773 = digit_sum(n_735, 10)
+    return _x_26773
 
 # Lean: Corpus.Math.digitalRoot
-def digital_root(n_793: int) -> int:
-    _x_18560 = 100
-    _x_18563 = digital_root_go(n_793, 100)
-    return _x_18563
+def digital_root(n_736: int) -> int:
+    _x_26775 = 100
+    _x_26778 = digital_root_go(n_736, 100)
+    return _x_26778
 
 # Lean: Corpus.Math.reverseDigits
-def reverse_digits(n_794: int) -> int:
-    _x_18565 = 10
-    _x_18568 = digits(n_794, 10)
-    _x_18569 = list(reversed(_x_18568))
-    _x_18570 = from_digits(_x_18569, 10)
-    return _x_18570
+def reverse_digits(n_737: int) -> int:
+    _x_26780 = 10
+    _x_26783 = digits(n_737, 10)
+    _x_26784 = list(reversed(_x_26783))
+    _x_26785 = from_digits(_x_26784, 10)
+    return _x_26785
 
 # Lean: Corpus.Math.isPalindromeNum
-def is_palindrome_num(n_795: int) -> bool:
-    _x_18574 = reverse_digits(n_795)
-    _x_18575 = n_795 == _x_18574
-    return _x_18575
+def is_palindrome_num(n_738: int) -> bool:
+    _x_26790 = reverse_digits(n_738)
+    _x_26791 = n_738 == _x_26790
+    return _x_26791
 
 # Lean: Corpus.Math.isEven
-def is_even(n_796: int) -> bool:
-    _x_18582 = 2
-    _x_18585 = n_796 % 2
-    _x_18586 = 0
-    _x_18589 = _x_18585 == 0
-    return _x_18589
+def is_even(n_739: int) -> bool:
+    _x_26799 = 2
+    _x_26802 = n_739 % 2
+    _x_26803 = 0
+    _x_26806 = _x_26802 == 0
+    return _x_26806
 
 # Lean: Corpus.Math.isOdd
-def is_odd(n_797: int) -> bool:
-    _x_18596 = 2
-    _x_18599 = n_797 % 2
-    _x_18600 = 1
-    _x_18603 = _x_18599 == 1
-    return _x_18603
+def is_odd(n_740: int) -> bool:
+    _x_26814 = 2
+    _x_26817 = n_740 % 2
+    _x_26818 = 1
+    _x_26821 = _x_26817 == 1
+    return _x_26821
 
 # Lean: Corpus.Functional.id
-def functional_id(__798: Any, x_799: Any) -> Any:
-    return x_799
+def functional_id(__741: Any, x_742: Any) -> Any:
+    return x_742
 
 # Lean: Corpus.Functional.const
-def functional_const(__800: Any, __801: Any, x_802: Any, y_803: Any) -> Any:
-    return x_802
+def functional_const(__743: Any, __744: Any, x_745: Any, y_746: Any) -> Any:
+    return x_745
 
 # Lean: Corpus.Functional.flip
-def functional_flip(__804: Any, __805: Any, __806: Any, f_807: Callable[[Any, Any], Any], y_808: Any, x_809: Any) -> Any:
-    _x_18607 = f_807(x_809, y_808)
-    return _x_18607
+def functional_flip(__747: Any, __748: Any, __749: Any, f_750: Callable[[Any, Any], Any], y_751: Any, x_752: Any) -> Any:
+    _x_26825 = f_750(x_752, y_751)
+    return _x_26825
 
 # Lean: Corpus.Functional.compose
-def functional_compose(__810: Any, __811: Any, __812: Any, f_813: Callable[[Any], Any], g_814: Callable[[Any], Any], x_815: Any) -> Any:
-    _x_18609 = g_814(x_815)
-    _x_18610 = f_813(_x_18609)
-    return _x_18610
+def functional_compose(__753: Any, __754: Any, __755: Any, f_756: Callable[[Any], Any], g_757: Callable[[Any], Any], x_758: Any) -> Any:
+    _x_26827 = g_757(x_758)
+    _x_26828 = f_756(_x_26827)
+    return _x_26828
 
 # Lean: Corpus.Functional.pipe
-def pipe(__816: Any, __817: Any, x_818: Any, f_819: Callable[[Any], Any]) -> Any:
-    _x_18612 = f_819(x_818)
-    return _x_18612
+def pipe(__759: Any, __760: Any, x_761: Any, f_762: Callable[[Any], Any]) -> Any:
+    _x_26830 = f_762(x_761)
+    return _x_26830
 
 # Lean: Corpus.Functional.apply
-def functional_apply(__820: Any, __821: Any, f_822: Callable[[Any], Any], x_823: Any) -> Any:
-    _x_18614 = f_822(x_823)
-    return _x_18614
+def functional_apply(__763: Any, __764: Any, f_765: Callable[[Any], Any], x_766: Any) -> Any:
+    _x_26832 = f_765(x_766)
+    return _x_26832
 
 # Lean: Corpus.Functional.curry
-def curry(__824: Any, __825: Any, __826: Any, f_827: Callable[[tuple[Any, Any]], Any], x_828: Any, y_829: Any) -> Any:
-    _x_18616 = (x_828, y_829)
-    _x_18617 = f_827(_x_18616)
-    return _x_18617
+def curry(__767: Any, __768: Any, __769: Any, f_770: Callable[[tuple[Any, Any]], Any], x_771: Any, y_772: Any) -> Any:
+    _x_26834 = (x_771, y_772)
+    _x_26835 = f_770(_x_26834)
+    return _x_26835
 
 # Lean: Corpus.Functional.uncurry
-def uncurry(__830: Any, __831: Any, __832: Any, f_833: Callable[[Any, Any], Any], p_834: tuple[Any, Any]) -> Any:
-    _x_18619 = p_834[0]
-    _x_18620 = p_834[1]
-    _x_18621 = f_833(_x_18619, _x_18620)
-    return _x_18621
+def uncurry(__773: Any, __774: Any, __775: Any, f_776: Callable[[Any, Any], Any], p_777: tuple[Any, Any]) -> Any:
+    _x_26837 = p_777[0]
+    _x_26838 = p_777[1]
+    _x_26839 = f_776(_x_26837, _x_26838)
+    return _x_26839
 
 # Lean: Corpus.Functional.Option.map
-def option_map(__835: Any, __836: Any, f_837: Callable[[Any], Any], x_18623: Any | None) -> Any | None:
-    def _f_18625():
-        _x_18624 = None
-        return _x_18624
-    _alt_18626 = _f_18625
-    def _f_18629(x_839: Any):
-        _x_18627 = f_837(x_839)
-        _x_18628 = _x_18627
-        return _x_18628
-    _alt_18630 = _f_18629
-    if x_18623 is None:
-        _x_18632 = _alt_18626()
-        return _x_18632
+def option_map(__778: Any, __779: Any, f_780: Callable[[Any], Any], x_26841: Any | None) -> Any | None:
+    def _f_26843():
+        _x_26842 = None
+        return _x_26842
+    _alt_26844 = _f_26843
+    def _f_26847(x_782: Any):
+        _x_26845 = f_780(x_782)
+        _x_26846 = _x_26845
+        return _x_26846
+    _alt_26848 = _f_26847
+    if x_26841 is None:
+        _x_26850 = _alt_26844()
+        return _x_26850
     else:
-        val_18633 = x_18623
-        _x_18634 = _alt_18630(val_18633)
-        return _x_18634
+        val_26851 = x_26841
+        _x_26852 = _alt_26848(val_26851)
+        return _x_26852
 
 # Lean: Corpus.Functional.Option.bind
-def option_bind(__840: Any, __841: Any, x_842: Any | None, f_843: Callable[[Any], Any | None]) -> Any | None:
-    def _f_18638():
-        _x_18637 = None
-        return _x_18637
-    _alt_18639 = _f_18638
-    def _f_18641(a_845: Any):
-        _x_18640 = f_843(a_845)
-        return _x_18640
-    _alt_18642 = _f_18641
-    if x_842 is None:
-        _x_18644 = _alt_18639()
-        return _x_18644
+def option_bind(__783: Any, __784: Any, x_785: Any | None, f_786: Callable[[Any], Any | None]) -> Any | None:
+    def _f_26856():
+        _x_26855 = None
+        return _x_26855
+    _alt_26857 = _f_26856
+    _alt_26860 = (lambda a_788: f_786(a_788))
+    if x_785 is None:
+        _x_26862 = _alt_26857()
+        return _x_26862
     else:
-        val_18645 = x_842
-        _x_18646 = _alt_18642(val_18645)
-        return _x_18646
+        val_26863 = x_785
+        _x_26864 = _alt_26860(val_26863)
+        return _x_26864
 
 # Lean: Corpus.Functional.Option.filter
-def option_filter(__846: Any, p_847: Callable[[Any], bool], x_18649: Any | None) -> Any | None:
-    def _f_18651():
-        _x_18650 = None
-        return _x_18650
-    _alt_18652 = _f_18651
-    def _f_18661(x_849: Any):
-        _x_18653 = p_847(x_849)
-        _x_18654 = True
-        if _x_18653:
-            _x_18659 = x_849
-            return _x_18659
+def option_filter(__789: Any, p_790: Callable[[Any], bool], x_26867: Any | None) -> Any | None:
+    def _f_26869():
+        _x_26868 = None
+        return _x_26868
+    _alt_26870 = _f_26869
+    def _f_26879(x_792: Any):
+        _x_26871 = p_790(x_792)
+        _x_26872 = True
+        _x_26873 = _x_26871 == True
+        if _x_26873:
+            _x_26877 = x_792
+            return _x_26877
         else:
-            _x_18657 = None
-            return _x_18657
-    _alt_18662 = _f_18661
-    if x_18649 is None:
-        _x_18664 = _alt_18652()
-        return _x_18664
+            _x_26875 = None
+            return _x_26875
+    _alt_26880 = _f_26879
+    if x_26867 is None:
+        _x_26882 = _alt_26870()
+        return _x_26882
     else:
-        val_18665 = x_18649
-        _x_18666 = _alt_18662(val_18665)
-        return _x_18666
+        val_26883 = x_26867
+        _x_26884 = _alt_26880(val_26883)
+        return _x_26884
 
 # Lean: Corpus.Functional.Option.getOrElse
-def get_or_else(__850: Any, x_851: Any | None, default: Any) -> Any:
-    def _f_18669():
+def get_or_else(__793: Any, x_794: Any | None, default: Any) -> Any:
+    def _f_26887():
         return default
-    _alt_18670 = _f_18669
-    def _f_18671(a_853: Any):
-        return a_853
-    _alt_18672 = _f_18671
-    if x_851 is None:
-        _x_18674 = _alt_18670()
-        return _x_18674
+    _alt_26888 = _f_26887
+    _alt_26890 = (lambda a_796: a_796)
+    if x_794 is None:
+        _x_26892 = _alt_26888()
+        return _x_26892
     else:
-        val_18675 = x_851
-        _x_18676 = _alt_18672(val_18675)
-        return _x_18676
+        val_26893 = x_794
+        _x_26894 = _alt_26890(val_26893)
+        return _x_26894
 
 # Lean: Corpus.Functional.Option.orElse
-def or_else(__854: Any, x_855: Any | None, y_856: Any | None) -> Any | None:
-    def _f_18680(a_857: Any):
-        _x_18679 = a_857
-        return _x_18679
-    _alt_18681 = _f_18680
-    def _f_18682():
-        return y_856
-    _alt_18683 = _f_18682
-    if x_855 is None:
-        _x_18685 = _alt_18683()
-        return _x_18685
+def or_else(__797: Any, x_798: Any | None, y_799: Any | None) -> Any | None:
+    def _f_26898(a_800: Any):
+        _x_26897 = a_800
+        return _x_26897
+    _alt_26899 = _f_26898
+    def _f_26900():
+        return y_799
+    _alt_26901 = _f_26900
+    if x_798 is None:
+        _x_26903 = _alt_26901()
+        return _x_26903
     else:
-        val_18686 = x_855
-        _x_18687 = _alt_18681(val_18686)
-        return _x_18687
+        val_26904 = x_798
+        _x_26905 = _alt_26899(val_26904)
+        return _x_26905
 
 # Lean: Corpus.Functional.Option.zip
-def option_zip(__859: Any, __860: Any, x_861: Any | None, y_862: Any | None) -> tuple[Any, Any] | None:
-    def _f_18692(a_863: Any, b_864: Any):
-        _x_18690 = (a_863, b_864)
-        _x_18691 = _x_18690
-        return _x_18691
-    _alt_18693 = _f_18692
-    def _f_18697(x_18694: Any | None, x_18695: Any | None):
-        _x_18696 = None
-        return _x_18696
-    _alt_18698 = _f_18697
-    if x_861 is None:
-        _x_18699 = None
-        _x_18700 = _alt_18698(_x_18699, y_862)
-        return _x_18700
+def option_zip(__802: Any, __803: Any, x_804: Any | None, y_805: Any | None) -> tuple[Any, Any] | None:
+    def _f_26910(a_806: Any, b_807: Any):
+        _x_26908 = (a_806, b_807)
+        _x_26909 = _x_26908
+        return _x_26909
+    _alt_26911 = _f_26910
+    def _f_26915(x_26912: Any | None, x_26913: Any | None):
+        _x_26914 = None
+        return _x_26914
+    _alt_26916 = _f_26915
+    if x_804 is None:
+        _x_26929 = (lambda h_26926: _alt_26916(x_804, y_805))(None)
+        return _x_26929
     else:
-        val_18701 = x_861
-        if y_862 is None:
-            _x_18702 = val_18701
-            _x_18703 = None
-            _x_18704 = _alt_18698(_x_18702, _x_18703)
-            return _x_18704
+        val_26917 = x_804
+        if y_805 is None:
+            def _f_26923(h_26920: Any):
+                _x_26921 = val_26917
+                _x_26922 = _alt_26916(_x_26921, y_805)
+                return _x_26922
+            _x_26924 = _f_26923(None)
+            return _x_26924
         else:
-            val_18705 = y_862
-            _x_18706 = _alt_18693(val_18701, val_18705)
-            return _x_18706
+            val_26918 = y_805
+            _x_26919 = _alt_26911(val_26917, val_26918)
+            return _x_26919
 
 # Lean: Corpus.Functional.List.head?
-def head_(__865: Any, xs_866: list[Any]) -> Any | None:
-    def _f_18711():
-        _x_18710 = None
-        return _x_18710
-    _alt_18712 = _f_18711
-    def _f_18715(x_868: Any, tail_18713: list[Any]):
-        _x_18714 = x_868
-        return _x_18714
-    _alt_18716 = _f_18715
-    if len(xs_866) == 0:
-        _x_18718 = _alt_18712()
-        return _x_18718
+def head_(__808: Any, xs_809: list[Any]) -> Any | None:
+    def _f_26933():
+        _x_26932 = None
+        return _x_26932
+    _alt_26934 = _f_26933
+    def _f_26937(x_811: Any, tail_26935: list[Any]):
+        _x_26936 = x_811
+        return _x_26936
+    _alt_26938 = _f_26937
+    if len(xs_809) == 0:
+        _x_26940 = _alt_26934()
+        return _x_26940
     else:
-        head_18719 = xs_866[0]
-        tail_18720 = xs_866[1:]
-        _x_18721 = _alt_18716(head_18719, tail_18720)
-        return _x_18721
+        head_26941 = xs_809[0]
+        tail_26942 = xs_809[1:]
+        _x_26943 = _alt_26938(head_26941, tail_26942)
+        return _x_26943
 
 # Lean: Corpus.Functional.List.tail?
-def tail_(__869: Any, xs_870: list[Any]) -> list[Any] | None:
-    def _f_18725():
-        _x_18724 = None
-        return _x_18724
-    _alt_18726 = _f_18725
-    def _f_18729(head_18727: Any, xs__872: list[Any]):
-        _x_18728 = xs__872
-        return _x_18728
-    _alt_18730 = _f_18729
-    if len(xs_870) == 0:
-        _x_18732 = _alt_18726()
-        return _x_18732
+def tail_(__812: Any, xs_813: list[Any]) -> list[Any] | None:
+    def _f_26947():
+        _x_26946 = None
+        return _x_26946
+    _alt_26948 = _f_26947
+    def _f_26951(head_26949: Any, xs__815: list[Any]):
+        _x_26950 = xs__815
+        return _x_26950
+    _alt_26952 = _f_26951
+    if len(xs_813) == 0:
+        _x_26954 = _alt_26948()
+        return _x_26954
     else:
-        head_18733 = xs_870[0]
-        tail_18734 = xs_870[1:]
-        _x_18735 = _alt_18730(head_18733, tail_18734)
-        return _x_18735
+        head_26955 = xs_813[0]
+        tail_26956 = xs_813[1:]
+        _x_26957 = _alt_26952(head_26955, tail_26956)
+        return _x_26957
 
 # Lean: Corpus.Functional.List.last?
-def last_(__873: Any, xs_874: list[Any]) -> Any | None:
-    def _f_18739():
-        _x_18738 = None
-        return _x_18738
-    _alt_18740 = _f_18739
-    def _f_18742(x_876: Any):
-        _x_18741 = x_876
-        return _x_18741
-    _alt_18743 = _f_18742
-    def _f_18746(head_18744: Any, xs__877: list[Any]):
-        _x_18745 = last_(None, xs__877)
-        return _x_18745
-    _alt_18747 = _f_18746
-    if len(xs_874) == 0:
-        _x_18749 = _alt_18740()
-        return _x_18749
-    else:
-        head_18750 = xs_874[0]
-        tail_18751 = xs_874[1:]
-        if len(tail_18751) == 0:
-            _x_18752 = _alt_18743(head_18750)
-            return _x_18752
+def last_(__816: Any, xs_817: list[Any]) -> Any | None:
+    while True:
+        def _f_26961():
+            _x_26960 = None
+            return _x_26960
+        _alt_26962 = _f_26961
+        def _f_26964(x_819: Any):
+            _x_26963 = x_819
+            return _x_26963
+        _alt_26965 = _f_26964
+        if len(xs_817) == 0:
+            _x_26971 = _alt_26962()
+            return _x_26971
         else:
-            head_18753 = tail_18751[0]
-            tail_18754 = tail_18751[1:]
-            _x_18755 = [head_18753] + tail_18754
-            _x_18756 = _alt_18747(head_18750, _x_18755)
-            return _x_18756
+            head_26972 = xs_817[0]
+            tail_26973 = xs_817[1:]
+            if len(tail_26973) == 0:
+                _x_26974 = _alt_26965(head_26972)
+                return _x_26974
+            else:
+                _x_26978 = (lambda h_26975: _uniq_78536(head_26972, tail_26973))(None)
+                return _x_26978
 
 # Lean: Corpus.Functional.List.nth
-def nth(__878: Any, xs_879: list[Any], n_880: int) -> Any | None:
-    def _f_18762(x_18760: int):
-        _x_18761 = None
-        return _x_18761
-    _alt_18763 = _f_18762
-    def _f_18766(x_881: Any, tail_18764: list[Any]):
-        _x_18765 = x_881
-        return _x_18765
-    _alt_18767 = _f_18766
-    def _f_18770(head_18768: Any, xs__882: list[Any], n__883: int):
-        _x_18769 = nth(None, xs__882, n__883)
-        return _x_18769
-    _alt_18771 = _f_18770
-    if len(xs_879) == 0:
-        _x_18772 = _alt_18763(n_880)
-        return _x_18772
-    else:
-        head_18773 = xs_879[0]
-        tail_18774 = xs_879[1:]
-        if n_880 == 0:
-            _x_18775 = _alt_18767(head_18773, tail_18774)
-            return _x_18775
+def nth(__820: Any, xs_821: list[Any], n_822: int) -> Any | None:
+    while True:
+        def _f_26984(x_26982: int):
+            _x_26983 = None
+            return _x_26983
+        _alt_26985 = _f_26984
+        def _f_26988(x_823: Any, tail_26986: list[Any]):
+            _x_26987 = x_823
+            return _x_26987
+        _alt_26989 = _f_26988
+        if len(xs_821) == 0:
+            _x_26994 = _alt_26985(n_822)
+            return _x_26994
         else:
-            n_18776 = n_880 - 1
-            _x_18777 = _alt_18771(head_18773, tail_18774, n_18776)
-            return _x_18777
+            head_26995 = xs_821[0]
+            tail_26996 = xs_821[1:]
+            if n_822 == 0:
+                _x_26997 = _alt_26989(head_26995, tail_26996)
+                return _x_26997
+            else:
+                n_26998 = n_822 - 1
+                head_26990 = head_26995
+                xs__824 = tail_26996
+                n__825 = n_26998
+                return nth(None, xs__824, n__825)
 
 # Lean: Corpus.Functional.List.updateAt
-def update_at(__884: Any, xs_885: list[Any], n_886: int, f_887: Callable[[Any], Any]) -> list[Any]:
-    def _f_18783(x_18781: int):
-        _x_18782 = []
-        return _x_18782
-    _alt_18784 = _f_18783
-    def _f_18787(x_888: Any, xs__889: list[Any]):
-        _x_18785 = f_887(x_888)
-        _x_18786 = [_x_18785] + xs__889
-        return _x_18786
-    _alt_18788 = _f_18787
-    def _f_18791(x_890: Any, xs__891: list[Any], n__892: int):
-        _x_18789 = update_at(None, xs__891, n__892, f_887)
-        _x_18790 = [x_890] + _x_18789
-        return _x_18790
-    _alt_18792 = _f_18791
-    if len(xs_885) == 0:
-        _x_18793 = _alt_18784(n_886)
-        return _x_18793
+def update_at(__826: Any, xs_827: list[Any], n_828: int, f_829: Callable[[Any], Any]) -> list[Any]:
+    def _f_27005(x_27003: int):
+        _x_27004 = []
+        return _x_27004
+    _alt_27006 = _f_27005
+    def _f_27009(x_830: Any, xs__831: list[Any]):
+        _x_27007 = f_829(x_830)
+        _x_27008 = [_x_27007] + xs__831
+        return _x_27008
+    _alt_27010 = _f_27009
+    def _f_27013(x_832: Any, xs__833: list[Any], n__834: int):
+        _x_27011 = update_at(None, xs__833, n__834, f_829)
+        _x_27012 = [x_832] + _x_27011
+        return _x_27012
+    _alt_27014 = _f_27013
+    if len(xs_827) == 0:
+        _x_27015 = _alt_27006(n_828)
+        return _x_27015
     else:
-        head_18794 = xs_885[0]
-        tail_18795 = xs_885[1:]
-        if n_886 == 0:
-            _x_18796 = _alt_18788(head_18794, tail_18795)
-            return _x_18796
+        head_27016 = xs_827[0]
+        tail_27017 = xs_827[1:]
+        if n_828 == 0:
+            _x_27018 = _alt_27010(head_27016, tail_27017)
+            return _x_27018
         else:
-            n_18797 = n_886 - 1
-            _x_18798 = _alt_18792(head_18794, tail_18795, n_18797)
-            return _x_18798
+            n_27019 = n_828 - 1
+            _x_27020 = _alt_27014(head_27016, tail_27017, n_27019)
+            return _x_27020
 
 # Lean: Corpus.Functional.List.insertAt
-def insert_at(__893: Any, xs_894: list[Any], n_895: int, x_896: Any) -> list[Any]:
-    def _f_18803(xs_897: list[Any]):
-        _x_18802 = [x_896] + xs_897
-        return _x_18802
-    _alt_18804 = _f_18803
-    def _f_18808(x_18805: int):
-        _x_18806 = []
-        _x_18807 = [x_896] + _x_18806
-        return _x_18807
-    _alt_18809 = _f_18808
-    def _f_18812(y_898: Any, ys_899: list[Any], n__900: int):
-        _x_18810 = insert_at(None, ys_899, n__900, x_896)
-        _x_18811 = [y_898] + _x_18810
-        return _x_18811
-    _alt_18813 = _f_18812
-    if len(xs_894) == 0:
-        _x_18814 = 0
-        if n_895:
-            _x_18818 = _alt_18809(n_895)
-            return _x_18818
-        else:
-            _x_18819 = []
-            _x_18820 = _alt_18804(_x_18819)
-            return _x_18820
+def insert_at(__835: Any, xs_836: list[Any], n_837: int, x_838: Any) -> list[Any]:
+    def _f_27025(xs_839: list[Any]):
+        _x_27024 = [x_838] + xs_839
+        return _x_27024
+    _alt_27026 = _f_27025
+    def _f_27030(x_27027: int):
+        _x_27028 = []
+        _x_27029 = [x_838] + _x_27028
+        return _x_27029
+    _alt_27031 = _f_27030
+    def _f_27034(y_840: Any, ys_841: list[Any], n__842: int):
+        _x_27032 = insert_at(None, ys_841, n__842, x_838)
+        _x_27033 = [y_840] + _x_27032
+        return _x_27033
+    _alt_27035 = _f_27034
+    if n_837 == 0:
+        _x_27036 = _alt_27026(xs_836)
+        return _x_27036
     else:
-        head_18822 = xs_894[0]
-        tail_18823 = xs_894[1:]
-        if n_895 == 0:
-            _x_18824 = [head_18822] + tail_18823
-            _x_18825 = _alt_18804(_x_18824)
-            return _x_18825
+        n_27037 = n_837 - 1
+        if len(xs_836) == 0:
+            _x_27038 = n_27037 + 1
+            _x_27039 = _alt_27031(_x_27038)
+            return _x_27039
         else:
-            n_18826 = n_895 - 1
-            _x_18827 = _alt_18813(head_18822, tail_18823, n_18826)
-            return _x_18827
+            head_27040 = xs_836[0]
+            tail_27041 = xs_836[1:]
+            _x_27042 = _alt_27035(head_27040, tail_27041, n_27037)
+            return _x_27042
 
 # Lean: Corpus.Functional.List.removeAt
-def remove_at(__901: Any, xs_902: list[Any], n_903: int) -> list[Any]:
-    def _f_18833(x_18831: int):
-        _x_18832 = []
-        return _x_18832
-    _alt_18834 = _f_18833
-    def _f_18836(head_18835: Any, xs__904: list[Any]):
-        return xs__904
-    _alt_18837 = _f_18836
-    def _f_18840(x_905: Any, xs__906: list[Any], n__907: int):
-        _x_18838 = remove_at(None, xs__906, n__907)
-        _x_18839 = [x_905] + _x_18838
-        return _x_18839
-    _alt_18841 = _f_18840
-    if len(xs_902) == 0:
-        _x_18842 = _alt_18834(n_903)
-        return _x_18842
+def remove_at(__843: Any, xs_844: list[Any], n_845: int) -> list[Any]:
+    def _f_27048(x_27046: int):
+        _x_27047 = []
+        return _x_27047
+    _alt_27049 = _f_27048
+    def _f_27051(head_27050: Any, xs__846: list[Any]):
+        return xs__846
+    _alt_27052 = _f_27051
+    def _f_27055(x_847: Any, xs__848: list[Any], n__849: int):
+        _x_27053 = remove_at(None, xs__848, n__849)
+        _x_27054 = [x_847] + _x_27053
+        return _x_27054
+    _alt_27056 = _f_27055
+    if len(xs_844) == 0:
+        _x_27057 = _alt_27049(n_845)
+        return _x_27057
     else:
-        head_18843 = xs_902[0]
-        tail_18844 = xs_902[1:]
-        if n_903 == 0:
-            _x_18845 = _alt_18837(head_18843, tail_18844)
-            return _x_18845
+        head_27058 = xs_844[0]
+        tail_27059 = xs_844[1:]
+        if n_845 == 0:
+            _x_27060 = _alt_27052(head_27058, tail_27059)
+            return _x_27060
         else:
-            n_18846 = n_903 - 1
-            _x_18847 = _alt_18841(head_18843, tail_18844, n_18846)
-            return _x_18847
+            n_27061 = n_845 - 1
+            _x_27062 = _alt_27056(head_27058, tail_27059, n_27061)
+            return _x_27062
 
 # Lean: Corpus.Functional.List.splitAt
-def split_at(__908: Any, n_909: int, xs_910: list[Any]) -> tuple[list[Any], list[Any]]:
-    def _f_18853(xs_911: list[Any]):
-        _x_18851 = []
-        _x_18852 = (_x_18851, xs_911)
-        return _x_18852
-    _alt_18854 = _f_18853
-    def _f_18858(x_18855: int):
-        _x_18856 = []
-        _x_18857 = (_x_18856, _x_18856)
-        return _x_18857
-    _alt_18859 = _f_18858
-    def _f_18869(n__912: int, x_913: Any, xs__914: list[Any]):
-        def _f_18862(l_915: list[Any], r_916: list[Any]):
-            _x_18860 = [x_913] + l_915
-            _x_18861 = (_x_18860, r_916)
-            return _x_18861
-        _alt_18863 = _f_18862
-        _x_18864 = split_at(None, n__912, xs__914)
-        match _x_18864:
-            case (fst_18865, snd_18866):
-                _x_18867 = _alt_18863(fst_18865, snd_18866)
-                return _x_18867
-    _alt_18870 = _f_18869
-    if n_909 == 0:
-        if len(xs_910) == 0:
-            _x_18871 = []
-            _x_18872 = _alt_18854(_x_18871)
-            return _x_18872
-        else:
-            head_18873 = xs_910[0]
-            tail_18874 = xs_910[1:]
-            _x_18875 = [head_18873] + tail_18874
-            _x_18876 = _alt_18854(_x_18875)
-            return _x_18876
+def split_at(__850: Any, n_851: int, xs_852: list[Any]) -> tuple[list[Any], list[Any]]:
+    def _f_27068(xs_853: list[Any]):
+        _x_27066 = []
+        _x_27067 = (_x_27066, xs_853)
+        return _x_27067
+    _alt_27069 = _f_27068
+    def _f_27073(x_27070: int):
+        _x_27071 = []
+        _x_27072 = (_x_27071, _x_27071)
+        return _x_27072
+    _alt_27074 = _f_27073
+    def _f_27084(n__854: int, x_855: Any, xs__856: list[Any]):
+        def _f_27077(l_857: list[Any], r_858: list[Any]):
+            _x_27075 = [x_855] + l_857
+            _x_27076 = (_x_27075, r_858)
+            return _x_27076
+        _alt_27078 = _f_27077
+        _x_27079 = split_at(None, n__854, xs__856)
+        match _x_27079:
+            case (fst_27080, snd_27081):
+                _x_27082 = _alt_27078(fst_27080, snd_27081)
+                return _x_27082
+    _alt_27085 = _f_27084
+    if n_851 == 0:
+        _x_27086 = _alt_27069(xs_852)
+        return _x_27086
     else:
-        n_18878 = n_909 - 1
-        if len(xs_910) == 0:
-            _x_18879 = n_18878 + 1
-            _x_18880 = _alt_18859(_x_18879)
-            return _x_18880
+        n_27087 = n_851 - 1
+        if len(xs_852) == 0:
+            _x_27088 = n_27087 + 1
+            _x_27089 = _alt_27074(_x_27088)
+            return _x_27089
         else:
-            head_18881 = xs_910[0]
-            tail_18882 = xs_910[1:]
-            _x_18883 = _alt_18870(n_18878, head_18881, tail_18882)
-            return _x_18883
+            head_27090 = xs_852[0]
+            tail_27091 = xs_852[1:]
+            _x_27092 = _alt_27085(n_27087, head_27090, tail_27091)
+            return _x_27092
 
 # Lean: Corpus.Functional.List.takeWhile
-def take_while(__917: Any, p_918: Callable[[Any], bool], xs_919: list[Any]) -> list[Any]:
-    def _f_18888():
-        _x_18887 = []
-        return _x_18887
-    _alt_18889 = _f_18888
-    def _f_18899(x_921: Any, xs__922: list[Any]):
-        _x_18890 = p_918(x_921)
-        _x_18891 = True
-        if _x_18890:
-            _x_18896 = take_while(None, p_918, xs__922)
-            _x_18897 = [x_921] + _x_18896
-            return _x_18897
+def take_while(__859: Any, p_860: Callable[[Any], bool], xs_861: list[Any]) -> list[Any]:
+    def _f_27097():
+        _x_27096 = []
+        return _x_27096
+    _alt_27098 = _f_27097
+    def _f_27108(x_863: Any, xs__864: list[Any]):
+        _x_27099 = p_860(x_863)
+        _x_27100 = True
+        _x_27101 = _x_27099 == True
+        if _x_27101:
+            _x_27105 = take_while(None, p_860, xs__864)
+            _x_27106 = [x_863] + _x_27105
+            return _x_27106
         else:
-            _x_18894 = []
-            return _x_18894
-    _alt_18900 = _f_18899
-    if len(xs_919) == 0:
-        _x_18902 = _alt_18889()
-        return _x_18902
+            _x_27103 = []
+            return _x_27103
+    _alt_27109 = _f_27108
+    if len(xs_861) == 0:
+        _x_27111 = _alt_27098()
+        return _x_27111
     else:
-        head_18903 = xs_919[0]
-        tail_18904 = xs_919[1:]
-        _x_18905 = _alt_18900(head_18903, tail_18904)
-        return _x_18905
+        head_27112 = xs_861[0]
+        tail_27113 = xs_861[1:]
+        _x_27114 = _alt_27109(head_27112, tail_27113)
+        return _x_27114
 
 # Lean: Corpus.Functional.List.dropWhile
-def drop_while(__923: Any, p_924: Callable[[Any], bool], xs_925: list[Any]) -> list[Any]:
-    def _f_18909():
-        _x_18908 = []
-        return _x_18908
-    _alt_18910 = _f_18909
-    def _f_18919(x_927: Any, xs__928: list[Any]):
-        _x_18911 = p_924(x_927)
-        _x_18912 = True
-        if _x_18911:
-            _x_18917 = drop_while(None, p_924, xs__928)
-            return _x_18917
+def drop_while(__865: Any, p_866: Callable[[Any], bool], xs_867: list[Any]) -> list[Any]:
+    while True:
+        def _f_27118():
+            _x_27117 = []
+            return _x_27117
+        _alt_27119 = _f_27118
+        if len(xs_867) == 0:
+            _x_27131 = _alt_27119()
+            return _x_27131
         else:
-            _x_18915 = [x_927] + xs__928
-            return _x_18915
-    _alt_18920 = _f_18919
-    if len(xs_925) == 0:
-        _x_18922 = _alt_18910()
-        return _x_18922
-    else:
-        head_18923 = xs_925[0]
-        tail_18924 = xs_925[1:]
-        _x_18925 = _alt_18920(head_18923, tail_18924)
-        return _x_18925
+            head_27132 = xs_867[0]
+            tail_27133 = xs_867[1:]
+            x_869 = head_27132
+            xs__870 = tail_27133
+            _x_27120 = p_866(x_869)
+            _x_27121 = True
+            _x_27122 = _x_27120 == True
+            if _x_27122:
+                return drop_while(None, p_866, xs__870)
+            else:
+                _x_27124 = [x_869] + xs__870
+                return _x_27124
 
 # Lean: Corpus.Functional.List.replicate
-def list_replicate(__929: Any, n_930: int, x_931: Any) -> list[Any]:
-    def _f_18929():
-        _x_18928 = []
-        return _x_18928
-    _alt_18930 = _f_18929
-    def _f_18933(n__933: int):
-        _x_18931 = list_replicate(None, n__933, x_931)
-        _x_18932 = [x_931] + _x_18931
-        return _x_18932
-    _alt_18934 = _f_18933
-    if n_930 == 0:
-        _x_18936 = _alt_18930()
-        return _x_18936
+def list_replicate(__871: Any, n_872: int, x_873: Any) -> list[Any]:
+    def _f_27138():
+        _x_27137 = []
+        return _x_27137
+    _alt_27139 = _f_27138
+    def _f_27142(n__875: int):
+        _x_27140 = list_replicate(None, n__875, x_873)
+        _x_27141 = [x_873] + _x_27140
+        return _x_27141
+    _alt_27143 = _f_27142
+    if n_872 == 0:
+        _x_27145 = _alt_27139()
+        return _x_27145
     else:
-        n_18937 = n_930 - 1
-        _x_18938 = _alt_18934(n_18937)
-        return _x_18938
+        n_27146 = n_872 - 1
+        _x_27147 = _alt_27143(n_27146)
+        return _x_27147
 
 # Lean: Corpus.Functional.List.scanl
-def scanl(__934: Any, __935: Any, f_936: Callable[[Any, Any], Any], init_937: Any, xs_938: list[Any]) -> list[Any]:
-    def _f_18942():
-        _x_18941 = []
-        return _x_18941
-    _alt_18943 = _f_18942
-    def _f_18946(x_940: Any, xs__941: list[Any]):
-        _x_18944 = f_936(init_937, x_940)
-        _x_18945 = scanl(None, None, f_936, _x_18944, xs__941)
-        return _x_18945
-    _alt_18947 = _f_18946
-    def _jp_18955(_y_18953: list[Any]):
-        _x_18954 = [init_937] + _y_18953
-        return _x_18954
-    def _jp_18958():
-        _x_18957 = _alt_18943()
-        return _jp_18955(_x_18957)
-    def _jp_18962(_y_18959: Any, _y_18960: list[Any]):
-        _x_18961 = _alt_18947(_y_18959, _y_18960)
-        return _jp_18955(_x_18961)
-    if len(xs_938) == 0:
-        return _jp_18958()
+def scanl(__876: Any, __877: Any, f_878: Callable[[Any, Any], Any], init_879: Any, xs_880: list[Any]) -> list[Any]:
+    def _f_27151():
+        _x_27150 = []
+        return _x_27150
+    _alt_27152 = _f_27151
+    def _f_27155(x_882: Any, xs__883: list[Any]):
+        _x_27153 = f_878(init_879, x_882)
+        _x_27154 = scanl(None, None, f_878, _x_27153, xs__883)
+        return _x_27154
+    _alt_27156 = _f_27155
+    def _jp_27164(_y_27162: list[Any]):
+        _x_27163 = [init_879] + _y_27162
+        return _x_27163
+    def _jp_27167():
+        _x_27166 = _alt_27152()
+        return _jp_27164(_x_27166)
+    def _jp_27171(_y_27168: Any, _y_27169: list[Any]):
+        _x_27170 = _alt_27156(_y_27168, _y_27169)
+        return _jp_27164(_x_27170)
+    if len(xs_880) == 0:
+        return _jp_27167()
     else:
-        head_18950 = xs_938[0]
-        tail_18951 = xs_938[1:]
-        return _jp_18962(head_18950, tail_18951)
+        head_27159 = xs_880[0]
+        tail_27160 = xs_880[1:]
+        return _jp_27171(head_27159, tail_27160)
 
 # Lean: Corpus.Functional.List.interleave
-def interleave(__942: Any, xs_943: list[Any], ys_944: list[Any]) -> list[Any]:
-    def _f_18964(ys_945: list[Any]):
-        return ys_945
-    _alt_18965 = _f_18964
-    _alt_18966 = _f_18964
-    def _f_18970(x_946: Any, xs__947: list[Any], y_948: Any, ys__949: list[Any]):
-        _x_18967 = interleave(None, xs__947, ys__949)
-        _x_18968 = [y_948] + _x_18967
-        _x_18969 = [x_946] + _x_18968
-        return _x_18969
-    _alt_18971 = _f_18970
-    if len(xs_943) == 0:
-        if len(ys_944) == 0:
-            _x_18972 = []
-            _x_18973 = _alt_18965(_x_18972)
-            return _x_18973
-        else:
-            head_18974 = ys_944[0]
-            tail_18975 = ys_944[1:]
-            _x_18976 = [head_18974] + tail_18975
-            _x_18977 = _alt_18965(_x_18976)
-            return _x_18977
+def interleave(__884: Any, xs_885: list[Any], ys_886: list[Any]) -> list[Any]:
+    _alt_27174 = (lambda ys_887: ys_887)
+    _alt_27175 = (lambda ys_887: ys_887)
+    def _f_27179(x_888: Any, xs__889: list[Any], y_890: Any, ys__891: list[Any]):
+        _x_27176 = interleave(None, xs__889, ys__891)
+        _x_27177 = [y_890] + _x_27176
+        _x_27178 = [x_888] + _x_27177
+        return _x_27178
+    _alt_27180 = _f_27179
+    if len(xs_885) == 0:
+        _x_27181 = _alt_27174(ys_886)
+        return _x_27181
     else:
-        head_18979 = xs_943[0]
-        tail_18980 = xs_943[1:]
-        if len(ys_944) == 0:
-            _x_18981 = [head_18979] + tail_18980
-            _x_18982 = _alt_18966(_x_18981)
-            return _x_18982
+        head_27182 = xs_885[0]
+        tail_27183 = xs_885[1:]
+        if len(ys_886) == 0:
+            _x_27184 = [head_27182] + tail_27183
+            _x_27185 = _alt_27175(_x_27184)
+            return _x_27185
         else:
-            head_18983 = ys_944[0]
-            tail_18984 = ys_944[1:]
-            _x_18985 = _alt_18971(head_18979, tail_18980, head_18983, tail_18984)
-            return _x_18985
+            head_27186 = ys_886[0]
+            tail_27187 = ys_886[1:]
+            _x_27188 = _alt_27180(head_27182, tail_27183, head_27186, tail_27187)
+            return _x_27188
 
 # Lean: Corpus.Functional.Either.map
-def either_map(__950: Any, __951: Any, __952: Any, f_953: Callable[[Any], Any], x_18989: Any) -> Any:
-    def _f_18991(a_954: Any):
-        _x_18990 = left(None, None, a_954)
-        return _x_18990
-    _alt_18992 = _f_18991
-    def _f_18995(b_955: Any):
-        _x_18993 = f_953(b_955)
-        _x_18994 = right(None, None, _x_18993)
-        return _x_18994
-    _alt_18996 = _f_18995
-    match x_18989:
-        case left(a_18997):
-            _x_18998 = _alt_18992(a_18997)
-            return _x_18998
-        case right(a_18999):
-            _x_19000 = _alt_18996(a_18999)
-            return _x_19000
+def either_map(__892: Any, __893: Any, __894: Any, f_895: Callable[[Any], Any], x_27192: Any) -> Any:
+    def _f_27194(a_896: Any):
+        _x_27193 = left(a_896)
+        return _x_27193
+    _alt_27195 = _f_27194
+    def _f_27198(b_897: Any):
+        _x_27196 = f_895(b_897)
+        _x_27197 = right(_x_27196)
+        return _x_27197
+    _alt_27199 = _f_27198
+    match x_27192:
+        case left(a_27200):
+            _x_27201 = _alt_27195(a_27200)
+            return _x_27201
+        case right(a_27202):
+            _x_27203 = _alt_27199(a_27202)
+            return _x_27203
 
 # Lean: Corpus.Functional.Either.mapLeft
-def map_left(__956: Any, __957: Any, __958: Any, f_959: Callable[[Any], Any], x_19003: Any) -> Any:
-    def _f_19006(a_960: Any):
-        _x_19004 = f_959(a_960)
-        _x_19005 = left(None, None, _x_19004)
-        return _x_19005
-    _alt_19007 = _f_19006
-    def _f_19009(b_961: Any):
-        _x_19008 = right(None, None, b_961)
-        return _x_19008
-    _alt_19010 = _f_19009
-    match x_19003:
-        case left(a_19011):
-            _x_19012 = _alt_19007(a_19011)
-            return _x_19012
-        case right(a_19013):
-            _x_19014 = _alt_19010(a_19013)
-            return _x_19014
+def map_left(__898: Any, __899: Any, __900: Any, f_901: Callable[[Any], Any], x_27206: Any) -> Any:
+    def _f_27209(a_902: Any):
+        _x_27207 = f_901(a_902)
+        _x_27208 = left(_x_27207)
+        return _x_27208
+    _alt_27210 = _f_27209
+    def _f_27212(b_903: Any):
+        _x_27211 = right(b_903)
+        return _x_27211
+    _alt_27213 = _f_27212
+    match x_27206:
+        case left(a_27214):
+            _x_27215 = _alt_27210(a_27214)
+            return _x_27215
+        case right(a_27216):
+            _x_27217 = _alt_27213(a_27216)
+            return _x_27217
 
 # Lean: Corpus.Functional.Either.bind
-def either_bind(__962: Any, __963: Any, __964: Any, x_965: Any, f_966: Callable[[Any], Any]) -> Any:
-    def _f_19018(a_967: Any):
-        _x_19017 = left(None, None, a_967)
-        return _x_19017
-    _alt_19019 = _f_19018
-    def _f_19021(b_968: Any):
-        _x_19020 = f_966(b_968)
-        return _x_19020
-    _alt_19022 = _f_19021
-    match x_965:
-        case left(a_19023):
-            _x_19024 = _alt_19019(a_19023)
-            return _x_19024
-        case right(a_19025):
-            _x_19026 = _alt_19022(a_19025)
-            return _x_19026
+def either_bind(__904: Any, __905: Any, __906: Any, x_907: Any, f_908: Callable[[Any], Any]) -> Any:
+    def _f_27221(a_909: Any):
+        _x_27220 = left(a_909)
+        return _x_27220
+    _alt_27222 = _f_27221
+    _alt_27225 = (lambda b_910: f_908(b_910))
+    match x_907:
+        case left(a_27226):
+            _x_27227 = _alt_27222(a_27226)
+            return _x_27227
+        case right(a_27228):
+            _x_27229 = _alt_27225(a_27228)
+            return _x_27229
 
 # Lean: Corpus.Functional.Either.isLeft
-def is_left(__969: Any, __970: Any, x_19029: Any) -> bool:
-    def _f_19032(a_19030: Any):
-        _x_19031 = True
+def is_left(__911: Any, __912: Any, x_27232: Any) -> bool:
+    def _f_27235(a_27233: Any):
+        _x_27234 = True
         return True
-    _alt_19033 = _f_19032
-    def _f_19036(a_19034: Any):
-        _x_19035 = False
+    _alt_27236 = _f_27235
+    def _f_27239(a_27237: Any):
+        _x_27238 = False
         return False
-    _alt_19037 = _f_19036
-    match x_19029:
-        case left(a_19038):
-            _x_19039 = _alt_19033(a_19038)
-            return _x_19039
-        case right(a_19040):
-            _x_19041 = _alt_19037(a_19040)
-            return _x_19041
+    _alt_27240 = _f_27239
+    match x_27232:
+        case left(a_27241):
+            _x_27242 = _alt_27236(a_27241)
+            return _x_27242
+        case right(a_27243):
+            _x_27244 = _alt_27240(a_27243)
+            return _x_27244
 
 # Lean: Corpus.Functional.Either.isRight
-def is_right(__971: Any, __972: Any, x_19044: Any) -> bool:
-    def _f_19047(a_19045: Any):
-        _x_19046 = False
+def is_right(__913: Any, __914: Any, x_27247: Any) -> bool:
+    def _f_27250(a_27248: Any):
+        _x_27249 = False
         return False
-    _alt_19048 = _f_19047
-    def _f_19051(a_19049: Any):
-        _x_19050 = True
+    _alt_27251 = _f_27250
+    def _f_27254(a_27252: Any):
+        _x_27253 = True
         return True
-    _alt_19052 = _f_19051
-    match x_19044:
-        case left(a_19053):
-            _x_19054 = _alt_19048(a_19053)
-            return _x_19054
-        case right(a_19055):
-            _x_19056 = _alt_19052(a_19055)
-            return _x_19056
+    _alt_27255 = _f_27254
+    match x_27247:
+        case left(a_27256):
+            _x_27257 = _alt_27251(a_27256)
+            return _x_27257
+        case right(a_27258):
+            _x_27259 = _alt_27255(a_27258)
+            return _x_27259
 
 # Lean: Corpus.Strings.isEmpty
-def strings_is_empty(s_973: str) -> bool:
-    _x_19061 = len(s_973)
-    _x_19062 = 0
-    _x_19065 = _x_19061 == 0
-    return _x_19065
+def strings_is_empty(s_915: str) -> bool:
+    _x_27265 = len(s_915)
+    _x_27266 = 0
+    _x_27269 = _x_27265 == 0
+    return _x_27269
 
 # Lean: Corpus.Strings.isNotEmpty
-def is_not_empty(s_974: str) -> bool:
-    _x_19067 = 0
-    _x_19070 = len(s_974)
-    _x_19071 = 0 < _x_19070
-    return _x_19071
+def is_not_empty(s_916: str) -> bool:
+    _x_27271 = 0
+    _x_27274 = len(s_916)
+    _x_27275 = 0 < _x_27274
+    return _x_27275
 
 # Lean: Corpus.Strings.head
-def head(s_975: str) -> str | None:
-    _x_19074 = list(s_975)
-    _x_19075 = (lambda xs: xs[0] if xs else None)(_x_19074)
-    return _x_19075
+def head(s_917: str) -> str | None:
+    _x_27278 = list(s_917)
+    _x_27279 = (lambda xs: xs[0] if xs else None)(_x_27278)
+    return _x_27279
 
 # Lean: Corpus.Strings.tail
-def tail(s_976: str) -> str:
-    def _f_19078():
-        _x_19077 = ""
-        return _x_19077
-    _alt_19079 = _f_19078
-    def _f_19082(head_19080: str, cs_978: list[str]):
-        _x_19081 = ''.join(cs_978)
-        return _x_19081
-    _alt_19083 = _f_19082
-    _x_19084 = list(s_976)
-    if len(_x_19084) == 0:
-        _x_19086 = _alt_19079()
-        return _x_19086
+def tail(s_918: str) -> str:
+    def _f_27282():
+        _x_27281 = ""
+        return _x_27281
+    _alt_27283 = _f_27282
+    def _f_27286(head_27284: str, cs_920: list[str]):
+        _x_27285 = ''.join(cs_920)
+        return _x_27285
+    _alt_27287 = _f_27286
+    _x_27288 = list(s_918)
+    if len(_x_27288) == 0:
+        _x_27290 = _alt_27283()
+        return _x_27290
     else:
-        head_19087 = _x_19084[0]
-        tail_19088 = _x_19084[1:]
-        _x_19089 = _alt_19083(head_19087, tail_19088)
-        return _x_19089
+        head_27291 = _x_27288[0]
+        tail_27292 = _x_27288[1:]
+        _x_27293 = _alt_27287(head_27291, tail_27292)
+        return _x_27293
 
 # Lean: Corpus.Strings.last
-def last(s_979: str) -> str | None:
-    _x_19092 = list(s_979)
-    _x_19093 = (lambda xs: xs[-1] if xs else None)(_x_19092)
-    return _x_19093
+def last(s_921: str) -> str | None:
+    _x_27296 = list(s_921)
+    _x_27297 = (lambda xs: xs[-1] if xs else None)(_x_27296)
+    return _x_27297
 
 # Lean: Corpus.Strings.init
-def init(s_980: str) -> str:
-    _x_19095 = list(s_980)
-    _x_19096 = (lambda xs: xs[:-1])(_x_19095)
-    _x_19097 = ''.join(_x_19096)
-    return _x_19097
+def init(s_922: str) -> str:
+    _x_27299 = list(s_922)
+    _x_27300 = drop_last_tr(None, _x_27299)
+    _x_27301 = ''.join(_x_27300)
+    return _x_27301
 
 # Lean: Corpus.Strings.take
-def strings_take(n_981: int, s_982: str) -> str:
-    _x_19099 = list(s_982)
-    _x_19100 = (lambda n, xs: xs[:n])(_x_19099)
-    _x_19101 = ''.join(_x_19100)
-    return _x_19101
+def strings_take(n_923: int, s_924: str) -> str:
+    _x_27303 = list(s_924)
+    _x_27304 = take_tr(None, n_923, _x_27303)
+    _x_27305 = ''.join(_x_27304)
+    return _x_27305
 
 # Lean: Corpus.Strings.drop
-def strings_drop(n_983: int, s_984: str) -> str:
-    _x_19103 = list(s_984)
-    _x_19104 = (lambda n, xs: xs[n:])(_x_19103)
-    _x_19105 = ''.join(_x_19104)
-    return _x_19105
+def strings_drop(n_925: int, s_926: str) -> str:
+    _x_27307 = list(s_926)
+    _x_27308 = (lambda n, xs: xs[n:])(_x_27307)
+    _x_27309 = ''.join(_x_27308)
+    return _x_27309
 
 # Lean: Corpus.Strings.charAt
-def char_at(s_985: str, i_986: int) -> str | None:
-    def _f_19110(xs_987: list[str], i_988: int):
-        _x_19108 = len(xs_987)
-        _x_19109 = i_988 < _x_19108
-        return _x_19109
-    _x_19112 = (lambda xs, i: xs[i] if 0 <= i < len(xs) else None)
-    _x_19113 = list(s_985)
-    _x_19114 = _x_19112(_x_19113, i_986)
-    return _x_19114
+def char_at(s_927: str, i_928: int) -> str | None:
+    _x_27312 = (lambda xs, i: xs[i] if 0 <= i < len(xs) else None)
+    _x_27313 = list(s_927)
+    _x_27314 = _x_27312(_x_27313, i_928)
+    return _x_27314
 
 # Lean: Corpus.Strings.substring
-def substring(s_989: str, start_990: int, len_991: int) -> str:
-    _x_19116 = list(s_989)
-    _x_19117 = (lambda n, xs: xs[n:])(_x_19116)
-    _x_19118 = (lambda n, xs: xs[:n])(_x_19117)
-    _x_19119 = ''.join(_x_19118)
-    return _x_19119
+def substring(s_929: str, start_930: int, len_931: int) -> str:
+    _x_27316 = list(s_929)
+    _x_27317 = (lambda n, xs: xs[n:])(_x_27316)
+    _x_27318 = take_tr(None, len_931, _x_27317)
+    _x_27319 = ''.join(_x_27318)
+    return _x_27319
 
 # Lean: Corpus.Strings.slice
-def slice(s_992: str, start_993: int, stop: int) -> str:
-    _x_19124 = stop - start_993
-    _x_19125 = substring(s_992, start_993, _x_19124)
-    return _x_19125
+def slice(s_932: str, start_933: int, stop: int) -> str:
+    _x_27324 = stop - start_933
+    _x_27325 = substring(s_932, start_933, _x_27324)
+    return _x_27325
 
 # Lean: Corpus.Strings.append
 def append(s1: str, s2: str) -> str:
-    _x_19130 = s1 + s2
-    return _x_19130
+    _x_27330 = s1 + s2
+    return _x_27330
 
 # Lean: Corpus.Strings.concat
 def strings_concat(ss: list[str]) -> str:
-    def _f_19138(x1_19132: str, x2_19133: str):
-        _x_19137 = x1_19132 + x2_19133
-        return _x_19137
-    _x_19139 = ""
-    _x_19140 = functools.reduce(_f_19138, ss, _x_19139)
-    return _x_19140
+    def _f_27338(x1_27332: str, x2_27333: str):
+        _x_27337 = x1_27332 + x2_27333
+        return _x_27337
+    _x_27339 = ""
+    _x_27340 = functools.reduce(_f_27338, ss, _x_27339)
+    return _x_27340
 
 # Lean: Corpus.Strings.intercalate
-def intercalate(sep_994: str, ss_995: list[str]) -> str:
-    def _f_19143():
-        _x_19142 = ""
-        return _x_19142
-    _alt_19144 = _f_19143
-    def _f_19145(s_997: str):
-        return s_997
-    _alt_19146 = _f_19145
-    def _f_19153(s_998: str, rest_999: list[str]):
-        _x_19150 = s_998 + sep_994
-        _x_19151 = intercalate(sep_994, rest_999)
-        _x_19152 = _x_19150 + _x_19151
-        return _x_19152
-    _alt_19154 = _f_19153
-    if len(ss_995) == 0:
-        _x_19156 = _alt_19144()
-        return _x_19156
+def intercalate(sep_934: str, ss_935: list[str]) -> str:
+    def _f_27343():
+        _x_27342 = ""
+        return _x_27342
+    _alt_27344 = _f_27343
+    _alt_27346 = (lambda s_937: s_937)
+    def _f_27353(s_938: str, rest_939: list[str]):
+        _x_27350 = s_938 + sep_934
+        _x_27351 = intercalate(sep_934, rest_939)
+        _x_27352 = _x_27350 + _x_27351
+        return _x_27352
+    _alt_27354 = _f_27353
+    if len(ss_935) == 0:
+        _x_27356 = _alt_27344()
+        return _x_27356
     else:
-        head_19157 = ss_995[0]
-        tail_19158 = ss_995[1:]
-        if len(tail_19158) == 0:
-            _x_19159 = _alt_19146(head_19157)
-            return _x_19159
+        head_27357 = ss_935[0]
+        tail_27358 = ss_935[1:]
+        if len(tail_27358) == 0:
+            _x_27359 = _alt_27346(head_27357)
+            return _x_27359
         else:
-            head_19160 = tail_19158[0]
-            tail_19161 = tail_19158[1:]
-            _x_19162 = [head_19160] + tail_19161
-            _x_19163 = _alt_19154(head_19157, _x_19162)
-            return _x_19163
+            _x_27363 = (lambda h_27360: _alt_27354(head_27357, tail_27358))(None)
+            return _x_27363
 
 # Lean: Corpus.Strings.join
-def join(ss_1000: list[str]) -> str:
-    _x_19167 = strings_concat(ss_1000)
-    return _x_19167
+def join(ss_940: list[str]) -> str:
+    _x_27367 = strings_concat(ss_940)
+    return _x_27367
 
 # Lean: Corpus.Strings.replicate
-def strings_replicate(n_1001: int, s_1002: str) -> str:
-    _x_19169 = ""
-    _x_19170 = strings_replicate_go(s_1002, n_1001, _x_19169)
-    return _x_19170
+def strings_replicate(n_941: int, s_942: str) -> str:
+    _x_27369 = ""
+    _x_27370 = strings_replicate_go(s_942, n_941, _x_27369)
+    return _x_27370
 
 # Lean: Corpus.Strings.reverse
-def strings_reverse(s_1003: str) -> str:
-    _x_19172 = list(s_1003)
-    _x_19173 = list(reversed(_x_19172))
-    _x_19174 = ''.join(_x_19173)
-    return _x_19174
+def strings_reverse(s_943: str) -> str:
+    _x_27372 = list(s_943)
+    _x_27373 = list(reversed(_x_27372))
+    _x_27374 = ''.join(_x_27373)
+    return _x_27374
 
 # Lean: Corpus.Strings.toUpper
-def to_upper(s_1004: str) -> str:
-    _x_19176 = (lambda c: c.upper())
-    _x_19177 = list(s_1004)
-    _x_19178 = [_x_19176(x) for x in _x_19177]
-    _x_19179 = ''.join(_x_19178)
-    return _x_19179
+def to_upper(s_944: str) -> str:
+    _x_27376 = (lambda c: c.upper())
+    _x_27377 = list(s_944)
+    _x_27378 = [_x_27376(x) for x in _x_27377]
+    _x_27379 = ''.join(_x_27378)
+    return _x_27379
 
 # Lean: Corpus.Strings.toLower
-def to_lower(s_1005: str) -> str:
-    _x_19181 = (lambda c: c.lower())
-    _x_19182 = list(s_1005)
-    _x_19183 = [_x_19181(x) for x in _x_19182]
-    _x_19184 = ''.join(_x_19183)
-    return _x_19184
+def to_lower(s_945: str) -> str:
+    _x_27381 = (lambda c: c.lower())
+    _x_27382 = list(s_945)
+    _x_27383 = [_x_27381(x) for x in _x_27382]
+    _x_27384 = ''.join(_x_27383)
+    return _x_27384
 
 # Lean: Corpus.Strings.capitalize
-def capitalize(s_1006: str) -> str:
-    def _f_19187():
-        _x_19186 = ""
-        return _x_19186
-    _alt_19188 = _f_19187
-    def _f_19192(c_1008: str, cs_1009: list[str]):
-        _x_19189 = (lambda c: c.upper())(c_1008)
-        _x_19190 = [_x_19189] + cs_1009
-        _x_19191 = ''.join(_x_19190)
-        return _x_19191
-    _alt_19193 = _f_19192
-    _x_19194 = list(s_1006)
-    if len(_x_19194) == 0:
-        _x_19196 = _alt_19188()
-        return _x_19196
+def capitalize(s_946: str) -> str:
+    def _f_27387():
+        _x_27386 = ""
+        return _x_27386
+    _alt_27388 = _f_27387
+    def _f_27392(c_948: str, cs_949: list[str]):
+        _x_27389 = (lambda c: c.upper())(c_948)
+        _x_27390 = [_x_27389] + cs_949
+        _x_27391 = ''.join(_x_27390)
+        return _x_27391
+    _alt_27393 = _f_27392
+    _x_27394 = list(s_946)
+    if len(_x_27394) == 0:
+        _x_27396 = _alt_27388()
+        return _x_27396
     else:
-        head_19197 = _x_19194[0]
-        tail_19198 = _x_19194[1:]
-        _x_19199 = _alt_19193(head_19197, tail_19198)
-        return _x_19199
+        head_27397 = _x_27394[0]
+        tail_27398 = _x_27394[1:]
+        _x_27399 = _alt_27393(head_27397, tail_27398)
+        return _x_27399
 
 # Lean: Corpus.Strings.swapCase
-def swap_case(s_1010: str) -> str:
-    def _f_19215(c_1011: str):
-        _x_19202 = (lambda c: c.isupper())(c_1011)
-        _x_19203 = True
-        if _x_19202:
-            _x_19213 = (lambda c: c.lower())(c_1011)
-            return _x_19213
+def swap_case(s_950: str) -> str:
+    def _f_27415(c_951: str):
+        _x_27402 = (lambda c: c.isupper())(c_951)
+        _x_27403 = True
+        _x_27404 = _x_27402 == True
+        if _x_27404:
+            _x_27413 = (lambda c: c.lower())(c_951)
+            return _x_27413
         else:
-            _x_19206 = (lambda c: c.islower())(c_1011)
-            if _x_19206:
-                _x_19210 = (lambda c: c.upper())(c_1011)
-                return _x_19210
+            _x_27406 = (lambda c: c.islower())(c_951)
+            _x_27407 = _x_27406 == True
+            if _x_27407:
+                _x_27410 = (lambda c: c.upper())(c_951)
+                return _x_27410
             else:
-                return c_1011
-    _x_19216 = list(s_1010)
-    _x_19217 = [_f_19215(x) for x in _x_19216]
-    _x_19218 = ''.join(_x_19217)
-    return _x_19218
+                return c_951
+    _x_27416 = list(s_950)
+    _x_27417 = [_f_27415(x) for x in _x_27416]
+    _x_27418 = ''.join(_x_27417)
+    return _x_27418
 
 # Lean: Corpus.Strings.trimLeft
-def trim_left(s_1012: str) -> str:
-    def _f_19227(x_19220: str):
-        _x_19224 = 32
-        _x_19225 = chr(_x_19224)
-        _x_19226 = x_19220 == _x_19225
-        return _x_19226
-    _x_19228 = list(s_1012)
-    _x_19229 = drop_while(None, _f_19227, _x_19228)
-    _x_19230 = ''.join(_x_19229)
-    return _x_19230
+def trim_left(s_952: str) -> str:
+    _x_27428 = list(s_952)
+    _x_27429 = drop_while(None, (lambda x_27420: (x_27420 == chr(32))), _x_27428)
+    _x_27430 = ''.join(_x_27429)
+    return _x_27430
 
 # Lean: Corpus.Strings.trimRight
-def trim_right(s_1013: str) -> str:
-    def _f_19239(x_19232: str):
-        _x_19236 = 32
-        _x_19237 = chr(_x_19236)
-        _x_19238 = x_19232 == _x_19237
-        return _x_19238
-    _x_19240 = list(s_1013)
-    _x_19241 = list(reversed(_x_19240))
-    _x_19242 = drop_while(None, _f_19239, _x_19241)
-    _x_19243 = list(reversed(_x_19242))
-    _x_19244 = ''.join(_x_19243)
-    return _x_19244
+def trim_right(s_953: str) -> str:
+    _x_27440 = list(s_953)
+    _x_27441 = list(reversed(_x_27440))
+    _x_27442 = drop_while(None, (lambda x_27432: (x_27432 == chr(32))), _x_27441)
+    _x_27443 = list(reversed(_x_27442))
+    _x_27444 = ''.join(_x_27443)
+    return _x_27444
 
 # Lean: Corpus.Strings.trim
-def trim(s_1014: str) -> str:
-    _x_19246 = trim_left(s_1014)
-    _x_19247 = trim_right(_x_19246)
-    return _x_19247
+def trim(s_954: str) -> str:
+    _x_27446 = trim_left(s_954)
+    _x_27447 = trim_right(_x_27446)
+    return _x_27447
 
 # Lean: Corpus.Strings.padLeft
-def pad_left(n_1015: int, c_1016: str, s_1017: str) -> str:
-    _x_19249 = len(s_1017)
-    _x_19250 = n_1015 <= _x_19249
-    if _x_19250:
-        return s_1017
+def pad_left(n_955: int, c_956: str, s_957: str) -> str:
+    _x_27449 = len(s_957)
+    _x_27450 = n_955 <= _x_27449
+    if _x_27450:
+        return s_957
     else:
-        _x_19258 = n_1015 - _x_19249
-        _x_19259 = list_replicate(None, _x_19258, c_1016)
-        _x_19260 = ''.join(_x_19259)
-        _x_19261 = _x_19260 + s_1017
-        return _x_19261
+        _x_27458 = n_955 - _x_27449
+        _x_27459 = replicate_tr(None, _x_27458, c_956)
+        _x_27460 = ''.join(_x_27459)
+        _x_27461 = _x_27460 + s_957
+        return _x_27461
 
 # Lean: Corpus.Strings.padRight
-def pad_right(n_1018: int, c_1019: str, s_1020: str) -> str:
-    _x_19265 = len(s_1020)
-    _x_19266 = n_1018 <= _x_19265
-    if _x_19266:
-        return s_1020
+def pad_right(n_958: int, c_959: str, s_960: str) -> str:
+    _x_27465 = len(s_960)
+    _x_27466 = n_958 <= _x_27465
+    if _x_27466:
+        return s_960
     else:
-        _x_19274 = n_1018 - _x_19265
-        _x_19275 = list_replicate(None, _x_19274, c_1019)
-        _x_19276 = ''.join(_x_19275)
-        _x_19277 = s_1020 + _x_19276
-        return _x_19277
+        _x_27474 = n_958 - _x_27465
+        _x_27475 = replicate_tr(None, _x_27474, c_959)
+        _x_27476 = ''.join(_x_27475)
+        _x_27477 = s_960 + _x_27476
+        return _x_27477
 
 # Lean: Corpus.Strings.center
-def center(n_1021: int, c_1022: str, s_1023: str) -> str:
-    _x_19281 = len(s_1023)
-    _x_19282 = n_1021 <= _x_19281
-    if _x_19282:
-        return s_1023
+def center(n_961: int, c_962: str, s_963: str) -> str:
+    _x_27481 = len(s_963)
+    _x_27482 = n_961 <= _x_27481
+    if _x_27482:
+        return s_963
     else:
-        _x_19287 = n_1021 - _x_19281
-        _x_19291 = 2
-        _x_19294 = _x_19287 // 2
-        _x_19295 = _x_19287 - _x_19294
-        _x_19299 = list_replicate(None, _x_19294, c_1022)
-        _x_19300 = ''.join(_x_19299)
-        _x_19301 = _x_19300 + s_1023
-        _x_19302 = list_replicate(None, _x_19295, c_1022)
-        _x_19303 = ''.join(_x_19302)
-        _x_19304 = _x_19301 + _x_19303
-        return _x_19304
+        _x_27487 = n_961 - _x_27481
+        _x_27491 = 2
+        _x_27494 = _x_27487 // 2
+        _x_27495 = _x_27487 - _x_27494
+        _x_27499 = replicate_tr(None, _x_27494, c_962)
+        _x_27500 = ''.join(_x_27499)
+        _x_27501 = _x_27500 + s_963
+        _x_27502 = replicate_tr(None, _x_27495, c_962)
+        _x_27503 = ''.join(_x_27502)
+        _x_27504 = _x_27501 + _x_27503
+        return _x_27504
 
 # Lean: Corpus.Strings.contains
-def strings_contains(s_1024: str, sub_1025: str) -> bool:
-    _x_19308 = list(s_1024)
-    _x_19309 = strings_contains_go(sub_1025, _x_19308)
-    return _x_19309
+def strings_contains(s_964: str, sub_965: str) -> bool:
+    _x_27508 = list(s_964)
+    _x_27509 = strings_contains_go(sub_965, _x_27508)
+    return _x_27509
 
 # Lean: Corpus.Strings.indexOf
-def index_of(s_1026: str, sub_1027: str) -> int | None:
-    _x_19311 = list(s_1026)
-    _x_19312 = 0
-    _x_19315 = index_of_go(sub_1027, _x_19311, 0)
-    return _x_19315
+def index_of(s_966: str, sub_967: str) -> int | None:
+    _x_27511 = list(s_966)
+    _x_27512 = 0
+    _x_27515 = index_of_go(sub_967, _x_27511, 0)
+    return _x_27515
 
 # Lean: Corpus.Strings.count
-def count(s_1028: str, sub_1029: str) -> int:
-    _x_19317 = list(s_1028)
-    _x_19318 = 0
-    _x_19321 = count_go(sub_1029, _x_19317, 0)
-    return _x_19321
+def count(s_968: str, sub_969: str) -> int:
+    _x_27517 = list(s_968)
+    _x_27518 = 0
+    _x_27521 = count_go(sub_969, _x_27517, 0)
+    return _x_27521
 
 # Lean: Corpus.Strings.countChar
-def strings_count_char(c_1030: str, s_1031: str) -> int:
-    def _f_19339(acc_1032: int, x_1033: str):
-        _x_19326 = x_1033 == c_1030
-        _x_19327 = True
-        if _x_19326:
-            _x_19334 = 1
-            _x_19337 = acc_1032 + 1
-            return _x_19337
+def strings_count_char(c_970: str, s_971: str) -> int:
+    def _f_27539(acc_972: int, x_973: str):
+        _x_27526 = x_973 == c_970
+        _x_27527 = True
+        _x_27528 = _x_27526 == True
+        if _x_27528:
+            _x_27534 = 1
+            _x_27537 = acc_972 + 1
+            return _x_27537
         else:
-            return acc_1032
-    _x_19340 = 0
-    _x_19343 = list(s_1031)
-    _x_19344 = functools.reduce(_f_19339, _x_19343, 0)
-    return _x_19344
+            return acc_972
+    _x_27540 = 0
+    _x_27543 = list(s_971)
+    _x_27544 = functools.reduce(_f_27539, _x_27543, 0)
+    return _x_27544
 
 # Lean: Corpus.Strings.startsWith
-def starts_with(s_1034: str, pfx: str) -> bool:
-    _x_19350 = len(pfx)
-    _x_19351 = list(s_1034)
-    _x_19352 = (lambda n, xs: xs[:n])(_x_19351)
-    _x_19353 = list(pfx)
-    _x_19354 = _x_19352 == _x_19353
-    return _x_19354
+def starts_with(s_974: str, pfx: str) -> bool:
+    _x_27550 = len(pfx)
+    _x_27551 = list(s_974)
+    _x_27552 = take_tr(None, _x_27550, _x_27551)
+    _x_27553 = list(pfx)
+    _x_27554 = _x_27552 == _x_27553
+    return _x_27554
 
 # Lean: Corpus.Strings.endsWith
-def ends_with(s_1035: str, suffix: str) -> bool:
-    _x_19360 = len(suffix)
-    _x_19361 = list(s_1035)
-    _x_19362 = list(reversed(_x_19361))
-    _x_19363 = (lambda n, xs: xs[:n])(_x_19362)
-    _x_19364 = list(suffix)
-    _x_19365 = list(reversed(_x_19364))
-    _x_19366 = _x_19363 == _x_19365
-    return _x_19366
+def ends_with(s_975: str, suffix: str) -> bool:
+    _x_27560 = len(suffix)
+    _x_27561 = list(s_975)
+    _x_27562 = list(reversed(_x_27561))
+    _x_27563 = take_tr(None, _x_27560, _x_27562)
+    _x_27564 = list(suffix)
+    _x_27565 = list(reversed(_x_27564))
+    _x_27566 = _x_27563 == _x_27565
+    return _x_27566
 
 # Lean: Corpus.Strings.isPalindrome
-def strings_is_palindrome(s_1036: str) -> bool:
-    _x_19368 = (lambda c: c.lower())
-    def _f_19381(c_1037: str):
-        def _f_19370():
-            _x_19369 = True
+def strings_is_palindrome(s_976: str) -> bool:
+    _x_27568 = (lambda c: c.lower())
+    def _f_27581(c_977: str):
+        def _f_27570():
+            _x_27569 = True
             return True
-        _alt_19371 = _f_19370
-        def _f_19373():
-            _x_19372 = str.isdigit(c_1037)
-            return _x_19372
-        _alt_19374 = _f_19373
-        _x_19375 = str.isalpha(c_1037)
-        if _x_19375:
-            _x_19379 = _alt_19371()
-            return _x_19379
+        _alt_27571 = _f_27570
+        def _f_27573():
+            _x_27572 = str.isdigit(c_977)
+            return _x_27572
+        _alt_27574 = _f_27573
+        _x_27575 = str.isalpha(c_977)
+        if _x_27575:
+            _x_27579 = _alt_27571()
+            return _x_27579
         else:
-            _x_19377 = _alt_19374()
-            return _x_19377
-    _x_19382 = list(s_1036)
-    _x_19383 = [x for x in _x_19382 if _f_19381(x)]
-    _x_19384 = [_x_19368(x) for x in _x_19383]
-    _x_19389 = list(reversed(_x_19384))
-    _x_19390 = _x_19384 == _x_19389
-    return _x_19390
+            _x_27577 = _alt_27574()
+            return _x_27577
+    _x_27582 = list(s_976)
+    _x_27583 = [x for x in _x_27582 if _f_27581(x)]
+    _x_27584 = [_x_27568(x) for x in _x_27583]
+    _x_27589 = list(reversed(_x_27584))
+    _x_27590 = _x_27584 == _x_27589
+    return _x_27590
 
 # Lean: Corpus.Strings.isDigits
-def is_digits(s_1041: str) -> bool:
-    def _f_19393():
-        _x_19392 = False
+def is_digits(s_981: str) -> bool:
+    def _f_27593():
+        _x_27592 = False
         return False
-    _alt_19394 = _f_19393
-    def _f_19398():
-        _x_19395 = list(s_1041)
-        _x_19396 = str.isdigit
-        _x_19397 = all(_x_19396(x) for x in _x_19395)
-        return _x_19397
-    _alt_19399 = _f_19398
-    _x_19400 = len(s_1041) == 0
-    _x_19401 = not _x_19400
-    if _x_19401:
-        _x_19405 = _alt_19399()
-        return _x_19405
+    _alt_27594 = _f_27593
+    def _f_27598():
+        _x_27595 = list(s_981)
+        _x_27596 = str.isdigit
+        _x_27597 = all(_x_27596(x) for x in _x_27595)
+        return _x_27597
+    _alt_27599 = _f_27598
+    _x_27600 = len(s_981) == 0
+    _x_27601 = not _x_27600
+    if _x_27601:
+        _x_27605 = _alt_27599()
+        return _x_27605
     else:
-        _x_19403 = _alt_19394()
-        return _x_19403
+        _x_27603 = _alt_27594()
+        return _x_27603
 
 # Lean: Corpus.Strings.isAlpha
-def is_alpha(s_1044: str) -> bool:
-    def _f_19409():
-        _x_19408 = False
+def is_alpha(s_984: str) -> bool:
+    def _f_27609():
+        _x_27608 = False
         return False
-    _alt_19410 = _f_19409
-    def _f_19414():
-        _x_19411 = list(s_1044)
-        _x_19412 = str.isalpha
-        _x_19413 = all(_x_19412(x) for x in _x_19411)
-        return _x_19413
-    _alt_19415 = _f_19414
-    _x_19416 = len(s_1044) == 0
-    _x_19417 = not _x_19416
-    if _x_19417:
-        _x_19421 = _alt_19415()
-        return _x_19421
+    _alt_27610 = _f_27609
+    def _f_27614():
+        _x_27611 = list(s_984)
+        _x_27612 = str.isalpha
+        _x_27613 = all(_x_27612(x) for x in _x_27611)
+        return _x_27613
+    _alt_27615 = _f_27614
+    _x_27616 = len(s_984) == 0
+    _x_27617 = not _x_27616
+    if _x_27617:
+        _x_27621 = _alt_27615()
+        return _x_27621
     else:
-        _x_19419 = _alt_19410()
-        return _x_19419
+        _x_27619 = _alt_27610()
+        return _x_27619
 
 # Lean: Corpus.Strings.splitOn
-def split_on(s_1047: str, sep_1048: str) -> list[str]:
-    _x_19424 = len(sep_1048) == 0
-    _x_19425 = True
-    if _x_19424:
-        _x_19433 = []
-        _x_19434 = [s_1047] + _x_19433
-        return _x_19434
+def split_on(s_987: str, sep_988: str) -> list[str]:
+    _x_27624 = len(sep_988) == 0
+    _x_27625 = True
+    _x_27626 = _x_27624 == True
+    if _x_27626:
+        _x_27633 = []
+        _x_27634 = [s_987] + _x_27633
+        return _x_27634
     else:
-        _x_19428 = list(s_1047)
-        _x_19429 = []
-        _x_19430 = []
-        _x_19431 = split_on_go(sep_1048, _x_19428, _x_19429, _x_19430)
-        return _x_19431
+        _x_27628 = list(s_987)
+        _x_27629 = []
+        _x_27630 = []
+        _x_27631 = split_on_go(sep_988, _x_27628, _x_27629, _x_27630)
+        return _x_27631
 
 # Lean: Corpus.Strings.lines
-def lines(s_1049: str) -> list[str]:
-    _x_19437 = "\n"
-    _x_19438 = split_on(s_1049, _x_19437)
-    return _x_19438
+def lines(s_989: str) -> list[str]:
+    _x_27637 = "\n"
+    _x_27638 = split_on(s_989, _x_27637)
+    return _x_27638
 
 # Lean: Corpus.Strings.words
-def words(s_1050: str) -> list[str]:
-    _x_19440 = list(s_1050)
-    _x_19441 = []
-    _x_19442 = []
-    _x_19443 = words_go(_x_19440, _x_19441, _x_19442)
-    return _x_19443
+def words(s_990: str) -> list[str]:
+    _x_27640 = list(s_990)
+    _x_27641 = []
+    _x_27642 = []
+    _x_27643 = words_go(_x_27640, _x_27641, _x_27642)
+    return _x_27643
 
 # Lean: Corpus.Strings.unlines
-def unlines(ss_1051: list[str]) -> str:
-    _x_19445 = "\n"
-    _x_19446 = intercalate(_x_19445, ss_1051)
-    return _x_19446
+def unlines(ss_991: list[str]) -> str:
+    _x_27645 = "\n"
+    _x_27646 = intercalate(_x_27645, ss_991)
+    return _x_27646
 
 # Lean: Corpus.Strings.unwords
-def unwords(ss_1052: list[str]) -> str:
-    _x_19448 = " "
-    _x_19449 = intercalate(_x_19448, ss_1052)
-    return _x_19449
+def unwords(ss_992: list[str]) -> str:
+    _x_27648 = " "
+    _x_27649 = intercalate(_x_27648, ss_992)
+    return _x_27649
 
 # Lean: Corpus.Strings.replace
-def replace(s_1053: str, old_1054: str, new_1055: str) -> str:
-    _x_19451 = split_on(s_1053, old_1054)
-    _x_19452 = intercalate(new_1055, _x_19451)
-    return _x_19452
+def replace(s_993: str, old_994: str, new_995: str) -> str:
+    _x_27651 = split_on(s_993, old_994)
+    _x_27652 = intercalate(new_995, _x_27651)
+    return _x_27652
 
 # Lean: Corpus.Strings.replaceFirst
-def replace_first(s_1056: str, old_1057: str, new_1058: str) -> str:
-    def _f_19454():
-        return s_1056
-    _alt_19455 = _f_19454
-    def _f_19468(i_1060: int):
-        _x_19459 = strings_take(i_1060, s_1056)
-        _x_19460 = _x_19459 + new_1058
-        _x_19464 = len(old_1057)
-        _x_19465 = i_1060 + _x_19464
-        _x_19466 = strings_drop(_x_19465, s_1056)
-        _x_19467 = _x_19460 + _x_19466
-        return _x_19467
-    _alt_19469 = _f_19468
-    _x_19470 = index_of(s_1056, old_1057)
-    if _x_19470 is None:
-        _x_19472 = _alt_19455()
-        return _x_19472
+def replace_first(s_996: str, old_997: str, new_998: str) -> str:
+    def _f_27654():
+        return s_996
+    _alt_27655 = _f_27654
+    def _f_27668(i_1000: int):
+        _x_27659 = strings_take(i_1000, s_996)
+        _x_27660 = _x_27659 + new_998
+        _x_27664 = len(old_997)
+        _x_27665 = i_1000 + _x_27664
+        _x_27666 = strings_drop(_x_27665, s_996)
+        _x_27667 = _x_27660 + _x_27666
+        return _x_27667
+    _alt_27669 = _f_27668
+    _x_27670 = index_of(s_996, old_997)
+    if _x_27670 is None:
+        _x_27672 = _alt_27655()
+        return _x_27672
     else:
-        val_19473 = _x_19470
-        _x_19474 = _alt_19469(val_19473)
-        return _x_19474
+        val_27673 = _x_27670
+        _x_27674 = _alt_27669(val_27673)
+        return _x_27674
 
 # Lean: Corpus.Strings.removePrefix
-def remove_prefix(pfx_1061: str, s_1062: str) -> str:
-    _x_19477 = starts_with(s_1062, pfx_1061)
-    _x_19478 = True
-    if _x_19477:
-        _x_19482 = len(pfx_1061)
-        _x_19483 = strings_drop(_x_19482, s_1062)
-        return _x_19483
+def remove_prefix(pfx_1001: str, s_1002: str) -> str:
+    _x_27677 = starts_with(s_1002, pfx_1001)
+    _x_27678 = True
+    _x_27679 = _x_27677 == True
+    if _x_27679:
+        _x_27682 = len(pfx_1001)
+        _x_27683 = strings_drop(_x_27682, s_1002)
+        return _x_27683
     else:
-        return s_1062
+        return s_1002
 
 # Lean: Corpus.Strings.removeSuffix
-def remove_suffix(suffix_1063: str, s_1064: str) -> str:
-    _x_19486 = ends_with(s_1064, suffix_1063)
-    _x_19487 = True
-    if _x_19486:
-        _x_19494 = len(s_1064)
-        _x_19495 = len(suffix_1063)
-        _x_19496 = _x_19494 - _x_19495
-        _x_19497 = strings_take(_x_19496, s_1064)
-        return _x_19497
+def remove_suffix(suffix_1003: str, s_1004: str) -> str:
+    _x_27686 = ends_with(s_1004, suffix_1003)
+    _x_27687 = True
+    _x_27688 = _x_27686 == True
+    if _x_27688:
+        _x_27694 = len(s_1004)
+        _x_27695 = len(suffix_1003)
+        _x_27696 = _x_27694 - _x_27695
+        _x_27697 = strings_take(_x_27696, s_1004)
+        return _x_27697
     else:
-        return s_1064
+        return s_1004
 
 # Lean: Corpus.Strings.toCharList
-def to_char_list(s_1065: str) -> list[str]:
-    _x_19500 = list(s_1065)
-    return _x_19500
+def to_char_list(s_1005: str) -> list[str]:
+    _x_27700 = list(s_1005)
+    return _x_27700
 
 # Lean: Corpus.Strings.fromCharList
-def from_char_list(cs_1066: list[str]) -> str:
-    _x_19502 = ''.join(cs_1066)
-    return _x_19502
+def from_char_list(cs_1006: list[str]) -> str:
+    _x_27702 = ''.join(cs_1006)
+    return _x_27702
 
 # Lean: Corpus.Strings.filterChars
-def filter_chars(p_1067: Callable[[str], bool], s_1068: str) -> str:
-    _x_19504 = list(s_1068)
-    _x_19505 = [x for x in _x_19504 if p_1067(x)]
-    _x_19506 = ''.join(_x_19505)
-    return _x_19506
+def filter_chars(p_1007: Callable[[str], bool], s_1008: str) -> str:
+    _x_27704 = list(s_1008)
+    _x_27705 = [x for x in _x_27704 if p_1007(x)]
+    _x_27706 = ''.join(_x_27705)
+    return _x_27706
 
 # Lean: Corpus.Strings.mapChars
-def map_chars(f_1069: Callable[[str], str], s_1070: str) -> str:
-    _x_19508 = list(s_1070)
-    _x_19509 = [f_1069(x) for x in _x_19508]
-    _x_19510 = ''.join(_x_19509)
-    return _x_19510
+def map_chars(f_1009: Callable[[str], str], s_1010: str) -> str:
+    _x_27708 = list(s_1010)
+    _x_27709 = [f_1009(x) for x in _x_27708]
+    _x_27710 = ''.join(_x_27709)
+    return _x_27710
 
 # Lean: Corpus.Strings.ord
-def strings_ord(c_1071: str) -> int:
-    _x_19512 = ord(c_1071)
-    return _x_19512
+def strings_ord(c_1011: str) -> int:
+    _x_27712 = ord(c_1011)
+    return _x_27712
 
 # Lean: Corpus.Strings.chr
-def strings_chr(n_1072: int) -> str:
-    _x_19514 = chr(n_1072)
-    return _x_19514
+def strings_chr(n_1012: int) -> str:
+    _x_27714 = chr(n_1012)
+    return _x_27714
 
 # Lean: Corpus.Strings.toAsciiCodes
-def to_ascii_codes(s_1073: str) -> list[int]:
-    _x_19516 = ord
-    _x_19517 = list(s_1073)
-    _x_19518 = [_x_19516(x) for x in _x_19517]
-    return _x_19518
+def to_ascii_codes(s_1013: str) -> list[int]:
+    _x_27716 = ord
+    _x_27717 = list(s_1013)
+    _x_27718 = [_x_27716(x) for x in _x_27717]
+    return _x_27718
 
 # Lean: Corpus.Strings.fromAsciiCodes
 def from_ascii_codes(ns: list[int]) -> str:
-    _x_19520 = chr
-    _x_19521 = [_x_19520(x) for x in ns]
-    _x_19522 = ''.join(_x_19521)
-    return _x_19522
+    _x_27720 = chr
+    _x_27721 = [_x_27720(x) for x in ns]
+    _x_27722 = ''.join(_x_27721)
+    return _x_27722
 
 # Lean: Corpus.Games.Player.other
-def other(x_19524: Player) -> Player:
-    def _f_19526():
-        _x_19525 = O()
-        return _x_19525
-    _alt_19527 = _f_19526
-    def _f_19529():
-        _x_19528 = X()
-        return _x_19528
-    _alt_19530 = _f_19529
-    match x_19524:
+def other(x_27724: Player) -> Player:
+    def _f_27726():
+        _x_27725 = O()
+        return _x_27725
+    _alt_27727 = _f_27726
+    def _f_27729():
+        _x_27728 = X()
+        return _x_27728
+    _alt_27730 = _f_27729
+    match x_27724:
         case X():
-            _x_19532 = _alt_19527()
-            return _x_19532
+            _x_27732 = _alt_27727()
+            return _x_27732
         case O():
-            _x_19534 = _alt_19530()
-            return _x_19534
+            _x_27734 = _alt_27730()
+            return _x_27734
 
 # Lean: Corpus.Games.TicTacToe.empty
 def tic_tac_toe_empty() -> TicTacToe:
-    _x_19537 = 9
-    _x_19540 = None
-    _x_19541 = list_replicate(None, 9, _x_19540)
-    _x_19542 = X()
-    _x_19543 = TicTacToe_mk(_x_19541, _x_19542)
-    return _x_19543
+    _x_27737 = 9
+    _x_27740 = None
+    _x_27741 = replicate_tr(None, 9, _x_27740)
+    _x_27742 = X()
+    _x_27743 = TicTacToe_mk(_x_27741, _x_27742)
+    return _x_27743
 
 # Lean: Corpus.Games.TicTacToe.get
-def tic_tac_toe_get(g_1076: TicTacToe, row: int, col: int) -> Player | None:
-    def _f_19544(p_1077: Player | None):
-        return p_1077
-    _alt_19545 = _f_19544
-    def _f_19547():
-        _x_19546 = None
-        return _x_19546
-    _alt_19548 = _f_19547
-    def _f_19552(xs_1079: list[Player | None], i_1080: int):
-        _x_19550 = len(xs_1079)
-        _x_19551 = i_1080 < _x_19550
-        return _x_19551
-    _x_19554 = (lambda xs, i: xs[i] if 0 <= i < len(xs) else None)
-    _x_19555 = g_1076.tic_tac_toe_0
-    _x_19562 = 3
-    _x_19565 = row * 3
-    _x_19566 = _x_19565 + col
-    _x_19567 = _x_19554(_x_19555, _x_19566)
-    if _x_19567 is None:
-        _x_19569 = _alt_19548()
-        return _x_19569
+def tic_tac_toe_get(g_1016: TicTacToe, row: int, col: int) -> Player | None:
+    _alt_27745 = (lambda p_1017: p_1017)
+    def _f_27747():
+        _x_27746 = None
+        return _x_27746
+    _alt_27748 = _f_27747
+    _x_27750 = (lambda xs, i: xs[i] if 0 <= i < len(xs) else None)
+    _x_27751 = g_1016.field_0
+    _x_27758 = 3
+    _x_27761 = row * 3
+    _x_27762 = _x_27761 + col
+    _x_27763 = _x_27750(_x_27751, _x_27762)
+    if _x_27763 is None:
+        _x_27765 = _alt_27748()
+        return _x_27765
     else:
-        val_19570 = _x_19567
-        _x_19571 = _alt_19545(val_19570)
-        return _x_19571
+        val_27766 = _x_27763
+        _x_27767 = _alt_27745(val_27766)
+        return _x_27767
 
 # Lean: Corpus.Games.TicTacToe.set
-def tic_tac_toe_set(g_1081: TicTacToe, row_1082: int, col_1083: int) -> TicTacToe | None:
-    _x_19580 = 3
-    _x_19583 = row_1082 * 3
-    _x_19584 = _x_19583 + col_1083
-    _x_19585 = 9
-    _x_19588 = 9 <= _x_19584
-    if _x_19588:
-        _x_19623 = None
-        return _x_19623
+def tic_tac_toe_set(g_1019: TicTacToe, row_1020: int, col_1021: int) -> TicTacToe | None:
+    _x_27776 = 3
+    _x_27779 = row_1020 * 3
+    _x_27780 = _x_27779 + col_1021
+    _x_27781 = 9
+    _x_27784 = 9 <= _x_27780
+    if _x_27784:
+        _x_27818 = None
+        return _x_27818
     else:
-        def _f_19597():
-            _x_19590 = g_1081.tic_tac_toe_0
-            _x_19591 = g_1081.tic_tac_toe_1
-            _x_19592 = _x_19591
-            _x_19593 = _x_19590[:_x_19584] + [_x_19592] + _x_19590[_x_19584+1:]
-            _x_19594 = other(_x_19591)
-            _x_19595 = TicTacToe_mk(_x_19593, _x_19594)
-            _x_19596 = _x_19595
-            return _x_19596
-        _alt_19598 = _f_19597
-        def _f_19601(x_19599: Player | None | None):
-            _x_19600 = None
-            return _x_19600
-        _alt_19602 = _f_19601
-        def _f_19606(xs_1086: list[Player | None], i_1087: int):
-            _x_19604 = len(xs_1086)
-            _x_19605 = i_1087 < _x_19604
-            return _x_19605
-        _x_19608 = (lambda xs, i: xs[i] if 0 <= i < len(xs) else None)
-        _x_19609 = g_1081.tic_tac_toe_0
-        _x_19610 = _x_19608(_x_19609, _x_19584)
-        if _x_19610 is None:
-            _x_19611 = None
-            _x_19612 = _alt_19602(_x_19611)
-            return _x_19612
+        def _f_27793():
+            _x_27786 = g_1019.field_0
+            _x_27787 = g_1019.field_1
+            _x_27788 = _x_27787
+            _x_27789 = set_tr(None, _x_27786, _x_27780, _x_27788)
+            _x_27790 = other(_x_27787)
+            _x_27791 = TicTacToe_mk(_x_27789, _x_27790)
+            _x_27792 = _x_27791
+            return _x_27792
+        _alt_27794 = _f_27793
+        def _f_27797(x_27795: Player | None | None):
+            _x_27796 = None
+            return _x_27796
+        _alt_27798 = _f_27797
+        _x_27800 = (lambda xs, i: xs[i] if 0 <= i < len(xs) else None)
+        _x_27801 = g_1019.field_0
+        _x_27802 = _x_27800(_x_27801, _x_27780)
+        if _x_27802 is None:
+            _x_27815 = (lambda h_27812: _alt_27798(_x_27802))(None)
+            return _x_27815
         else:
-            val_19613 = _x_19610
-            if val_19613 is None:
-                _x_19615 = _alt_19598()
-                return _x_19615
+            val_27803 = _x_27802
+            if val_27803 is None:
+                _x_27805 = _alt_27794()
+                return _x_27805
             else:
-                val_19616 = val_19613
-                _x_19617 = val_19616
-                _x_19618 = _x_19617
-                _x_19619 = _alt_19602(_x_19618)
-                return _x_19619
+                def _f_27809(h_27806: Any):
+                    _x_27807 = val_27803
+                    _x_27808 = _alt_27798(_x_27807)
+                    return _x_27808
+                _x_27810 = _f_27809(None)
+                return _x_27810
 
 # Lean: Corpus.Games.TicTacToe.checkLine
-def check_line(g_1088: TicTacToe, i1: int, i2: int, i3: int) -> Player | None:
-    def _f_19656(p1_1089: Player, p2_1090: Player, p3_1091: Player):
-        def _f_19627():
-            _x_19626 = False
+def check_line(g_1024: TicTacToe, i1: int, i2: int, i3: int) -> Player | None:
+    def _f_27851(p1_1025: Player, p2_1026: Player, p3_1027: Player):
+        def _f_27822():
+            _x_27821 = False
             return False
-        _alt_19628 = _f_19627
-        def _f_19632():
-            _x_19631 = p2_1090 == p3_1091
-            return _x_19631
-        _alt_19633 = _f_19632
-        _x_19636 = p1_1089 == p2_1090
-        def _jp_19649(_y_19641: bool):
-            _x_19642 = True
-            if _y_19641:
-                _x_19647 = p1_1089
-                return _x_19647
+        _alt_27823 = _f_27822
+        def _f_27827():
+            _x_27826 = p2_1026 == p3_1027
+            return _x_27826
+        _alt_27828 = _f_27827
+        _x_27831 = p1_1025 == p2_1026
+        def _jp_27844(_y_27836: bool):
+            _x_27837 = True
+            _x_27838 = _y_27836 == True
+            if _x_27838:
+                _x_27842 = p1_1025
+                return _x_27842
             else:
-                _x_19645 = None
-                return _x_19645
-        def _jp_19652():
-            _x_19651 = _alt_19628()
-            return _jp_19649(_x_19651)
-        def _jp_19655():
-            _x_19654 = _alt_19633()
-            return _jp_19649(_x_19654)
-        if _x_19636:
-            return _jp_19655()
+                _x_27840 = None
+                return _x_27840
+        def _jp_27847():
+            _x_27846 = _alt_27823()
+            return _jp_27844(_x_27846)
+        def _jp_27850():
+            _x_27849 = _alt_27828()
+            return _jp_27844(_x_27849)
+        if _x_27831:
+            return _jp_27850()
         else:
-            return _jp_19652()
-    _alt_19657 = _f_19656
-    def _f_19662(x_19658: Player | None | None, x_19659: Player | None | None, x_19660: Player | None | None):
-        _x_19661 = None
-        return _x_19661
-    _alt_19663 = _f_19662
-    def _f_19667(xs_1094: list[Player | None], i_1095: int):
-        _x_19665 = len(xs_1094)
-        _x_19666 = i_1095 < _x_19665
-        return _x_19666
-    _x_19669 = (lambda xs, i: xs[i] if 0 <= i < len(xs) else None)
-    _x_19670 = g_1088.tic_tac_toe_0
-    _x_19671 = _x_19669(_x_19670, i1)
-    if _x_19671 is None:
-        _x_19672 = None
-        _x_19673 = _x_19669(_x_19670, i2)
-        _x_19674 = _x_19669(_x_19670, i3)
-        _x_19675 = _alt_19663(_x_19672, _x_19673, _x_19674)
-        return _x_19675
+            return _jp_27847()
+    _alt_27852 = _f_27851
+    def _f_27857(x_27853: Player | None | None, x_27854: Player | None | None, x_27855: Player | None | None):
+        _x_27856 = None
+        return _x_27856
+    _alt_27858 = _f_27857
+    _x_27860 = (lambda xs, i: xs[i] if 0 <= i < len(xs) else None)
+    _x_27861 = g_1024.field_0
+    _x_27862 = _x_27860(_x_27861, i1)
+    if _x_27862 is None:
+        _x_27921 = (lambda h_27916: _alt_27858(_x_27862, _x_27860(_x_27861, i2), _x_27860(_x_27861, i3)))(None)
+        return _x_27921
     else:
-        val_19676 = _x_19671
-        if val_19676 is None:
-            _x_19677 = None
-            _x_19678 = _x_19677
-            _x_19679 = _x_19669(_x_19670, i2)
-            _x_19680 = _x_19669(_x_19670, i3)
-            _x_19681 = _alt_19663(_x_19678, _x_19679, _x_19680)
-            return _x_19681
+        val_27863 = _x_27862
+        if val_27863 is None:
+            def _f_27913(h_27908: Any):
+                _x_27909 = val_27863
+                _x_27910 = _x_27860(_x_27861, i2)
+                _x_27911 = _x_27860(_x_27861, i3)
+                _x_27912 = _alt_27858(_x_27909, _x_27910, _x_27911)
+                return _x_27912
+            _x_27914 = _f_27913(None)
+            return _x_27914
         else:
-            val_19682 = val_19676
-            _x_19683 = _x_19669(_x_19670, i2)
-            if _x_19683 is None:
-                _x_19684 = val_19682
-                _x_19685 = _x_19684
-                _x_19686 = None
-                _x_19687 = _x_19669(_x_19670, i3)
-                _x_19688 = _alt_19663(_x_19685, _x_19686, _x_19687)
-                return _x_19688
+            val_27864 = val_27863
+            _x_27865 = _x_27860(_x_27861, i2)
+            if _x_27865 is None:
+                def _f_27905(h_27900: Any):
+                    _x_27901 = val_27864
+                    _x_27902 = _x_27901
+                    _x_27903 = _x_27860(_x_27861, i3)
+                    _x_27904 = _alt_27858(_x_27902, _x_27865, _x_27903)
+                    return _x_27904
+                _x_27906 = _f_27905(None)
+                return _x_27906
             else:
-                val_19689 = _x_19683
-                if val_19689 is None:
-                    _x_19690 = val_19682
-                    _x_19691 = _x_19690
-                    _x_19692 = None
-                    _x_19693 = _x_19692
-                    _x_19694 = _x_19669(_x_19670, i3)
-                    _x_19695 = _alt_19663(_x_19691, _x_19693, _x_19694)
-                    return _x_19695
+                val_27866 = _x_27865
+                if val_27866 is None:
+                    def _f_27897(h_27891: Any):
+                        _x_27892 = val_27864
+                        _x_27893 = _x_27892
+                        _x_27894 = val_27866
+                        _x_27895 = _x_27860(_x_27861, i3)
+                        _x_27896 = _alt_27858(_x_27893, _x_27894, _x_27895)
+                        return _x_27896
+                    _x_27898 = _f_27897(None)
+                    return _x_27898
                 else:
-                    val_19696 = val_19689
-                    _x_19697 = _x_19669(_x_19670, i3)
-                    if _x_19697 is None:
-                        _x_19698 = val_19682
-                        _x_19699 = _x_19698
-                        _x_19700 = val_19696
-                        _x_19701 = _x_19700
-                        _x_19702 = None
-                        _x_19703 = _alt_19663(_x_19699, _x_19701, _x_19702)
-                        return _x_19703
+                    val_27867 = val_27866
+                    _x_27868 = _x_27860(_x_27861, i3)
+                    if _x_27868 is None:
+                        def _f_27888(h_27882: Any):
+                            _x_27883 = val_27864
+                            _x_27884 = _x_27883
+                            _x_27885 = val_27867
+                            _x_27886 = _x_27885
+                            _x_27887 = _alt_27858(_x_27884, _x_27886, _x_27868)
+                            return _x_27887
+                        _x_27889 = _f_27888(None)
+                        return _x_27889
                     else:
-                        val_19704 = _x_19697
-                        if val_19704 is None:
-                            _x_19705 = val_19682
-                            _x_19706 = _x_19705
-                            _x_19707 = val_19696
-                            _x_19708 = _x_19707
-                            _x_19709 = None
-                            _x_19710 = _x_19709
-                            _x_19711 = _alt_19663(_x_19706, _x_19708, _x_19710)
-                            return _x_19711
+                        val_27869 = _x_27868
+                        if val_27869 is None:
+                            def _f_27879(h_27872: Any):
+                                _x_27873 = val_27864
+                                _x_27874 = _x_27873
+                                _x_27875 = val_27867
+                                _x_27876 = _x_27875
+                                _x_27877 = val_27869
+                                _x_27878 = _alt_27858(_x_27874, _x_27876, _x_27877)
+                                return _x_27878
+                            _x_27880 = _f_27879(None)
+                            return _x_27880
                         else:
-                            val_19712 = val_19704
-                            _x_19713 = _alt_19657(val_19682, val_19696, val_19712)
-                            return _x_19713
+                            val_27870 = val_27869
+                            _x_27871 = _alt_27852(val_27864, val_27867, val_27870)
+                            return _x_27871
 
 # Lean: Corpus.Games.TicTacToe.winner
-def winner(g_1096: TicTacToe) -> Player | None:
-    _x_19721 = 0
-    _x_19724 = 1
-    _x_19727 = 2
-    _x_19730 = (1, 2)
-    _x_19731 = (0, _x_19730)
-    _x_19732 = 3
-    _x_19735 = 4
-    _x_19738 = 5
-    _x_19741 = (4, 5)
-    _x_19742 = (3, _x_19741)
-    _x_19743 = 6
-    _x_19746 = 7
-    _x_19749 = 8
-    _x_19752 = (7, 8)
-    _x_19753 = (6, _x_19752)
-    _x_19754 = (3, 6)
-    _x_19755 = (0, _x_19754)
-    _x_19756 = (4, 7)
-    _x_19757 = (1, _x_19756)
-    _x_19758 = (5, 8)
-    _x_19759 = (2, _x_19758)
-    _x_19760 = (4, 8)
-    _x_19761 = (0, _x_19760)
-    _x_19762 = (4, 6)
-    _x_19763 = (2, _x_19762)
-    _x_19764 = []
-    _x_19765 = [_x_19763] + _x_19764
-    _x_19766 = [_x_19761] + _x_19765
-    _x_19767 = [_x_19759] + _x_19766
-    _x_19768 = [_x_19757] + _x_19767
-    _x_19769 = [_x_19755] + _x_19768
-    _x_19770 = [_x_19753] + _x_19769
-    _x_19771 = [_x_19742] + _x_19770
-    _x_19772 = [_x_19731] + _x_19771
-    def _f_19784(x_19773: tuple[int, tuple[int, int]]):
-        def _f_19775(i1_1097: int, i2_1098: int, i3_1099: int):
-            _x_19774 = check_line(g_1096, i1_1097, i2_1098, i3_1099)
-            return _x_19774
-        _alt_19776 = _f_19775
-        match x_19773:
-            case (fst_19777, snd_19778):
-                match snd_19778:
-                    case (fst_19779, snd_19780):
-                        _x_19781 = _alt_19776(fst_19777, fst_19779, snd_19780)
-                        return _x_19781
-    _x_19785 = next((y for x in _x_19772 if (y := _f_19784(x)) is not None), None)
-    return _x_19785
+def winner(g_1030: TicTacToe) -> Player | None:
+    _x_27924 = 0
+    _x_27927 = 1
+    _x_27930 = 2
+    _x_27933 = (1, 2)
+    _x_27934 = (0, _x_27933)
+    _x_27935 = 3
+    _x_27938 = 4
+    _x_27941 = 5
+    _x_27944 = (4, 5)
+    _x_27945 = (3, _x_27944)
+    _x_27946 = 6
+    _x_27949 = 7
+    _x_27952 = 8
+    _x_27955 = (7, 8)
+    _x_27956 = (6, _x_27955)
+    _x_27957 = (3, 6)
+    _x_27958 = (0, _x_27957)
+    _x_27959 = (4, 7)
+    _x_27960 = (1, _x_27959)
+    _x_27961 = (5, 8)
+    _x_27962 = (2, _x_27961)
+    _x_27963 = (4, 8)
+    _x_27964 = (0, _x_27963)
+    _x_27965 = (4, 6)
+    _x_27966 = (2, _x_27965)
+    _x_27967 = []
+    _x_27968 = [_x_27966] + _x_27967
+    _x_27969 = [_x_27964] + _x_27968
+    _x_27970 = [_x_27962] + _x_27969
+    _x_27971 = [_x_27960] + _x_27970
+    _x_27972 = [_x_27958] + _x_27971
+    _x_27973 = [_x_27956] + _x_27972
+    _x_27974 = [_x_27945] + _x_27973
+    _x_27975 = [_x_27934] + _x_27974
+    def _f_27987(x_27976: tuple[int, tuple[int, int]]):
+        def _f_27978(i1_1031: int, i2_1032: int, i3_1033: int):
+            _x_27977 = check_line(g_1030, i1_1031, i2_1032, i3_1033)
+            return _x_27977
+        _alt_27979 = _f_27978
+        match x_27976:
+            case (fst_27980, snd_27981):
+                match snd_27981:
+                    case (fst_27982, snd_27983):
+                        _x_27984 = _alt_27979(fst_27980, fst_27982, snd_27983)
+                        return _x_27984
+    _x_27988 = next((_y for x in _x_27975 if (_y := _f_27987(x)) is not None), None)
+    return _x_27988
 
 # Lean: Corpus.Games.TicTacToe.isDraw
-def is_draw(g_1100: TicTacToe) -> bool:
-    def _f_19788():
-        _x_19787 = False
+def is_draw(g_1034: TicTacToe) -> bool:
+    def _f_27991():
+        _x_27990 = False
         return False
-    _alt_19789 = _f_19788
-    def _f_19793():
-        _x_19790 = g_1100.tic_tac_toe_0
-        _x_19791 = (lambda x: x is not None)(None)
-        _x_19792 = all(_x_19791(x) for x in _x_19790)
-        return _x_19792
-    _alt_19794 = _f_19793
-    _x_19795 = winner(g_1100)
-    _x_19796 = (lambda x: x is None)(_x_19795)
-    if _x_19796:
-        _x_19800 = _alt_19794()
-        return _x_19800
+    _alt_27992 = _f_27991
+    def _f_27996():
+        _x_27993 = g_1034.field_0
+        _x_27994 = (lambda x: x is not None)(None)
+        _x_27995 = all(_x_27994(x) for x in _x_27993)
+        return _x_27995
+    _alt_27997 = _f_27996
+    _x_27998 = winner(g_1034)
+    _x_27999 = (lambda x: x is None)(_x_27998)
+    if _x_27999:
+        _x_28003 = _alt_27997()
+        return _x_28003
     else:
-        _x_19798 = _alt_19789()
-        return _x_19798
+        _x_28001 = _alt_27992()
+        return _x_28001
 
 # Lean: Corpus.Games.TicTacToe.isOver
-def tic_tac_toe_is_over(g_1103: TicTacToe) -> bool:
-    def _f_19804():
-        _x_19803 = True
+def tic_tac_toe_is_over(g_1037: TicTacToe) -> bool:
+    def _f_28007():
+        _x_28006 = True
         return True
-    _alt_19805 = _f_19804
-    def _f_19807():
-        _x_19806 = is_draw(g_1103)
-        return _x_19806
-    _alt_19808 = _f_19807
-    _x_19809 = winner(g_1103)
-    _x_19810 = (lambda x: x is not None)(_x_19809)
-    if _x_19810:
-        _x_19814 = _alt_19805()
-        return _x_19814
+    _alt_28008 = _f_28007
+    def _f_28010():
+        _x_28009 = is_draw(g_1037)
+        return _x_28009
+    _alt_28011 = _f_28010
+    _x_28012 = winner(g_1037)
+    _x_28013 = (lambda x: x is not None)(_x_28012)
+    if _x_28013:
+        _x_28017 = _alt_28008()
+        return _x_28017
     else:
-        _x_19812 = _alt_19808()
-        return _x_19812
+        _x_28015 = _alt_28011()
+        return _x_28015
 
 # Lean: Corpus.Games.TicTacToe.validMoves
-def valid_moves(g_1106: TicTacToe) -> list[tuple[int, int]]:
-    _x_19817 = tic_tac_toe_is_over(g_1106)
-    _x_19818 = True
-    if _x_19817:
-        _x_19866 = []
-        return _x_19866
+def valid_moves(g_1040: TicTacToe) -> list[tuple[int, int]]:
+    _x_28020 = tic_tac_toe_is_over(g_1040)
+    _x_28021 = True
+    _x_28022 = _x_28020 == True
+    if _x_28022:
+        _x_28068 = []
+        return _x_28068
     else:
-        def _f_19859(i_1107: int):
-            def _f_19834():
-                _x_19824 = 3
-                _x_19827 = i_1107 // 3
-                _x_19831 = i_1107 % 3
-                _x_19832 = (_x_19827, _x_19831)
-                _x_19833 = _x_19832
-                return _x_19833
-            _alt_19835 = _f_19834
-            def _f_19838(x_19836: Player | None | None):
-                _x_19837 = None
-                return _x_19837
-            _alt_19839 = _f_19838
-            def _f_19843(xs_1109: list[Player | None], i_1110: int):
-                _x_19841 = len(xs_1109)
-                _x_19842 = i_1110 < _x_19841
-                return _x_19842
-            _x_19845 = (lambda xs, i: xs[i] if 0 <= i < len(xs) else None)
-            _x_19846 = g_1106.tic_tac_toe_0
-            _x_19847 = _x_19845(_x_19846, i_1107)
-            if _x_19847 is None:
-                _x_19848 = None
-                _x_19849 = _alt_19839(_x_19848)
-                return _x_19849
+        def _f_28061(i_1041: int):
+            def _f_28037():
+                _x_28027 = 3
+                _x_28030 = i_1041 // 3
+                _x_28034 = i_1041 % 3
+                _x_28035 = (_x_28030, _x_28034)
+                _x_28036 = _x_28035
+                return _x_28036
+            _alt_28038 = _f_28037
+            def _f_28041(x_28039: Player | None | None):
+                _x_28040 = None
+                return _x_28040
+            _alt_28042 = _f_28041
+            _x_28044 = (lambda xs, i: xs[i] if 0 <= i < len(xs) else None)
+            _x_28045 = g_1040.field_0
+            _x_28046 = _x_28044(_x_28045, i_1041)
+            if _x_28046 is None:
+                _x_28059 = (lambda h_28056: _alt_28042(_x_28046))(None)
+                return _x_28059
             else:
-                val_19850 = _x_19847
-                if val_19850 is None:
-                    _x_19852 = _alt_19835()
-                    return _x_19852
+                val_28047 = _x_28046
+                if val_28047 is None:
+                    _x_28049 = _alt_28038()
+                    return _x_28049
                 else:
-                    val_19853 = val_19850
-                    _x_19854 = val_19853
-                    _x_19855 = _x_19854
-                    _x_19856 = _alt_19839(_x_19855)
-                    return _x_19856
-        _x_19860 = 9
-        _x_19863 = list(range(9))
-        _x_19864 = [y for x in _x_19863 if (y := _f_19859(x)) is not None]
-        return _x_19864
+                    def _f_28053(h_28050: Any):
+                        _x_28051 = val_28047
+                        _x_28052 = _alt_28042(_x_28051)
+                        return _x_28052
+                    _x_28054 = _f_28053(None)
+                    return _x_28054
+        _x_28062 = 9
+        _x_28065 = list(range(9))
+        _x_28066 = [_y for x in _x_28065 if (_y := _f_28061(x)) is not None]
+        return _x_28066
 
 # Lean: Corpus.Games.Nim.create
 def nim_create(sizes: list[int]) -> Nim:
-    _x_19869 = Nim_mk(sizes)
-    return _x_19869
+    _x_28071 = Nim_mk(sizes)
+    return _x_28071
 
 # Lean: Corpus.Games.Nim.take
-def nim_take(g_1111: Nim, pile: int, count_1112: int) -> Nim | None:
-    def _f_19909(n_1113: int):
-        def _f_19872():
-            _x_19871 = False
+def nim_take(g_1043: Nim, pile: int, count_1044: int) -> Nim | None:
+    def _f_28111(n_1045: int):
+        def _f_28074():
+            _x_28073 = False
             return False
-        _alt_19873 = _f_19872
-        def _f_19876():
-            _x_19874 = count_1112 <= n_1113
-            return _x_19874
-        _alt_19877 = _f_19876
-        _x_19878 = 0
-        _x_19881 = 0 < count_1112
-        def _jp_19902(_y_19887: bool):
-            _x_19888 = True
-            if _y_19887:
-                _x_19893 = g_1111.nim_0
-                _x_19897 = n_1113 - count_1112
-                _x_19898 = _x_19893[:pile] + [_x_19897] + _x_19893[pile+1:]
-                _x_19899 = Nim_mk(_x_19898)
-                _x_19900 = _x_19899
-                return _x_19900
+        _alt_28075 = _f_28074
+        def _f_28078():
+            _x_28076 = count_1044 <= n_1045
+            return _x_28076
+        _alt_28079 = _f_28078
+        _x_28080 = 0
+        _x_28083 = 0 < count_1044
+        def _jp_28104(_y_28089: bool):
+            _x_28090 = True
+            _x_28091 = _y_28089 == True
+            if _x_28091:
+                _x_28095 = g_1043.field_0
+                _x_28099 = n_1045 - count_1044
+                _x_28100 = set_tr(None, _x_28095, pile, _x_28099)
+                _x_28101 = Nim_mk(_x_28100)
+                _x_28102 = _x_28101
+                return _x_28102
             else:
-                _x_19891 = None
-                return _x_19891
-        def _jp_19905():
-            _x_19904 = _alt_19873()
-            return _jp_19902(_x_19904)
-        def _jp_19908():
-            _x_19907 = _alt_19877()
-            return _jp_19902(_x_19907)
-        if _x_19881:
-            return _jp_19908()
+                _x_28093 = None
+                return _x_28093
+        def _jp_28110():
+            _x_28109 = _alt_28079()
+            return _jp_28104(_x_28109)
+        def _jp_28107():
+            _x_28106 = _alt_28075()
+            return _jp_28104(_x_28106)
+        if _x_28083:
+            return _jp_28110()
         else:
-            return _jp_19905()
-    _alt_19910 = _f_19909
-    def _f_19912():
-        _x_19911 = None
-        return _x_19911
-    _alt_19913 = _f_19912
-    def _f_19917(xs_1117: list[int], i_1118: int):
-        _x_19915 = len(xs_1117)
-        _x_19916 = i_1118 < _x_19915
-        return _x_19916
-    _x_19919 = (lambda xs, i: xs[i] if 0 <= i < len(xs) else None)
-    _x_19920 = g_1111.nim_0
-    _x_19921 = _x_19919(_x_19920, pile)
-    if _x_19921 is None:
-        _x_19923 = _alt_19913()
-        return _x_19923
+            return _jp_28107()
+    _alt_28112 = _f_28111
+    def _f_28114():
+        _x_28113 = None
+        return _x_28113
+    _alt_28115 = _f_28114
+    _x_28117 = (lambda xs, i: xs[i] if 0 <= i < len(xs) else None)
+    _x_28118 = g_1043.field_0
+    _x_28119 = _x_28117(_x_28118, pile)
+    if _x_28119 is None:
+        _x_28121 = _alt_28115()
+        return _x_28121
     else:
-        val_19924 = _x_19921
-        _x_19925 = _alt_19910(val_19924)
-        return _x_19925
+        val_28122 = _x_28119
+        _x_28123 = _alt_28112(val_28122)
+        return _x_28123
 
 # Lean: Corpus.Games.Nim.isOver
-def nim_is_over(g_1119: Nim) -> bool:
-    _x_19928 = g_1119.nim_0
-    def _f_19936(x_19929: int):
-        _x_19932 = 0
-        _x_19935 = x_19929 == 0
-        return _x_19935
-    _x_19937 = all(_f_19936(x) for x in _x_19928)
-    return _x_19937
+def nim_is_over(g_1049: Nim) -> bool:
+    _x_28126 = g_1049.field_0
+    _x_28136 = all((x_28127 == 0) for x_28127 in _x_28126)
+    return _x_28136
 
 # Lean: Corpus.Games.Nim.nimSum
-def nim_sum(g_1120: Nim) -> int:
-    _x_19939 = (lambda a, b: a ^ b)
-    _x_19940 = 0
-    _x_19943 = g_1120.nim_0
-    _x_19944 = functools.reduce(_x_19939, _x_19943, 0)
-    return _x_19944
+def nim_sum(g_1050: Nim) -> int:
+    _x_28138 = (lambda a, b: a ^ b)
+    _x_28139 = 0
+    _x_28142 = g_1050.field_0
+    _x_28143 = functools.reduce(_x_28138, _x_28142, 0)
+    return _x_28143
 
 # Lean: Corpus.Games.Nim.isWinningPosition
-def is_winning_position(g_1121: Nim) -> bool:
-    _x_19947 = nim_sum(g_1121)
-    _x_19948 = 0
-    _x_19951 = (lambda a, b: a != b)(0)
-    return _x_19951
+def is_winning_position(g_1051: Nim) -> bool:
+    _x_28147 = nim_sum(g_1051)
+    _x_28148 = 0
+    _x_28151 = (lambda a, b: a != b)(0)
+    return _x_28151
 
 # Lean: Corpus.Games.Card.value
-def value(c_1122: Card) -> int:
-    def _f_19956():
-        _x_19953 = 11
+def value(c_1052: Card) -> int:
+    def _f_28156():
+        _x_28153 = 11
         return 11
-    _alt_19957 = _f_19956
-    def _f_19961():
-        _x_19958 = 2
+    _alt_28157 = _f_28156
+    def _f_28161():
+        _x_28158 = 2
         return 2
-    _alt_19962 = _f_19961
-    def _f_19966():
-        _x_19963 = 3
+    _alt_28162 = _f_28161
+    def _f_28166():
+        _x_28163 = 3
         return 3
-    _alt_19967 = _f_19966
-    def _f_19971():
-        _x_19968 = 4
+    _alt_28167 = _f_28166
+    def _f_28171():
+        _x_28168 = 4
         return 4
-    _alt_19972 = _f_19971
-    def _f_19976():
-        _x_19973 = 5
+    _alt_28172 = _f_28171
+    def _f_28176():
+        _x_28173 = 5
         return 5
-    _alt_19977 = _f_19976
-    def _f_19981():
-        _x_19978 = 6
+    _alt_28177 = _f_28176
+    def _f_28181():
+        _x_28178 = 6
         return 6
-    _alt_19982 = _f_19981
-    def _f_19986():
-        _x_19983 = 7
+    _alt_28182 = _f_28181
+    def _f_28186():
+        _x_28183 = 7
         return 7
-    _alt_19987 = _f_19986
-    def _f_19991():
-        _x_19988 = 8
+    _alt_28187 = _f_28186
+    def _f_28191():
+        _x_28188 = 8
         return 8
-    _alt_19992 = _f_19991
-    def _f_19996():
-        _x_19993 = 9
+    _alt_28192 = _f_28191
+    def _f_28196():
+        _x_28193 = 9
         return 9
-    _alt_19997 = _f_19996
-    def _f_20001():
-        _x_19998 = 10
+    _alt_28197 = _f_28196
+    def _f_28201():
+        _x_28198 = 10
         return 10
-    _alt_20002 = _f_20001
-    _alt_20003 = _f_20001
-    _alt_20004 = _f_20001
-    _alt_20005 = _f_20001
-    _x_20006 = c_1122.card_0
-    match _x_20006:
+    _alt_28202 = _f_28201
+    _alt_28203 = _f_28201
+    _alt_28204 = _f_28201
+    _alt_28205 = _f_28201
+    _x_28206 = c_1052.field_0
+    match _x_28206:
         case ace():
-            _x_20008 = _alt_19957()
-            return _x_20008
+            _x_28208 = _alt_28157()
+            return _x_28208
         case two():
-            _x_20010 = _alt_19962()
-            return _x_20010
+            _x_28210 = _alt_28162()
+            return _x_28210
         case three():
-            _x_20012 = _alt_19967()
-            return _x_20012
+            _x_28212 = _alt_28167()
+            return _x_28212
         case four():
-            _x_20014 = _alt_19972()
-            return _x_20014
+            _x_28214 = _alt_28172()
+            return _x_28214
         case five():
-            _x_20016 = _alt_19977()
-            return _x_20016
+            _x_28216 = _alt_28177()
+            return _x_28216
         case six():
-            _x_20018 = _alt_19982()
-            return _x_20018
+            _x_28218 = _alt_28182()
+            return _x_28218
         case seven():
-            _x_20020 = _alt_19987()
-            return _x_20020
+            _x_28220 = _alt_28187()
+            return _x_28220
         case eight():
-            _x_20022 = _alt_19992()
-            return _x_20022
+            _x_28222 = _alt_28192()
+            return _x_28222
         case nine():
-            _x_20024 = _alt_19997()
-            return _x_20024
+            _x_28224 = _alt_28197()
+            return _x_28224
         case ten():
-            _x_20026 = _alt_20002()
-            return _x_20026
+            _x_28226 = _alt_28202()
+            return _x_28226
         case jack():
-            _x_20028 = _alt_20003()
-            return _x_20028
+            _x_28228 = _alt_28203()
+            return _x_28228
         case queen():
-            _x_20030 = _alt_20004()
-            return _x_20030
+            _x_28230 = _alt_28204()
+            return _x_28230
         case king():
-            _x_20032 = _alt_20005()
-            return _x_20032
+            _x_28232 = _alt_28205()
+            return _x_28232
 
 # Lean: Corpus.Games.Card.isAce
-def is_ace(c_1133: Card) -> bool:
-    _x_20037 = c_1133.card_0
-    _x_20038 = ace()
-    _x_20039 = _x_20037 == _x_20038
-    return _x_20039
+def is_ace(c_1063: Card) -> bool:
+    _x_28237 = c_1063.field_0
+    _x_28238 = ace()
+    _x_28239 = _x_28237 == _x_28238
+    return _x_28239
 
 # Lean: Corpus.Games.BlackjackHand.empty
 def blackjack_hand_empty() -> BlackjackHand:
-    _x_20041 = []
-    _x_20042 = BlackjackHand_mk(_x_20041)
-    return _x_20042
+    _x_28241 = []
+    _x_28242 = BlackjackHand_mk(_x_28241)
+    return _x_28242
 
 # Lean: Corpus.Games.BlackjackHand.add
-def add(h_1134: BlackjackHand, c_1135: Card) -> BlackjackHand:
-    _x_20043 = h_1134.blackjack_hand_0
-    _x_20044 = [c_1135] + _x_20043
-    _x_20045 = BlackjackHand_mk(_x_20044)
-    return _x_20045
+def add(h_1064: BlackjackHand, c_1065: Card) -> BlackjackHand:
+    _x_28243 = h_1064.field_0
+    _x_28244 = [c_1065] + _x_28243
+    _x_28245 = BlackjackHand_mk(_x_28244)
+    return _x_28245
 
 # Lean: Corpus.Games.BlackjackHand.hardValue
-def hard_value(h_1136: BlackjackHand) -> int:
-    def _f_20052(acc_1137: int, c_1138: Card):
-        _x_20050 = value(c_1138)
-        _x_20051 = acc_1137 + _x_20050
-        return _x_20051
-    _x_20053 = 0
-    _x_20056 = h_1136.blackjack_hand_0
-    _x_20057 = functools.reduce(_f_20052, _x_20056, 0)
-    return _x_20057
+def hard_value(h_1066: BlackjackHand) -> int:
+    def _f_28252(acc_1067: int, c_1068: Card):
+        _x_28250 = value(c_1068)
+        _x_28251 = acc_1067 + _x_28250
+        return _x_28251
+    _x_28253 = 0
+    _x_28256 = h_1066.field_0
+    _x_28257 = functools.reduce(_f_28252, _x_28256, 0)
+    return _x_28257
 
 # Lean: Corpus.Games.BlackjackHand.numAces
-def num_aces(h_1139: BlackjackHand) -> int:
-    _x_20059 = is_ace()
-    _x_20060 = h_1139.blackjack_hand_0
-    _x_20061 = [x for x in _x_20060 if _x_20059(x)]
-    _x_20062 = len(_x_20061)
-    return _x_20062
+def num_aces(h_1069: BlackjackHand) -> int:
+    _x_28259 = is_ace()
+    _x_28260 = h_1069.field_0
+    _x_28261 = [x for x in _x_28260 if _x_28259(x)]
+    _x_28262 = len(_x_28261)
+    return _x_28262
 
 # Lean: Corpus.Games.BlackjackHand.bestValue
-def best_value(h_1140: BlackjackHand) -> int:
-    _x_20064 = hard_value(h_1140)
-    _x_20065 = num_aces(h_1140)
-    _x_20066 = best_value_adjust(_x_20064, _x_20065)
-    return _x_20066
+def best_value(h_1070: BlackjackHand) -> int:
+    _x_28264 = hard_value(h_1070)
+    _x_28265 = num_aces(h_1070)
+    _x_28266 = best_value_adjust(_x_28264, _x_28265)
+    return _x_28266
 
 # Lean: Corpus.Games.BlackjackHand.isBust
-def is_bust(h_1141: BlackjackHand) -> bool:
-    _x_20068 = 21
-    _x_20071 = best_value(h_1141)
-    _x_20072 = 21 < _x_20071
-    return _x_20072
+def is_bust(h_1071: BlackjackHand) -> bool:
+    _x_28268 = 21
+    _x_28271 = best_value(h_1071)
+    _x_28272 = 21 < _x_28271
+    return _x_28272
 
 # Lean: Corpus.Games.BlackjackHand.isBlackjack
-def is_blackjack(h_1142: BlackjackHand) -> bool:
-    def _f_20076():
-        _x_20075 = False
+def is_blackjack(h_1072: BlackjackHand) -> bool:
+    def _f_28276():
+        _x_28275 = False
         return False
-    _alt_20077 = _f_20076
-    def _f_20085():
-        _x_20080 = best_value(h_1142)
-        _x_20081 = 21
-        _x_20084 = _x_20080 == 21
-        return _x_20084
-    _alt_20086 = _f_20085
-    _x_20089 = h_1142.blackjack_hand_0
-    _x_20090 = len(_x_20089)
-    _x_20091 = 2
-    _x_20094 = _x_20090 == 2
-    if _x_20094:
-        _x_20098 = _alt_20086()
-        return _x_20098
+    _alt_28277 = _f_28276
+    def _f_28286():
+        _x_28281 = best_value(h_1072)
+        _x_28282 = 21
+        _x_28285 = _x_28281 == 21
+        return _x_28285
+    _alt_28287 = _f_28286
+    _x_28291 = h_1072.field_0
+    _x_28292 = len(_x_28291)
+    _x_28293 = 2
+    _x_28296 = _x_28292 == 2
+    if _x_28296:
+        _x_28300 = _alt_28287()
+        return _x_28300
     else:
-        _x_20096 = _alt_20077()
-        return _x_20096
+        _x_28298 = _alt_28277()
+        return _x_28298
 
 # Lean: Corpus.Games.roll
-def roll(sides_1145: int, seed_1146: int) -> int:
-    _x_20110 = 1103515245
-    _x_20113 = seed_1146 * 1103515245
-    _x_20114 = 12345
-    _x_20117 = _x_20113 + 12345
-    _x_20122 = 2
-    _x_20125 = 31
-    _x_20128 = 2 ** 31
-    _x_20129 = _x_20117 % _x_20128
-    _x_20130 = _x_20129 % sides_1145
-    _x_20131 = 1
-    _x_20134 = _x_20130 + 1
-    return _x_20134
+def roll(sides_1075: int, seed_1076: int) -> int:
+    _x_28312 = 1103515245
+    _x_28315 = seed_1076 * 1103515245
+    _x_28316 = 12345
+    _x_28319 = _x_28315 + 12345
+    _x_28324 = 2
+    _x_28327 = 31
+    _x_28330 = 2 ** 31
+    _x_28331 = _x_28319 % _x_28330
+    _x_28332 = _x_28331 % sides_1075
+    _x_28333 = 1
+    _x_28336 = _x_28332 + 1
+    return _x_28336
 
 # Lean: Corpus.Games.rollDice
-def roll_dice(num_dice: int, sides_1147: int, seed_1148: int) -> tuple[list[int], int]:
-    _x_20136 = []
-    _x_20137 = roll_dice_go(sides_1147, num_dice, seed_1148, _x_20136)
-    return _x_20137
+def roll_dice(num_dice: int, sides_1077: int, seed_1078: int) -> tuple[list[int], int]:
+    _x_28338 = []
+    _x_28339 = roll_dice_go(sides_1077, num_dice, seed_1078, _x_28338)
+    return _x_28339
 
 # Lean: Corpus.Games.sumDice
 def sum_dice(dice: list[int]) -> int:
-    def _f_20145(x1_20139: int, x2_20140: int):
-        _x_20144 = x1_20139 + x2_20140
-        return _x_20144
-    _x_20146 = 0
-    _x_20149 = functools.reduce(_f_20145, dice, 0)
-    return _x_20149
+    def _f_28347(x1_28341: int, x2_28342: int):
+        _x_28346 = x1_28341 + x2_28342
+        return _x_28346
+    _x_28348 = 0
+    _x_28351 = functools.reduce(_f_28347, dice, 0)
+    return _x_28351
 
 # Lean: Corpus.Games.yahtzeeScore
-def yahtzee_score(dice_1149: list[int]) -> int:
-    _x_20152 = len(dice_1149)
-    _x_20153 = 5
-    _x_20156 = (lambda a, b: a != b)(5)
-    _x_20157 = True
-    if _x_20156:
-        _x_20301 = 0
+def yahtzee_score(dice_1079: list[int]) -> int:
+    _x_28355 = len(dice_1079)
+    _x_28356 = 5
+    _x_28359 = (lambda a, b: a != b)(5)
+    _x_28360 = True
+    _x_28361 = _x_28359 == True
+    if _x_28361:
+        _x_28505 = 0
         return 0
     else:
-        _x_20160 = list(dice_1149)
-        def _f_20165(x1_20161: int, x2_20162: int):
-            _x_20163 = x1_20161 < x2_20162
-            return _x_20163
-        _x_20166 = 0
-        _x_20172 = len(_x_20160)
-        _x_20173 = 1
-        _x_20176 = _x_20172 - 1
-        _x_20177 = sorted(0, key=functools.cmp_to_key(lambda a, b: -1 if _x_20176(a, b) else 1))
-        _x_20178 = list(_x_20177)
-        def _f_20189(n_1151: int):
-            def _f_20186(x_20179: int):
-                _x_20184 = n_1151 + 1
-                _x_20185 = x_20179 == _x_20184
-                return _x_20185
-            _x_20187 = [x for x in dice_1149 if _f_20186(x)]
-            _x_20188 = len(_x_20187)
-            return _x_20188
-        _x_20190 = 6
-        _x_20193 = list(range(6))
-        _x_20194 = [_f_20189(x) for x in _x_20193]
-        _x_20196 = max
-        _x_20197 = functools.reduce(_x_20196, _x_20194, 0)
-        def _f_20204(x1_20198: int, x2_20199: int):
-            _x_20203 = x1_20198 + x2_20199
-            return _x_20203
-        _x_20205 = functools.reduce(_f_20204, dice_1149, 0)
-        _x_20207 = _x_20197 == 5
-        if _x_20207:
-            _x_20296 = 50
+        _x_28363 = list(dice_1079)
+        def _f_28368(x1_28364: int, x2_28365: int):
+            _x_28366 = x1_28364 < x2_28365
+            return _x_28366
+        _x_28369 = 0
+        _x_28375 = len(_x_28363)
+        _x_28376 = 1
+        _x_28379 = _x_28375 - 1
+        _x_28380 = sorted(0, key=functools.cmp_to_key(lambda a, b: -1 if _x_28379(a, b) else 1))
+        _x_28381 = list(_x_28380)
+        def _f_28392(n_1081: int):
+            _x_28390 = [x_28382 for x_28382 in dice_1079 if (x_28382 == (n_1081 + 1))]
+            _x_28391 = len(_x_28390)
+            return _x_28391
+        _x_28393 = 6
+        _x_28396 = list(range(6))
+        _x_28397 = [_f_28392(x) for x in _x_28396]
+        _x_28399 = max
+        _x_28400 = functools.reduce(_x_28399, _x_28397, 0)
+        def _f_28407(x1_28401: int, x2_28402: int):
+            _x_28406 = x1_28401 + x2_28402
+            return _x_28406
+        _x_28408 = functools.reduce(_f_28407, dice_1079, 0)
+        _x_28410 = _x_28400 == 5
+        _x_28411 = _x_28410 == True
+        if _x_28411:
+            _x_28500 = 50
             return 50
         else:
-            def _f_20210():
+            def _f_28414():
+                _x_28413 = True
                 return True
-            _alt_20211 = _f_20210
-            def _f_20230():
-                _x_20214 = 2
-                _x_20217 = 3
-                _x_20220 = 4
-                _x_20223 = []
-                _x_20224 = [6] + _x_20223
-                _x_20225 = [5] + _x_20224
-                _x_20226 = [4] + _x_20225
-                _x_20227 = [3] + _x_20226
-                _x_20228 = [2] + _x_20227
-                _x_20229 = _x_20178 == _x_20228
-                return _x_20229
-            _alt_20231 = _f_20230
-            _x_20234 = 2
-            _x_20237 = 3
-            _x_20240 = 4
-            _x_20243 = []
-            _x_20244 = [5] + _x_20243
-            _x_20245 = [4] + _x_20244
-            _x_20246 = [3] + _x_20245
-            _x_20247 = [2] + _x_20246
-            _x_20248 = [1] + _x_20247
-            _x_20249 = _x_20178 == _x_20248
-            def _jp_20288(_y_20254: bool):
-                if _y_20254:
-                    _x_20284 = 40
+            _alt_28415 = _f_28414
+            def _f_28434():
+                _x_28418 = 2
+                _x_28421 = 3
+                _x_28424 = 4
+                _x_28427 = []
+                _x_28428 = [6] + _x_28427
+                _x_28429 = [5] + _x_28428
+                _x_28430 = [4] + _x_28429
+                _x_28431 = [3] + _x_28430
+                _x_28432 = [2] + _x_28431
+                _x_28433 = _x_28381 == _x_28432
+                return _x_28433
+            _alt_28435 = _f_28434
+            _x_28438 = 2
+            _x_28441 = 3
+            _x_28444 = 4
+            _x_28447 = []
+            _x_28448 = [5] + _x_28447
+            _x_28449 = [4] + _x_28448
+            _x_28450 = [3] + _x_28449
+            _x_28451 = [2] + _x_28450
+            _x_28452 = [1] + _x_28451
+            _x_28453 = _x_28381 == _x_28452
+            def _jp_28492(_y_28458: bool):
+                _x_28459 = _y_28458 == True
+                if _x_28459:
+                    _x_28488 = 40
                     return 40
                 else:
-                    def _f_20258():
-                        _x_20257 = False
+                    def _f_28462():
+                        _x_28461 = False
                         return False
-                    _alt_20259 = _f_20258
-                    def _f_20261():
-                        _x_20260 = 2 in _x_20194
-                        return _x_20260
-                    _alt_20262 = _f_20261
-                    _x_20263 = 3 in _x_20194
-                    def _jp_20276(_y_20268: bool):
-                        if _y_20268:
-                            _x_20272 = 25
+                    _alt_28463 = _f_28462
+                    def _f_28465():
+                        _x_28464 = 2 in _x_28397
+                        return _x_28464
+                    _alt_28466 = _f_28465
+                    _x_28467 = 3 in _x_28397
+                    def _jp_28480(_y_28472: bool):
+                        _x_28473 = _y_28472 == True
+                        if _x_28473:
+                            _x_28476 = 25
                             return 25
                         else:
-                            return _x_20205
-                    def _jp_20279():
-                        _x_20278 = _alt_20259()
-                        return _jp_20276(_x_20278)
-                    def _jp_20282():
-                        _x_20281 = _alt_20262()
-                        return _jp_20276(_x_20281)
-                    if _x_20263:
-                        return _jp_20282()
+                            return _x_28408
+                    def _jp_28483():
+                        _x_28482 = _alt_28463()
+                        return _jp_28480(_x_28482)
+                    def _jp_28486():
+                        _x_28485 = _alt_28466()
+                        return _jp_28480(_x_28485)
+                    if _x_28467:
+                        return _jp_28486()
                     else:
-                        return _jp_20279()
-            def _jp_20294():
-                _x_20293 = _alt_20211()
-                return _jp_20288(_x_20293)
-            def _jp_20291():
-                _x_20290 = _alt_20231()
-                return _jp_20288(_x_20290)
-            if _x_20249:
-                return _jp_20294()
+                        return _jp_28483()
+            def _jp_28495():
+                _x_28494 = _alt_28435()
+                return _jp_28492(_x_28494)
+            def _jp_28498():
+                _x_28497 = _alt_28415()
+                return _jp_28492(_x_28497)
+            if _x_28453:
+                return _jp_28498()
             else:
-                return _jp_20291()
+                return _jp_28495()
 
 # Lean: Corpus.Games.RPS.beats
-def beats(x_20306: RPS, x_20307: RPS) -> bool:
-    def _f_20309():
-        _x_20308 = True
+def beats(x_28510: RPS, x_28511: RPS) -> bool:
+    def _f_28513():
+        _x_28512 = True
         return True
-    _alt_20310 = _f_20309
-    _alt_20311 = _f_20309
-    _alt_20312 = _f_20309
-    def _f_20316(x_20313: RPS, x_20314: RPS):
-        _x_20315 = False
+    _alt_28514 = _f_28513
+    _alt_28515 = _f_28513
+    _alt_28516 = _f_28513
+    def _f_28520(x_28517: RPS, x_28518: RPS):
+        _x_28519 = False
         return False
-    _alt_20317 = _f_20316
-    match x_20306:
+    _alt_28521 = _f_28520
+    match x_28510:
         case rock():
-            match x_20307:
-                case rock():
-                    _x_20318 = rock()
-                    _x_20319 = _alt_20317(_x_20318, _x_20318)
-                    return _x_20319
-                case paper():
-                    _x_20320 = rock()
-                    _x_20321 = paper()
-                    _x_20322 = _alt_20317(_x_20320, _x_20321)
-                    return _x_20322
+            match x_28511:
                 case scissors():
-                    _x_20324 = _alt_20310()
-                    return _x_20324
+                    _x_28523 = _alt_28514()
+                    return _x_28523
+                case _:
+                    def _f_28527(h_28524: Any):
+                        _x_28525 = rock()
+                        _x_28526 = _alt_28521(_x_28525, x_28511)
+                        return _x_28526
+                    _x_28528 = _f_28527(None)
+                    return _x_28528
         case paper():
-            match x_20307:
+            match x_28511:
                 case rock():
-                    _x_20327 = _alt_20311()
-                    return _x_20327
-                case paper():
-                    _x_20328 = paper()
-                    _x_20329 = _alt_20317(_x_20328, _x_20328)
-                    return _x_20329
-                case scissors():
-                    _x_20330 = paper()
-                    _x_20331 = scissors()
-                    _x_20332 = _alt_20317(_x_20330, _x_20331)
-                    return _x_20332
+                    _x_28531 = _alt_28515()
+                    return _x_28531
+                case _:
+                    def _f_28535(h_28532: Any):
+                        _x_28533 = paper()
+                        _x_28534 = _alt_28521(_x_28533, x_28511)
+                        return _x_28534
+                    _x_28536 = _f_28535(None)
+                    return _x_28536
         case scissors():
-            match x_20307:
-                case rock():
-                    _x_20334 = scissors()
-                    _x_20335 = rock()
-                    _x_20336 = _alt_20317(_x_20334, _x_20335)
-                    return _x_20336
+            match x_28511:
                 case paper():
-                    _x_20338 = _alt_20312()
-                    return _x_20338
-                case scissors():
-                    _x_20339 = scissors()
-                    _x_20340 = _alt_20317(_x_20339, _x_20339)
-                    return _x_20340
+                    _x_28539 = _alt_28516()
+                    return _x_28539
+                case _:
+                    def _f_28543(h_28540: Any):
+                        _x_28541 = scissors()
+                        _x_28542 = _alt_28521(_x_28541, x_28511)
+                        return _x_28542
+                    _x_28544 = _f_28543(None)
+                    return _x_28544
 
 # Lean: Corpus.Games.RPS.compare
-def compare(a_1158: RPS, b_1159: RPS) -> int:
-    _x_20346 = a_1158 == b_1159
-    _x_20347 = True
-    if _x_20346:
-        _x_20365 = 0
+def compare(a_1088: RPS, b_1089: RPS) -> int:
+    _x_28550 = a_1088 == b_1089
+    _x_28551 = True
+    _x_28552 = _x_28550 == True
+    if _x_28552:
+        _x_28569 = 0
         return 0
     else:
-        _x_20350 = beats(a_1158, b_1159)
-        if _x_20350:
-            _x_20360 = 1
+        _x_28554 = beats(a_1088, b_1089)
+        _x_28555 = _x_28554 == True
+        if _x_28555:
+            _x_28564 = 1
             return 1
         else:
-            _x_20355 = 1
-            _x_20358 = -1
-            return _x_20358
+            _x_28559 = 1
+            _x_28562 = -1
+            return _x_28562
 
 # Lean: Corpus.Games.RPS.fromNat
-def from_nat(x_20370: int) -> RPS | None:
-    def _f_20373():
-        _x_20371 = rock()
-        _x_20372 = _x_20371
-        return _x_20372
-    _alt_20374 = _f_20373
-    def _f_20377():
-        _x_20375 = paper()
-        _x_20376 = _x_20375
-        return _x_20376
-    _alt_20378 = _f_20377
-    def _f_20381():
-        _x_20379 = scissors()
-        _x_20380 = _x_20379
-        return _x_20380
-    _alt_20382 = _f_20381
-    def _f_20385(x_20383: int):
-        _x_20384 = None
-        return _x_20384
-    _alt_20386 = _f_20385
-    _x_20387 = 0
-    if x_20370:
-        _x_20391 = 1
-        if x_20370:
-            _x_20395 = 2
-            if x_20370:
-                _x_20399 = _alt_20386(x_20370)
-                return _x_20399
-            else:
-                def _f_20402(h_1: Any, h_2: Any):
-                    _x_20401 = _alt_20382()
-                    return _x_20401
-                _x_20403 = _f_20402(None, None)
-                return _x_20403
-        else:
-            def _f_20407(h_1_1163: Any):
-                _x_20406 = _alt_20378()
-                return _x_20406
-            _x_20408 = _f_20407(None)
-            return _x_20408
+def from_nat(x_28574: int) -> RPS | None:
+    def _f_28577():
+        _x_28575 = rock()
+        _x_28576 = _x_28575
+        return _x_28576
+    _alt_28578 = _f_28577
+    def _f_28581():
+        _x_28579 = paper()
+        _x_28580 = _x_28579
+        return _x_28580
+    _alt_28582 = _f_28581
+    def _f_28585():
+        _x_28583 = scissors()
+        _x_28584 = _x_28583
+        return _x_28584
+    _alt_28586 = _f_28585
+    def _f_28589(x_28587: int):
+        _x_28588 = None
+        return _x_28588
+    _alt_28590 = _f_28589
+    _x_28591 = 0
+    _x_28594 = x_28574 == 0
+    if _x_28594:
+        _x_28613 = _alt_28578()
+        return _x_28613
     else:
-        _x_20411 = _alt_20374()
-        return _x_20411
+        _x_28595 = 1
+        _x_28598 = x_28574 == 1
+        if _x_28598:
+            _x_28609 = _alt_28582()
+            return _x_28609
+        else:
+            _x_28599 = 2
+            _x_28602 = x_28574 == 2
+            if _x_28602:
+                _x_28605 = _alt_28586()
+                return _x_28605
+            else:
+                _x_28603 = _alt_28590(x_28574)
+                return _x_28603
 
 # Lean: Corpus.Games.isValidSudokuRow
-def is_valid_sudoku_row(row_1164: list[int]) -> bool:
-    def _f_20420(x_20414: int):
-        _x_20416 = 0
-        _x_20419 = (lambda a, b: a != b)(0)
-        return _x_20419
-    _x_20421 = [x for x in row_1164 if _f_20420(x)]
-    _x_20424 = len(_x_20421)
-    _x_20425 = list(dict.fromkeys(_x_20421))
-    _x_20426 = len(_x_20425)
-    _x_20427 = _x_20424 == _x_20426
-    return _x_20427
+def is_valid_sudoku_row(row_1093: list[int]) -> bool:
+    def _f_28624(x_28617: int):
+        _x_28620 = 0
+        _x_28623 = (lambda a, b: a != b)(0)
+        return _x_28623
+    _x_28625 = [x for x in row_1093 if _f_28624(x)]
+    _x_28629 = len(_x_28625)
+    _x_28630 = {x for x in row_1093 if _f_28624(x)}
+    _x_28631 = len(_x_28630)
+    _x_28632 = _x_28629 == _x_28631
+    return _x_28632
 
 # Lean: Corpus.Games.isValidSudokuGrid
 def is_valid_sudoku_grid(grid: list[list[int]]) -> bool:
-    _x_20429 = is_valid_sudoku_row()
-    _x_20430 = all(_x_20429(x) for x in grid)
-    def _f_20440(c_1165: int):
-        def _f_20438(row_1166: list[int]):
-            def _f_20434(xs_1167: list[int], i_1168: int):
-                _x_20432 = len(xs_1167)
-                _x_20433 = i_1168 < _x_20432
-                return _x_20433
-            _x_20436 = (lambda xs, i: xs[i] if 0 <= i < len(xs) else None)
-            _x_20437 = _x_20436(row_1166, c_1165)
-            return _x_20437
-        _x_20439 = [y for x in grid if (y := _f_20438(x)) is not None]
-        return _x_20439
-    _x_20441 = 9
-    _x_20444 = list(range(9))
-    _x_20445 = [_f_20440(x) for x in _x_20444]
-    _x_20446 = all(_x_20429(x) for x in _x_20445)
-    _x_20447 = 3
-    _x_20450 = list(range(3))
-    def _f_20497(br: int):
-        def _f_20495(bc: int):
-            def _f_20493(r_1169: int):
-                def _f_20491(c_1170: int):
-                    def _f_20466(row_1171: list[int]):
-                        def _f_20454(xs_1172: list[int], i_1173: int):
-                            _x_20452 = len(xs_1172)
-                            _x_20453 = i_1173 < _x_20452
-                            return _x_20453
-                        _x_20456 = (lambda xs, i: xs[i] if 0 <= i < len(xs) else None)
-                        _x_20463 = bc * 3
-                        _x_20464 = _x_20463 + c_1170
-                        _x_20465 = _x_20456(row_1171, _x_20464)
-                        return _x_20465
-                    _alt_20467 = _f_20466
-                    def _f_20469():
-                        _x_20468 = None
-                        return _x_20468
-                    _alt_20470 = _f_20469
-                    def _f_20474(xs_1175: list[list[int]], i_1176: int):
-                        _x_20472 = len(xs_1175)
-                        _x_20473 = i_1176 < _x_20472
-                        return _x_20473
-                    _x_20476 = (lambda xs, i: xs[i] if 0 <= i < len(xs) else None)
-                    _x_20483 = br * 3
-                    _x_20484 = _x_20483 + r_1169
-                    _x_20485 = _x_20476(grid, _x_20484)
-                    if _x_20485 is None:
-                        _x_20487 = _alt_20470()
-                        return _x_20487
+    _x_28634 = is_valid_sudoku_row()
+    _x_28635 = all(_x_28634(x) for x in grid)
+    def _f_28641(c_1094: int):
+        def _f_28639(row_1095: list[int]):
+            _x_28637 = (lambda xs, i: xs[i] if 0 <= i < len(xs) else None)
+            _x_28638 = _x_28637(row_1095, c_1094)
+            return _x_28638
+        _x_28640 = [_y for x in grid if (_y := _f_28639(x)) is not None]
+        return _x_28640
+    _x_28642 = 9
+    _x_28645 = list(range(9))
+    _x_28646 = [_f_28641(x) for x in _x_28645]
+    _x_28647 = all(_x_28634(x) for x in _x_28646)
+    def _f_28704(br: int):
+        def _f_28698(bc: int):
+            def _f_28692(r_1096: int):
+                def _f_28686(c_1097: int):
+                    def _f_28662(row_1098: list[int]):
+                        _x_28649 = (lambda xs, i: xs[i] if 0 <= i < len(xs) else None)
+                        _x_28656 = 3
+                        _x_28659 = bc * 3
+                        _x_28660 = _x_28659 + c_1097
+                        _x_28661 = _x_28649(row_1098, _x_28660)
+                        return _x_28661
+                    _alt_28663 = _f_28662
+                    def _f_28665():
+                        _x_28664 = None
+                        return _x_28664
+                    _alt_28666 = _f_28665
+                    _x_28668 = (lambda xs, i: xs[i] if 0 <= i < len(xs) else None)
+                    _x_28675 = 3
+                    _x_28678 = br * 3
+                    _x_28679 = _x_28678 + r_1096
+                    _x_28680 = _x_28668(grid, _x_28679)
+                    if _x_28680 is None:
+                        _x_28682 = _alt_28666()
+                        return _x_28682
                     else:
-                        val_20488 = _x_20485
-                        _x_20489 = _alt_20467(val_20488)
-                        return _x_20489
-                _x_20492 = [y for x in _x_20450 if (y := _f_20491(x)) is not None]
-                return _x_20492
-            _x_20494 = [y for x in _x_20450 for y in _f_20493(x)]
-            return _x_20494
-        _x_20496 = [_f_20495(x) for x in _x_20450]
-        return _x_20496
-    _x_20498 = [y for x in _x_20450 for y in _f_20497(x)]
-    _x_20499 = all(_x_20429(x) for x in _x_20498)
-    def _f_20501():
-        _x_20500 = False
+                        val_28683 = _x_28680
+                        _x_28684 = _alt_28663(val_28683)
+                        return _x_28684
+                _x_28687 = 3
+                _x_28690 = list(range(3))
+                _x_28691 = [_y for x in _x_28690 if (_y := _f_28686(x)) is not None]
+                return _x_28691
+            _x_28693 = 3
+            _x_28696 = list(range(3))
+            _x_28697 = flat_map_tr(None, None, _f_28692, _x_28696)
+            return _x_28697
+        _x_28699 = 3
+        _x_28702 = list(range(3))
+        _x_28703 = [_f_28698(x) for x in _x_28702]
+        return _x_28703
+    _x_28705 = 3
+    _x_28708 = list(range(3))
+    _x_28709 = flat_map_tr(None, None, _f_28704, _x_28708)
+    _x_28710 = all(_x_28634(x) for x in _x_28709)
+    def _f_28712():
+        _x_28711 = False
         return False
-    _alt_20502 = _f_20501
-    def _f_20503():
-        return _x_20499
-    _alt_20504 = _f_20503
-    _alt_20505 = _f_20501
-    def _f_20506():
-        return _x_20446
-    _alt_20507 = _f_20506
-    def _jp_20518(_y_20512: bool):
-        if _y_20512:
-            _x_20516 = _alt_20504()
-            return _x_20516
+    _alt_28713 = _f_28712
+    def _f_28714():
+        return _x_28710
+    _alt_28715 = _f_28714
+    _alt_28716 = _f_28712
+    def _f_28717():
+        return _x_28647
+    _alt_28718 = _f_28717
+    def _jp_28729(_y_28723: bool):
+        if _y_28723:
+            _x_28727 = _alt_28715()
+            return _x_28727
         else:
-            _x_20514 = _alt_20502()
-            return _x_20514
-    def _jp_20521():
-        _x_20520 = _alt_20505()
-        return _jp_20518(_x_20520)
-    def _jp_20524():
-        _x_20523 = _alt_20507()
-        return _jp_20518(_x_20523)
-    if _x_20430:
-        return _jp_20524()
+            _x_28725 = _alt_28713()
+            return _x_28725
+    def _jp_28735():
+        _x_28734 = _alt_28718()
+        return _jp_28729(_x_28734)
+    def _jp_28732():
+        _x_28731 = _alt_28716()
+        return _jp_28729(_x_28731)
+    if _x_28635:
+        return _jp_28735()
     else:
-        return _jp_20521()
+        return _jp_28732()
 
 # Lean: Corpus.DataStructures.Stack.empty
-def stack_empty(__1180: Any) -> Any:
-    _x_20526 = []
-    _x_20527 = Stack_mk(None, _x_20526)
-    return _x_20527
+def stack_empty(__1103: Any) -> Any:
+    _x_28737 = []
+    _x_28738 = Stack_mk(_x_28737)
+    return _x_28738
 
 # Lean: Corpus.DataStructures.Stack.push
-def stack_push(__1181: Any, s_1182: Any, x_1183: Any) -> Any:
-    _x_20529 = s_1182.stack_0
-    _x_20530 = [x_1183] + _x_20529
-    _x_20531 = Stack_mk(None, _x_20530)
-    return _x_20531
+def stack_push(__1104: Any, s_1105: Any, x_1106: Any) -> Any:
+    _x_28740 = s_1105.field_0
+    _x_28741 = [x_1106] + _x_28740
+    _x_28742 = Stack_mk(_x_28741)
+    return _x_28742
 
 # Lean: Corpus.DataStructures.Stack.pop
-def pop(__1184: Any, s_1185: Any) -> tuple[Any, Any] | None:
-    def _f_20534():
-        _x_20533 = None
-        return _x_20533
-    _alt_20535 = _f_20534
-    def _f_20539(x_1187: Any, xs_1188: list[Any]):
-        _x_20536 = Stack_mk(None, xs_1188)
-        _x_20537 = (x_1187, _x_20536)
-        _x_20538 = _x_20537
-        return _x_20538
-    _alt_20540 = _f_20539
-    _x_20541 = s_1185.stack_0
-    if len(_x_20541) == 0:
-        _x_20543 = _alt_20535()
-        return _x_20543
+def pop(__1107: Any, s_1108: Any) -> tuple[Any, Any] | None:
+    def _f_28745():
+        _x_28744 = None
+        return _x_28744
+    _alt_28746 = _f_28745
+    def _f_28750(x_1110: Any, xs_1111: list[Any]):
+        _x_28747 = Stack_mk(xs_1111)
+        _x_28748 = (x_1110, _x_28747)
+        _x_28749 = _x_28748
+        return _x_28749
+    _alt_28751 = _f_28750
+    _x_28752 = s_1108.field_0
+    if len(_x_28752) == 0:
+        _x_28754 = _alt_28746()
+        return _x_28754
     else:
-        head_20544 = _x_20541[0]
-        tail_20545 = _x_20541[1:]
-        _x_20546 = _alt_20540(head_20544, tail_20545)
-        return _x_20546
+        head_28755 = _x_28752[0]
+        tail_28756 = _x_28752[1:]
+        _x_28757 = _alt_28751(head_28755, tail_28756)
+        return _x_28757
 
 # Lean: Corpus.DataStructures.Stack.peek
-def peek(__1189: Any, s_1190: Any) -> Any | None:
-    _x_20549 = s_1190.stack_0
-    _x_20550 = (lambda xs: xs[0] if xs else None)(_x_20549)
-    return _x_20550
+def peek(__1112: Any, s_1113: Any) -> Any | None:
+    _x_28760 = s_1113.field_0
+    _x_28761 = (lambda xs: xs[0] if xs else None)(_x_28760)
+    return _x_28761
 
 # Lean: Corpus.DataStructures.Stack.isEmpty
-def stack_is_empty(__1191: Any, s_1192: Any) -> bool:
-    _x_20552 = s_1192.stack_0
-    _x_20553 = len(_x_20552) == 0
-    return _x_20553
+def stack_is_empty(__1114: Any, s_1115: Any) -> bool:
+    _x_28763 = s_1115.field_0
+    _x_28764 = len(_x_28763) == 0
+    return _x_28764
 
 # Lean: Corpus.DataStructures.Stack.size
-def stack_size(__1193: Any, s_1194: Any) -> int:
-    _x_20555 = s_1194.stack_0
-    _x_20556 = len(_x_20555)
-    return _x_20556
+def stack_size(__1116: Any, s_1117: Any) -> int:
+    _x_28766 = s_1117.field_0
+    _x_28767 = len(_x_28766)
+    return _x_28767
 
 # Lean: Corpus.DataStructures.Queue.empty
-def queue_empty(__1195: Any) -> Any:
-    _x_20558 = []
-    _x_20559 = Queue_mk(None, _x_20558, _x_20558)
-    return _x_20559
+def queue_empty(__1118: Any) -> Any:
+    _x_28769 = []
+    _x_28770 = Queue_mk(_x_28769, _x_28769)
+    return _x_28770
 
 # Lean: Corpus.DataStructures.Queue.enqueue
-def enqueue(__1196: Any, q_1197: Any, x_1198: Any) -> Any:
-    _x_20561 = q_1197.queue_0
-    _x_20562 = q_1197.queue_1
-    _x_20563 = [x_1198] + _x_20562
-    _x_20564 = Queue_mk(None, _x_20561, _x_20563)
-    return _x_20564
+def enqueue(__1119: Any, q_1120: Any, x_1121: Any) -> Any:
+    _x_28772 = q_1120.field_0
+    _x_28773 = q_1120.field_1
+    _x_28774 = [x_1121] + _x_28773
+    _x_28775 = Queue_mk(_x_28772, _x_28774)
+    return _x_28775
 
 # Lean: Corpus.DataStructures.Queue.dequeue
-def dequeue(__1199: Any, q_1200: Any) -> tuple[Any, Any] | None:
-    def _f_20570(x_1201: Any, xs_1202: list[Any]):
-        _x_20566 = q_1200.queue_1
-        _x_20567 = Queue_mk(None, xs_1202, _x_20566)
-        _x_20568 = (x_1201, _x_20567)
-        _x_20569 = _x_20568
-        return _x_20569
-    _alt_20571 = _f_20570
-    def _f_20589():
-        def _f_20573():
-            _x_20572 = None
-            return _x_20572
-        _alt_20574 = _f_20573
-        def _f_20579(x_1205: Any, xs_1206: list[Any]):
-            _x_20575 = []
-            _x_20576 = Queue_mk(None, xs_1206, _x_20575)
-            _x_20577 = (x_1205, _x_20576)
-            _x_20578 = _x_20577
-            return _x_20578
-        _alt_20580 = _f_20579
-        _x_20581 = q_1200.queue_1
-        _x_20582 = list(reversed(_x_20581))
-        if len(_x_20582) == 0:
-            _x_20584 = _alt_20574()
-            return _x_20584
+def dequeue(__1122: Any, q_1123: Any) -> tuple[Any, Any] | None:
+    def _f_28781(x_1124: Any, xs_1125: list[Any]):
+        _x_28777 = q_1123.field_1
+        _x_28778 = Queue_mk(xs_1125, _x_28777)
+        _x_28779 = (x_1124, _x_28778)
+        _x_28780 = _x_28779
+        return _x_28780
+    _alt_28782 = _f_28781
+    def _f_28800():
+        def _f_28784():
+            _x_28783 = None
+            return _x_28783
+        _alt_28785 = _f_28784
+        def _f_28790(x_1128: Any, xs_1129: list[Any]):
+            _x_28786 = []
+            _x_28787 = Queue_mk(xs_1129, _x_28786)
+            _x_28788 = (x_1128, _x_28787)
+            _x_28789 = _x_28788
+            return _x_28789
+        _alt_28791 = _f_28790
+        _x_28792 = q_1123.field_1
+        _x_28793 = list(reversed(_x_28792))
+        if len(_x_28793) == 0:
+            _x_28795 = _alt_28785()
+            return _x_28795
         else:
-            head_20585 = _x_20582[0]
-            tail_20586 = _x_20582[1:]
-            _x_20587 = _alt_20580(head_20585, tail_20586)
-            return _x_20587
-    _alt_20590 = _f_20589
-    _x_20591 = q_1200.queue_0
-    if len(_x_20591) == 0:
-        _x_20593 = _alt_20590()
-        return _x_20593
+            head_28796 = _x_28793[0]
+            tail_28797 = _x_28793[1:]
+            _x_28798 = _alt_28791(head_28796, tail_28797)
+            return _x_28798
+    _alt_28801 = _f_28800
+    _x_28802 = q_1123.field_0
+    if len(_x_28802) == 0:
+        _x_28804 = _alt_28801()
+        return _x_28804
     else:
-        head_20594 = _x_20591[0]
-        tail_20595 = _x_20591[1:]
-        _x_20596 = _alt_20571(head_20594, tail_20595)
-        return _x_20596
+        head_28805 = _x_28802[0]
+        tail_28806 = _x_28802[1:]
+        _x_28807 = _alt_28782(head_28805, tail_28806)
+        return _x_28807
 
 # Lean: Corpus.DataStructures.Queue.isEmpty
-def queue_is_empty(__1207: Any, q_1208: Any) -> bool:
-    def _f_20600():
-        _x_20599 = False
+def queue_is_empty(__1130: Any, q_1131: Any) -> bool:
+    def _f_28811():
+        _x_28810 = False
         return False
-    _alt_20601 = _f_20600
-    def _f_20604():
-        _x_20602 = q_1208.queue_1
-        _x_20603 = len(_x_20602) == 0
-        return _x_20603
-    _alt_20605 = _f_20604
-    _x_20606 = q_1208.queue_0
-    _x_20607 = len(_x_20606) == 0
-    if _x_20607:
-        _x_20611 = _alt_20605()
-        return _x_20611
+    _alt_28812 = _f_28811
+    def _f_28815():
+        _x_28813 = q_1131.field_1
+        _x_28814 = len(_x_28813) == 0
+        return _x_28814
+    _alt_28816 = _f_28815
+    _x_28817 = q_1131.field_0
+    _x_28818 = len(_x_28817) == 0
+    if _x_28818:
+        _x_28822 = _alt_28816()
+        return _x_28822
     else:
-        _x_20609 = _alt_20601()
-        return _x_20609
+        _x_28820 = _alt_28812()
+        return _x_28820
 
 # Lean: Corpus.DataStructures.Queue.size
-def queue_size(__1211: Any, q_1212: Any) -> int:
-    _x_20617 = q_1212.queue_0
-    _x_20618 = len(_x_20617)
-    _x_20619 = q_1212.queue_1
-    _x_20620 = len(_x_20619)
-    _x_20621 = _x_20618 + _x_20620
-    return _x_20621
+def queue_size(__1134: Any, q_1135: Any) -> int:
+    _x_28828 = q_1135.field_0
+    _x_28829 = len(_x_28828)
+    _x_28830 = q_1135.field_1
+    _x_28831 = len(_x_28830)
+    _x_28832 = _x_28829 + _x_28831
+    return _x_28832
 
 # Lean: Corpus.DataStructures.BinaryTree.singleton
-def singleton(__1213: Any, x_1214: Any) -> Any:
-    _x_20623 = BinaryTree_empty(None)
-    _x_20624 = BinaryTree_node(None, x_1214, _x_20623, _x_20623)
-    return _x_20624
+def singleton(__1136: Any, x_1137: Any) -> Any:
+    _x_28834 = BinaryTree_empty()
+    _x_28835 = BinaryTree_node(x_1137, _x_28834, _x_28834)
+    return _x_28835
 
 # Lean: Corpus.DataStructures.BinaryTree.size
-def binary_tree_size(__1215: Any, t_1216: Any) -> int:
-    def _f_20629():
-        _x_20626 = 0
+def binary_tree_size(__1138: Any, t_1139: Any) -> int:
+    def _f_28840():
+        _x_28837 = 0
         return 0
-    _alt_20630 = _f_20629
-    def _f_20642(a_20631: Any, l_1218: Any, r_1219: Any):
-        _x_20635 = 1
-        _x_20638 = binary_tree_size(None, l_1218)
-        _x_20639 = 1 + _x_20638
-        _x_20640 = binary_tree_size(None, r_1219)
-        _x_20641 = _x_20639 + _x_20640
-        return _x_20641
-    _alt_20643 = _f_20642
-    match t_1216:
+    _alt_28841 = _f_28840
+    def _f_28853(a_28842: Any, l_1141: Any, r_1142: Any):
+        _x_28846 = 1
+        _x_28849 = binary_tree_size(None, l_1141)
+        _x_28850 = 1 + _x_28849
+        _x_28851 = binary_tree_size(None, r_1142)
+        _x_28852 = _x_28850 + _x_28851
+        return _x_28852
+    _alt_28854 = _f_28853
+    match t_1139:
         case BinaryTree_empty():
-            _x_20645 = _alt_20630()
-            return _x_20645
-        case BinaryTree_node(a_20646, a_20647, a_20648):
-            _x_20649 = _alt_20643(a_20646, a_20647, a_20648)
-            return _x_20649
+            _x_28856 = _alt_28841()
+            return _x_28856
+        case BinaryTree_node(a_28857, a_28858, a_28859):
+            _x_28860 = _alt_28854(a_28857, a_28858, a_28859)
+            return _x_28860
 
 # Lean: Corpus.DataStructures.BinaryTree.height
-def height(__1220: Any, t_1221: Any) -> int:
-    def _f_20655():
-        _x_20652 = 0
+def height(__1143: Any, t_1144: Any) -> int:
+    def _f_28866():
+        _x_28863 = 0
         return 0
-    _alt_20656 = _f_20655
-    def _f_20670(a_20657: Any, l_1223: Any, r_1224: Any):
-        _x_20661 = 1
-        _x_20665 = max
-        _x_20666 = height(None, l_1223)
-        _x_20667 = height(None, r_1224)
-        _x_20668 = _x_20665(_x_20666, _x_20667)
-        _x_20669 = 1 + _x_20668
-        return _x_20669
-    _alt_20671 = _f_20670
-    match t_1221:
+    _alt_28867 = _f_28866
+    def _f_28881(a_28868: Any, l_1146: Any, r_1147: Any):
+        _x_28872 = 1
+        _x_28876 = max
+        _x_28877 = height(None, l_1146)
+        _x_28878 = height(None, r_1147)
+        _x_28879 = _x_28876(_x_28877, _x_28878)
+        _x_28880 = 1 + _x_28879
+        return _x_28880
+    _alt_28882 = _f_28881
+    match t_1144:
         case BinaryTree_empty():
-            _x_20673 = _alt_20656()
-            return _x_20673
-        case BinaryTree_node(a_20674, a_20675, a_20676):
-            _x_20677 = _alt_20671(a_20674, a_20675, a_20676)
-            return _x_20677
+            _x_28884 = _alt_28867()
+            return _x_28884
+        case BinaryTree_node(a_28885, a_28886, a_28887):
+            _x_28888 = _alt_28882(a_28885, a_28886, a_28887)
+            return _x_28888
 
 # Lean: Corpus.DataStructures.BinaryTree.inorder
-def inorder(__1225: Any, t_1226: Any) -> list[Any]:
-    def _f_20681():
-        _x_20680 = []
-        return _x_20680
-    _alt_20682 = _f_20681
-    def _f_20692(v_1228: Any, l_1229: Any, r_1230: Any):
-        _x_20686 = inorder(None, l_1229)
-        _x_20687 = []
-        _x_20688 = [v_1228] + _x_20687
-        _x_20689 = _x_20686 + _x_20688
-        _x_20690 = inorder(None, r_1230)
-        _x_20691 = _x_20689 + _x_20690
-        return _x_20691
-    _alt_20693 = _f_20692
-    match t_1226:
+def inorder(__1148: Any, t_1149: Any) -> list[Any]:
+    def _f_28892():
+        _x_28891 = []
+        return _x_28891
+    _alt_28893 = _f_28892
+    def _f_28903(v_1151: Any, l_1152: Any, r_1153: Any):
+        _x_28897 = inorder(None, l_1152)
+        _x_28898 = []
+        _x_28899 = [v_1151] + _x_28898
+        _x_28900 = _x_28897 + _x_28899
+        _x_28901 = inorder(None, r_1153)
+        _x_28902 = _x_28900 + _x_28901
+        return _x_28902
+    _alt_28904 = _f_28903
+    match t_1149:
         case BinaryTree_empty():
-            _x_20695 = _alt_20682()
-            return _x_20695
-        case BinaryTree_node(a_20696, a_20697, a_20698):
-            _x_20699 = _alt_20693(a_20696, a_20697, a_20698)
-            return _x_20699
+            _x_28906 = _alt_28893()
+            return _x_28906
+        case BinaryTree_node(a_28907, a_28908, a_28909):
+            _x_28910 = _alt_28904(a_28907, a_28908, a_28909)
+            return _x_28910
 
 # Lean: Corpus.DataStructures.BinaryTree.preorder
-def preorder(__1231: Any, t_1232: Any) -> list[Any]:
-    def _f_20703():
-        _x_20702 = []
-        return _x_20702
-    _alt_20704 = _f_20703
-    def _f_20714(v_1234: Any, l_1235: Any, r_1236: Any):
-        _x_20708 = []
-        _x_20709 = [v_1234] + _x_20708
-        _x_20710 = preorder(None, l_1235)
-        _x_20711 = _x_20709 + _x_20710
-        _x_20712 = preorder(None, r_1236)
-        _x_20713 = _x_20711 + _x_20712
-        return _x_20713
-    _alt_20715 = _f_20714
-    match t_1232:
+def preorder(__1154: Any, t_1155: Any) -> list[Any]:
+    def _f_28914():
+        _x_28913 = []
+        return _x_28913
+    _alt_28915 = _f_28914
+    def _f_28925(v_1157: Any, l_1158: Any, r_1159: Any):
+        _x_28919 = []
+        _x_28920 = [v_1157] + _x_28919
+        _x_28921 = preorder(None, l_1158)
+        _x_28922 = _x_28920 + _x_28921
+        _x_28923 = preorder(None, r_1159)
+        _x_28924 = _x_28922 + _x_28923
+        return _x_28924
+    _alt_28926 = _f_28925
+    match t_1155:
         case BinaryTree_empty():
-            _x_20717 = _alt_20704()
-            return _x_20717
-        case BinaryTree_node(a_20718, a_20719, a_20720):
-            _x_20721 = _alt_20715(a_20718, a_20719, a_20720)
-            return _x_20721
+            _x_28928 = _alt_28915()
+            return _x_28928
+        case BinaryTree_node(a_28929, a_28930, a_28931):
+            _x_28932 = _alt_28926(a_28929, a_28930, a_28931)
+            return _x_28932
 
 # Lean: Corpus.DataStructures.BinaryTree.postorder
-def postorder(__1237: Any, t_1238: Any) -> list[Any]:
-    def _f_20725():
-        _x_20724 = []
-        return _x_20724
-    _alt_20726 = _f_20725
-    def _f_20736(v_1240: Any, l_1241: Any, r_1242: Any):
-        _x_20730 = postorder(None, l_1241)
-        _x_20731 = postorder(None, r_1242)
-        _x_20732 = _x_20730 + _x_20731
-        _x_20733 = []
-        _x_20734 = [v_1240] + _x_20733
-        _x_20735 = _x_20732 + _x_20734
-        return _x_20735
-    _alt_20737 = _f_20736
-    match t_1238:
+def postorder(__1160: Any, t_1161: Any) -> list[Any]:
+    def _f_28936():
+        _x_28935 = []
+        return _x_28935
+    _alt_28937 = _f_28936
+    def _f_28947(v_1163: Any, l_1164: Any, r_1165: Any):
+        _x_28941 = postorder(None, l_1164)
+        _x_28942 = postorder(None, r_1165)
+        _x_28943 = _x_28941 + _x_28942
+        _x_28944 = []
+        _x_28945 = [v_1163] + _x_28944
+        _x_28946 = _x_28943 + _x_28945
+        return _x_28946
+    _alt_28948 = _f_28947
+    match t_1161:
         case BinaryTree_empty():
-            _x_20739 = _alt_20726()
-            return _x_20739
-        case BinaryTree_node(a_20740, a_20741, a_20742):
-            _x_20743 = _alt_20737(a_20740, a_20741, a_20742)
-            return _x_20743
+            _x_28950 = _alt_28937()
+            return _x_28950
+        case BinaryTree_node(a_28951, a_28952, a_28953):
+            _x_28954 = _alt_28948(a_28951, a_28952, a_28953)
+            return _x_28954
 
 # Lean: Corpus.DataStructures.BinaryTree.levelOrder
-def level_order(__1243: Any, t_1244: Any) -> list[Any]:
-    _x_20746 = []
-    _x_20747 = [t_1244] + _x_20746
-    _x_20748 = []
-    _x_20749 = 10000
-    _x_20752 = level_order_go(None, _x_20747, _x_20748, 10000)
-    return _x_20752
+def level_order(__1166: Any, t_1167: Any) -> list[Any]:
+    _x_28957 = []
+    _x_28958 = [t_1167] + _x_28957
+    _x_28959 = []
+    _x_28960 = 10000
+    _x_28963 = level_order_go(None, _x_28958, _x_28959, 10000)
+    return _x_28963
 
 # Lean: Corpus.DataStructures.BinaryTree.mirror
-def mirror(__1245: Any, t_1246: Any) -> Any:
-    def _f_20755():
-        _x_20754 = BinaryTree_empty(None)
-        return _x_20754
-    _alt_20756 = _f_20755
-    def _f_20760(v_1248: Any, l_1249: Any, r_1250: Any):
-        _x_20757 = mirror(None, r_1250)
-        _x_20758 = mirror(None, l_1249)
-        _x_20759 = BinaryTree_node(None, v_1248, _x_20757, _x_20758)
-        return _x_20759
-    _alt_20761 = _f_20760
-    match t_1246:
+def mirror(__1168: Any, t_1169: Any) -> Any:
+    def _f_28966():
+        _x_28965 = BinaryTree_empty()
+        return _x_28965
+    _alt_28967 = _f_28966
+    def _f_28971(v_1171: Any, l_1172: Any, r_1173: Any):
+        _x_28968 = mirror(None, r_1173)
+        _x_28969 = mirror(None, l_1172)
+        _x_28970 = BinaryTree_node(v_1171, _x_28968, _x_28969)
+        return _x_28970
+    _alt_28972 = _f_28971
+    match t_1169:
         case BinaryTree_empty():
-            _x_20763 = _alt_20756()
-            return _x_20763
-        case BinaryTree_node(a_20764, a_20765, a_20766):
-            _x_20767 = _alt_20761(a_20764, a_20765, a_20766)
-            return _x_20767
+            _x_28974 = _alt_28967()
+            return _x_28974
+        case BinaryTree_node(a_28975, a_28976, a_28977):
+            _x_28978 = _alt_28972(a_28975, a_28976, a_28977)
+            return _x_28978
 
 # Lean: Corpus.DataStructures.BinaryTree.map
-def binary_tree_map(__1251: Any, __1252: Any, f_1253: Callable[[Any], Any], t_1254: Any) -> Any:
-    def _f_20771():
-        _x_20770 = BinaryTree_empty(None)
-        return _x_20770
-    _alt_20772 = _f_20771
-    def _f_20777(v_1256: Any, l_1257: Any, r_1258: Any):
-        _x_20773 = f_1253(v_1256)
-        _x_20774 = binary_tree_map(None, None, f_1253, l_1257)
-        _x_20775 = binary_tree_map(None, None, f_1253, r_1258)
-        _x_20776 = BinaryTree_node(None, _x_20773, _x_20774, _x_20775)
-        return _x_20776
-    _alt_20778 = _f_20777
-    match t_1254:
+def binary_tree_map(__1174: Any, __1175: Any, f_1176: Callable[[Any], Any], t_1177: Any) -> Any:
+    def _f_28982():
+        _x_28981 = BinaryTree_empty()
+        return _x_28981
+    _alt_28983 = _f_28982
+    def _f_28988(v_1179: Any, l_1180: Any, r_1181: Any):
+        _x_28984 = f_1176(v_1179)
+        _x_28985 = binary_tree_map(None, None, f_1176, l_1180)
+        _x_28986 = binary_tree_map(None, None, f_1176, r_1181)
+        _x_28987 = BinaryTree_node(_x_28984, _x_28985, _x_28986)
+        return _x_28987
+    _alt_28989 = _f_28988
+    match t_1177:
         case BinaryTree_empty():
-            _x_20780 = _alt_20772()
-            return _x_20780
-        case BinaryTree_node(a_20781, a_20782, a_20783):
-            _x_20784 = _alt_20778(a_20781, a_20782, a_20783)
-            return _x_20784
+            _x_28991 = _alt_28983()
+            return _x_28991
+        case BinaryTree_node(a_28992, a_28993, a_28994):
+            _x_28995 = _alt_28989(a_28992, a_28993, a_28994)
+            return _x_28995
 
 # Lean: Corpus.DataStructures.BinaryTree.fold
-def binary_tree_fold(__1259: Any, __1260: Any, f_1261: Callable[[Any, Any], Any], init_1262: Any, t_1263: Any) -> Any:
-    def _f_20787():
-        return init_1262
-    _alt_20788 = _f_20787
-    def _f_20792(v_1265: Any, l_1266: Any, r_1267: Any):
-        _x_20789 = binary_tree_fold(None, None, f_1261, init_1262, l_1266)
-        _x_20790 = f_1261(_x_20789, v_1265)
-        _x_20791 = binary_tree_fold(None, None, f_1261, _x_20790, r_1267)
-        return _x_20791
-    _alt_20793 = _f_20792
-    match t_1263:
+def binary_tree_fold(__1182: Any, __1183: Any, f_1184: Callable[[Any, Any], Any], init_1185: Any, t_1186: Any) -> Any:
+    def _f_28998():
+        return init_1185
+    _alt_28999 = _f_28998
+    def _f_29003(v_1188: Any, l_1189: Any, r_1190: Any):
+        _x_29000 = binary_tree_fold(None, None, f_1184, init_1185, l_1189)
+        _x_29001 = f_1184(_x_29000, v_1188)
+        _x_29002 = binary_tree_fold(None, None, f_1184, _x_29001, r_1190)
+        return _x_29002
+    _alt_29004 = _f_29003
+    match t_1186:
         case BinaryTree_empty():
-            _x_20795 = _alt_20788()
-            return _x_20795
-        case BinaryTree_node(a_20796, a_20797, a_20798):
-            _x_20799 = _alt_20793(a_20796, a_20797, a_20798)
-            return _x_20799
+            _x_29006 = _alt_28999()
+            return _x_29006
+        case BinaryTree_node(a_29007, a_29008, a_29009):
+            _x_29010 = _alt_29004(a_29007, a_29008, a_29009)
+            return _x_29010
 
 # Lean: Corpus.DataStructures.AssocList.empty
-def assoc_list_empty(__1268: Any, __1269: Any) -> list[tuple[Any, Any]]:
-    _x_20802 = []
-    return _x_20802
+def assoc_list_empty(__1191: Any, __1192: Any) -> list[tuple[Any, Any]]:
+    _x_29013 = []
+    return _x_29013
 
 # Lean: Corpus.DataStructures.AssocList.insert
-def assoc_list_insert(__1270: Any, __1271: Any, inst_20804: Any, m_1272: list[tuple[Any, Any]], k_1273: Any, v_1274: Any) -> list[tuple[Any, Any]]:
-    _x_20805 = (k_1273, v_1274)
-    def _f_20815(x_20806: tuple[Any, Any]):
-        def _f_20809(k__1275: Any, snd_20807: Any):
-            _x_20808 = (lambda a, b: a != b)(k_1273)
-            return _x_20808
-        _alt_20810 = _f_20809
-        match x_20806:
-            case (fst_20811, snd_20812):
-                _x_20813 = _alt_20810(fst_20811, snd_20812)
-                return _x_20813
-    _x_20816 = [x for x in m_1272 if _f_20815(x)]
-    _x_20817 = [_x_20805] + _x_20816
-    return _x_20817
+def assoc_list_insert(__1193: Any, __1194: Any, inst_29015: Any, m_1195: list[tuple[Any, Any]], k_1196: Any, v_1197: Any) -> list[tuple[Any, Any]]:
+    _x_29016 = (k_1196, v_1197)
+    def _f_29026(x_29017: tuple[Any, Any]):
+        def _f_29020(k__1198: Any, snd_29018: Any):
+            _x_29019 = (lambda a, b: a != b)(k_1196)
+            return _x_29019
+        _alt_29021 = _f_29020
+        match x_29017:
+            case (fst_29022, snd_29023):
+                _x_29024 = _alt_29021(fst_29022, snd_29023)
+                return _x_29024
+    _x_29027 = [x for x in m_1195 if _f_29026(x)]
+    _x_29028 = [_x_29016] + _x_29027
+    return _x_29028
 
 # Lean: Corpus.DataStructures.AssocList.lookup
-def lookup(__1276: Any, __1277: Any, inst_20819: Any, m_1278: list[tuple[Any, Any]], k_1279: Any) -> Any | None:
-    def _f_20821():
-        _x_20820 = None
-        return _x_20820
-    _alt_20822 = _f_20821
-    def _f_20832(k__1281: Any, v_1282: Any, rest_1283: list[tuple[Any, Any]]):
-        _x_20823 = inst_20819.beq_0
-        _x_20824 = _x_20823(k_1279, k__1281)
-        _x_20825 = True
-        if _x_20824:
-            _x_20830 = v_1282
-            return _x_20830
+def lookup(__1199: Any, __1200: Any, inst_29030: Any, m_1201: list[tuple[Any, Any]], k_1202: Any) -> Any | None:
+    def _f_29032():
+        _x_29031 = None
+        return _x_29031
+    _alt_29033 = _f_29032
+    def _f_29043(k__1204: Any, v_1205: Any, rest_1206: list[tuple[Any, Any]]):
+        _x_29034 = inst_29030.field_0
+        _x_29035 = _x_29034(k_1202, k__1204)
+        _x_29036 = True
+        _x_29037 = _x_29035 == True
+        if _x_29037:
+            _x_29041 = v_1205
+            return _x_29041
         else:
-            _x_20828 = lookup(None, None, inst_20819, k_1279, rest_1283)
-            return _x_20828
-    _alt_20833 = _f_20832
-    if len(m_1278) == 0:
-        _x_20835 = _alt_20822()
-        return _x_20835
+            _x_29039 = lookup(None, None, inst_29030, k_1202, rest_1206)
+            return _x_29039
+    _alt_29044 = _f_29043
+    if len(m_1201) == 0:
+        _x_29046 = _alt_29033()
+        return _x_29046
     else:
-        head_20836 = m_1278[0]
-        tail_20837 = m_1278[1:]
-        match head_20836:
-            case (fst_20838, snd_20839):
-                _x_20840 = _alt_20833(fst_20838, snd_20839, tail_20837)
-                return _x_20840
+        head_29047 = m_1201[0]
+        tail_29048 = m_1201[1:]
+        match head_29047:
+            case (fst_29049, snd_29050):
+                _x_29051 = _alt_29044(fst_29049, snd_29050, tail_29048)
+                return _x_29051
 
 # Lean: Corpus.DataStructures.AssocList.remove
-def remove(__1284: Any, __1285: Any, inst_20844: Any, m_1286: list[tuple[Any, Any]], k_1287: Any) -> list[tuple[Any, Any]]:
-    def _f_20854(x_20845: tuple[Any, Any]):
-        def _f_20848(k__1288: Any, snd_20846: Any):
-            _x_20847 = (lambda a, b: a != b)(k_1287)
-            return _x_20847
-        _alt_20849 = _f_20848
-        match x_20845:
-            case (fst_20850, snd_20851):
-                _x_20852 = _alt_20849(fst_20850, snd_20851)
-                return _x_20852
-    _x_20855 = [x for x in m_1286 if _f_20854(x)]
-    return _x_20855
+def remove(__1207: Any, __1208: Any, inst_29055: Any, m_1209: list[tuple[Any, Any]], k_1210: Any) -> list[tuple[Any, Any]]:
+    def _f_29065(x_29056: tuple[Any, Any]):
+        def _f_29059(k__1211: Any, snd_29057: Any):
+            _x_29058 = (lambda a, b: a != b)(k_1210)
+            return _x_29058
+        _alt_29060 = _f_29059
+        match x_29056:
+            case (fst_29061, snd_29062):
+                _x_29063 = _alt_29060(fst_29061, snd_29062)
+                return _x_29063
+    _x_29066 = [x for x in m_1209 if _f_29065(x)]
+    return _x_29066
 
 # Lean: Corpus.DataStructures.AssocList.keys
-def keys(__1289: Any, __1290: Any, m_1291: list[tuple[Any, Any]]) -> list[Any]:
-    def _f_20858(self: tuple[Any, Any]):
-        _x_20857 = self[0]
-        return _x_20857
-    _x_20859 = [_f_20858(x) for x in m_1291]
-    return _x_20859
+def keys(__1212: Any, __1213: Any, m_1214: list[tuple[Any, Any]]) -> list[Any]:
+    _x_29070 = [self[0] for self in m_1214]
+    return _x_29070
 
 # Lean: Corpus.DataStructures.AssocList.values
-def values(__1292: Any, __1293: Any, m_1294: list[tuple[Any, Any]]) -> list[Any]:
-    def _f_20862(self_1295: tuple[Any, Any]):
-        _x_20861 = self_1295[1]
-        return _x_20861
-    _x_20863 = [_f_20862(x) for x in m_1294]
-    return _x_20863
+def values(__1215: Any, __1216: Any, m_1217: list[tuple[Any, Any]]) -> list[Any]:
+    _x_29074 = [self_1218[1] for self_1218 in m_1217]
+    return _x_29074
 
 # Lean: Corpus.DataStructures.AssocList.size
-def assoc_list_size(__1296: Any, __1297: Any, m_1298: list[tuple[Any, Any]]) -> int:
-    _x_20865 = len(m_1298)
-    return _x_20865
+def assoc_list_size(__1219: Any, __1220: Any, m_1221: list[tuple[Any, Any]]) -> int:
+    _x_29076 = len(m_1221)
+    return _x_29076
 
 # Lean: Corpus.DataStructures.Graph.empty
-def data_structures_graph_empty(__1299: Any) -> Any:
-    _x_20867 = []
-    _x_20868 = []
-    _x_20869 = Graph_mk(None, _x_20867, _x_20868)
-    return _x_20869
+def data_structures_graph_empty(__1222: Any) -> Any:
+    _x_29078 = []
+    _x_29079 = []
+    _x_29080 = Graph_mk(_x_29078, _x_29079)
+    return _x_29080
 
 # Lean: Corpus.DataStructures.Graph.addVertex
-def data_structures_graph_add_vertex(__1300: Any, inst_20871: Any, g_1301: Any, v_1302: Any) -> Any:
-    _x_20872 = g_1301.data_structures_graph_0
-    _x_20873 = v_1302 in _x_20872
-    _x_20874 = True
-    if _x_20873:
-        return g_1301
+def data_structures_graph_add_vertex(__1223: Any, inst_29082: Any, g_1224: Any, v_1225: Any) -> Any:
+    _x_29083 = g_1224.field_0
+    _x_29084 = v_1225 in _x_29083
+    _x_29085 = True
+    _x_29086 = _x_29084 == True
+    if _x_29086:
+        return g_1224
     else:
-        _x_20877 = [v_1302] + _x_20872
-        _x_20878 = g_1301.data_structures_graph_1
-        _x_20879 = Graph_mk(None, _x_20877, _x_20878)
-        return _x_20879
+        _x_29088 = [v_1225] + _x_29083
+        _x_29089 = g_1224.field_1
+        _x_29090 = Graph_mk(_x_29088, _x_29089)
+        return _x_29090
 
 # Lean: Corpus.DataStructures.Graph.addEdge
-def data_structures_graph_add_edge(__1303: Any, inst_20883: Any, g_1304: Any, u: Any, v_1305: Any) -> Any:
-    _x_20884 = data_structures_graph_add_vertex(None, inst_20883, g_1304, u)
-    _x_20885 = data_structures_graph_add_vertex(None, inst_20883, _x_20884, v_1305)
-    _x_20886 = _x_20885.data_structures_graph_0
-    _x_20887 = (u, v_1305)
-    _x_20888 = _x_20885.data_structures_graph_1
-    _x_20889 = [_x_20887] + _x_20888
-    _x_20890 = Graph_mk(None, _x_20886, _x_20889)
-    return _x_20890
+def data_structures_graph_add_edge(__1226: Any, inst_29094: Any, g_1227: Any, u: Any, v_1228: Any) -> Any:
+    _x_29095 = data_structures_graph_add_vertex(None, inst_29094, g_1227, u)
+    _x_29096 = data_structures_graph_add_vertex(None, inst_29094, _x_29095, v_1228)
+    _x_29097 = _x_29096.field_0
+    _x_29098 = (u, v_1228)
+    _x_29099 = _x_29096.field_1
+    _x_29100 = [_x_29098] + _x_29099
+    _x_29101 = Graph_mk(_x_29097, _x_29100)
+    return _x_29101
 
 # Lean: Corpus.DataStructures.Graph.neighbors
-def data_structures_graph_neighbors(__1306: Any, inst_20892: Any, g_1307: Any, v_1308: Any) -> list[Any]:
-    def _f_20915(x_20893: tuple[Any, Any]):
-        def _f_20909(u_1309: Any, w_1310: Any):
-            _x_20894 = inst_20892.beq_0
-            _x_20895 = _x_20894(u_1309, v_1308)
-            _x_20896 = True
-            if _x_20895:
-                _x_20907 = w_1310
-                return _x_20907
+def data_structures_graph_neighbors(__1229: Any, inst_29103: Any, g_1230: Any, v_1231: Any) -> list[Any]:
+    def _f_29126(x_29104: tuple[Any, Any]):
+        def _f_29120(u_1232: Any, w_1233: Any):
+            _x_29105 = inst_29103.field_0
+            _x_29106 = _x_29105(u_1232, v_1231)
+            _x_29107 = True
+            _x_29108 = _x_29106 == True
+            if _x_29108:
+                _x_29118 = w_1233
+                return _x_29118
             else:
-                _x_20899 = _x_20894(w_1310, v_1308)
-                if _x_20899:
-                    _x_20904 = u_1309
-                    return _x_20904
+                _x_29110 = _x_29105(w_1233, v_1231)
+                _x_29111 = _x_29110 == True
+                if _x_29111:
+                    _x_29115 = u_1232
+                    return _x_29115
                 else:
-                    _x_20902 = None
-                    return _x_20902
-        _alt_20910 = _f_20909
-        match x_20893:
-            case (fst_20911, snd_20912):
-                _x_20913 = _alt_20910(fst_20911, snd_20912)
-                return _x_20913
-    _x_20916 = g_1307.data_structures_graph_1
-    _x_20917 = [y for x in _x_20916 if (y := _f_20915(x)) is not None]
-    return _x_20917
+                    _x_29113 = None
+                    return _x_29113
+        _alt_29121 = _f_29120
+        match x_29104:
+            case (fst_29122, snd_29123):
+                _x_29124 = _alt_29121(fst_29122, snd_29123)
+                return _x_29124
+    _x_29127 = g_1230.field_1
+    _x_29128 = [_y for x in _x_29127 if (_y := _f_29126(x)) is not None]
+    return _x_29128
 
 # Lean: Corpus.DataStructures.Graph.degree
-def degree(__1311: Any, inst_20919: Any, g_1312: Any, v_1313: Any) -> int:
-    _x_20920 = data_structures_graph_neighbors(None, inst_20919, g_1312, v_1313)
-    _x_20921 = len(_x_20920)
-    return _x_20921
+def degree(__1234: Any, inst_29130: Any, g_1235: Any, v_1236: Any) -> int:
+    _x_29131 = data_structures_graph_neighbors(None, inst_29130, g_1235, v_1236)
+    _x_29132 = len(_x_29131)
+    return _x_29132
 
 # Lean: Corpus.DataStructures.Graph.hasEdge
-def has_edge(__1314: Any, inst_20923: Any, g_1315: Any, u_1316: Any, v_1317: Any) -> bool:
-    _x_20924 = g_1315.data_structures_graph_1
-    def _f_20977(x_20925: tuple[Any, Any]):
-        def _f_20971(a_1318: Any, b_1319: Any):
-            def _f_20927():
-                _x_20926 = True
+def has_edge(__1237: Any, inst_29134: Any, g_1238: Any, u_1239: Any, v_1240: Any) -> bool:
+    _x_29135 = g_1238.field_1
+    def _f_29188(x_29136: tuple[Any, Any]):
+        def _f_29182(a_1241: Any, b_1242: Any):
+            def _f_29138():
+                _x_29137 = True
                 return True
-            _alt_20928 = _f_20927
-            def _f_20943():
-                def _f_20930():
-                    _x_20929 = False
+            _alt_29139 = _f_29138
+            def _f_29154():
+                def _f_29141():
+                    _x_29140 = False
                     return False
-                _alt_20931 = _f_20930
-                def _f_20934():
-                    _x_20932 = inst_20923.beq_0
-                    _x_20933 = _x_20932(b_1319, u_1316)
-                    return _x_20933
-                _alt_20935 = _f_20934
-                _x_20936 = inst_20923.beq_0
-                _x_20937 = _x_20936(a_1318, v_1317)
-                if _x_20937:
-                    _x_20941 = _alt_20935()
-                    return _x_20941
+                _alt_29142 = _f_29141
+                def _f_29145():
+                    _x_29143 = inst_29134.field_0
+                    _x_29144 = _x_29143(b_1242, u_1239)
+                    return _x_29144
+                _alt_29146 = _f_29145
+                _x_29147 = inst_29134.field_0
+                _x_29148 = _x_29147(a_1241, v_1240)
+                if _x_29148:
+                    _x_29152 = _alt_29146()
+                    return _x_29152
                 else:
-                    _x_20939 = _alt_20931()
-                    return _x_20939
-            _alt_20944 = _f_20943
-            def _f_20946():
-                _x_20945 = False
+                    _x_29150 = _alt_29142()
+                    return _x_29150
+            _alt_29155 = _f_29154
+            def _f_29157():
+                _x_29156 = False
                 return False
-            _alt_20947 = _f_20946
-            def _f_20950():
-                _x_20948 = inst_20923.beq_0
-                _x_20949 = _x_20948(b_1319, v_1317)
-                return _x_20949
-            _alt_20951 = _f_20950
-            _x_20952 = inst_20923.beq_0
-            _x_20953 = _x_20952(a_1318, u_1316)
-            def _jp_20964(_y_20958: bool):
-                if _y_20958:
-                    _x_20962 = _alt_20928()
-                    return _x_20962
+            _alt_29158 = _f_29157
+            def _f_29161():
+                _x_29159 = inst_29134.field_0
+                _x_29160 = _x_29159(b_1242, v_1240)
+                return _x_29160
+            _alt_29162 = _f_29161
+            _x_29163 = inst_29134.field_0
+            _x_29164 = _x_29163(a_1241, u_1239)
+            def _jp_29175(_y_29169: bool):
+                if _y_29169:
+                    _x_29173 = _alt_29139()
+                    return _x_29173
                 else:
-                    _x_20960 = _alt_20944()
-                    return _x_20960
-            def _jp_20967():
-                _x_20966 = _alt_20947()
-                return _jp_20964(_x_20966)
-            def _jp_20970():
-                _x_20969 = _alt_20951()
-                return _jp_20964(_x_20969)
-            if _x_20953:
-                return _jp_20970()
+                    _x_29171 = _alt_29155()
+                    return _x_29171
+            def _jp_29178():
+                _x_29177 = _alt_29158()
+                return _jp_29175(_x_29177)
+            def _jp_29181():
+                _x_29180 = _alt_29162()
+                return _jp_29175(_x_29180)
+            if _x_29164:
+                return _jp_29181()
             else:
-                return _jp_20967()
-        _alt_20972 = _f_20971
-        match x_20925:
-            case (fst_20973, snd_20974):
-                _x_20975 = _alt_20972(fst_20973, snd_20974)
-                return _x_20975
-    _x_20978 = any(_f_20977(x) for x in _x_20924)
-    return _x_20978
+                return _jp_29178()
+        _alt_29183 = _f_29182
+        match x_29136:
+            case (fst_29184, snd_29185):
+                _x_29186 = _alt_29183(fst_29184, snd_29185)
+                return _x_29186
+    _x_29189 = any(_f_29188(x) for x in _x_29135)
+    return _x_29189
 
 # Lean: Corpus.DataStructures.Trie.empty
 def trie_empty() -> Trie:
-    _x_20980 = False
-    _x_20981 = []
-    _x_20982 = Trie_node(False, _x_20981)
-    return _x_20982
+    _x_29191 = False
+    _x_29192 = []
+    _x_29193 = Trie_node(False, _x_29192)
+    return _x_29193
 
 # Lean: Corpus.DataStructures.Trie.insert
-def trie_insert(t_1326: Trie, s_1327: str) -> Trie:
-    _x_20983 = list(s_1327)
-    _x_20984 = trie_insert_go(t_1326, _x_20983)
-    return _x_20984
+def trie_insert(t_1249: Trie, s_1250: str) -> Trie:
+    _x_29194 = list(s_1250)
+    _x_29195 = trie_insert_go(t_1249, _x_29194)
+    return _x_29195
 
 # Lean: Corpus.DataStructures.Trie.contains
-def trie_contains(t_1328: Trie, s_1329: str) -> bool:
-    _x_20986 = list(s_1329)
-    _x_20987 = trie_contains_go(t_1328, _x_20986)
-    return _x_20987
+def trie_contains(t_1251: Trie, s_1252: str) -> bool:
+    _x_29197 = list(s_1252)
+    _x_29198 = trie_contains_go(t_1251, _x_29197)
+    return _x_29198
 
 # Lean: Corpus.DataStructures.Trie.hasPrefix
-def has_prefix(t_1330: Trie, pfx_1331: str) -> bool:
-    _x_20989 = list(pfx_1331)
-    _x_20990 = has_prefix_go(t_1330, _x_20989)
-    return _x_20990
+def has_prefix(t_1253: Trie, pfx_1254: str) -> bool:
+    _x_29200 = list(pfx_1254)
+    _x_29201 = has_prefix_go(t_1253, _x_29200)
+    return _x_29201
 
 # Lean: Corpus.Advanced.Heap.empty
-def advanced_heap_empty(__1332: Any) -> Any:
-    _x_20992 = []
-    _x_20993 = Heap_mk(None, _x_20992)
-    return _x_20993
+def advanced_heap_empty(__1255: Any) -> Any:
+    _x_29203 = []
+    _x_29204 = Heap_mk(_x_29203)
+    return _x_29204
 
 # Lean: Corpus.Advanced.Heap.isEmpty
-def advanced_heap_is_empty(__1333: Any, h_1334: Any) -> bool:
-    _x_20995 = h_1334.heap_0
-    _x_20996 = len(_x_20995) == 0
-    return _x_20996
+def advanced_heap_is_empty(__1256: Any, h_1257: Any) -> bool:
+    _x_29206 = h_1257.field_0
+    _x_29207 = len(_x_29206) == 0
+    return _x_29207
 
 # Lean: Corpus.Advanced.Heap.size
-def advanced_heap_size(__1335: Any, h_1336: Any) -> int:
-    _x_20998 = h_1336.heap_0
-    _x_20999 = len(_x_20998)
-    return _x_20999
+def advanced_heap_size(__1258: Any, h_1259: Any) -> int:
+    _x_29209 = h_1259.field_0
+    _x_29210 = len(_x_29209)
+    return _x_29210
 
 # Lean: Corpus.Advanced.parent
-def parent(i_1337: int) -> int:
-    _x_21007 = 1
-    _x_21010 = i_1337 - 1
-    _x_21011 = 2
-    _x_21014 = _x_21010 // 2
-    return _x_21014
+def parent(i_1260: int) -> int:
+    _x_29218 = 1
+    _x_29221 = i_1260 - 1
+    _x_29222 = 2
+    _x_29225 = _x_29221 // 2
+    return _x_29225
 
 # Lean: Corpus.Advanced.leftChild
-def left_child(i_1338: int) -> int:
-    _x_21022 = 2
-    _x_21025 = 2 * i_1338
-    _x_21026 = 1
-    _x_21029 = _x_21025 + 1
-    return _x_21029
+def left_child(i_1261: int) -> int:
+    _x_29233 = 2
+    _x_29236 = 2 * i_1261
+    _x_29237 = 1
+    _x_29240 = _x_29236 + 1
+    return _x_29240
 
 # Lean: Corpus.Advanced.rightChild
-def right_child(i_1339: int) -> int:
-    _x_21037 = 2
-    _x_21040 = 2 * i_1339
-    _x_21041 = _x_21040 + 2
-    return _x_21041
+def right_child(i_1262: int) -> int:
+    _x_29248 = 2
+    _x_29251 = 2 * i_1262
+    _x_29252 = _x_29251 + 2
+    return _x_29252
 
 # Lean: Corpus.Advanced.swapAt
-def swap_at(__1340: Any, xs_1341: list[Any], i_1342: int, j_1343: int) -> list[Any]:
-    def _f_21045(a_1344: Any, b_1345: Any):
-        _x_21043 = xs_1341[:i_1342] + [b_1345] + xs_1341[i_1342+1:]
-        _x_21044 = _x_21043[:j_1343] + [a_1344] + _x_21043[j_1343+1:]
-        return _x_21044
-    _alt_21046 = _f_21045
-    def _f_21049(x_21047: Any | None, x_21048: Any | None):
-        return xs_1341
-    _alt_21050 = _f_21049
-    _x_21051 = xs_1341[i_1342] if 0 <= i_1342 < len(xs_1341) else None
-    if _x_21051 is None:
-        _x_21052 = None
-        _x_21053 = xs_1341[j_1343] if 0 <= j_1343 < len(xs_1341) else None
-        _x_21054 = _alt_21050(_x_21052, _x_21053)
-        return _x_21054
+def swap_at(__1263: Any, xs_1264: list[Any], i_1265: int, j_1266: int) -> list[Any]:
+    def _f_29256(a_1267: Any, b_1268: Any):
+        _x_29254 = set_tr(None, xs_1264, i_1265, b_1268)
+        _x_29255 = set_tr(None, _x_29254, j_1266, a_1267)
+        return _x_29255
+    _alt_29257 = _f_29256
+    def _f_29260(x_29258: Any | None, x_29259: Any | None):
+        return xs_1264
+    _alt_29261 = _f_29260
+    _x_29263 = (lambda xs, i: xs[i] if 0 <= i < len(xs) else None)
+    _x_29264 = _x_29263(xs_1264, i_1265)
+    if _x_29264 is None:
+        _x_29279 = (lambda h_29275: _alt_29261(_x_29264, _x_29263(xs_1264, j_1266)))(None)
+        return _x_29279
     else:
-        val_21055 = _x_21051
-        _x_21056 = xs_1341[j_1343] if 0 <= j_1343 < len(xs_1341) else None
-        if _x_21056 is None:
-            _x_21057 = val_21055
-            _x_21058 = None
-            _x_21059 = _alt_21050(_x_21057, _x_21058)
-            return _x_21059
+        val_29265 = _x_29264
+        _x_29266 = _x_29263(xs_1264, j_1266)
+        if _x_29266 is None:
+            def _f_29272(h_29269: Any):
+                _x_29270 = val_29265
+                _x_29271 = _alt_29261(_x_29270, _x_29266)
+                return _x_29271
+            _x_29273 = _f_29272(None)
+            return _x_29273
         else:
-            val_21060 = _x_21056
-            _x_21061 = _alt_21046(val_21055, val_21060)
-            return _x_21061
+            val_29267 = _x_29266
+            _x_29268 = _alt_29257(val_29265, val_29267)
+            return _x_29268
 
 # Lean: Corpus.Advanced.siftUp
-def sift_up(__1346: Any, inst_21065: Any, xs_1347: list[Any], i_1348: int) -> list[Any]:
-    _x_21068 = 0
-    _x_21071 = i_1348 == 0
-    _x_21072 = True
-    if _x_21071:
-        return xs_1347
-    else:
-        _x_21075 = parent(i_1348)
-        def _f_21088(vi_1350: Any, vp: Any):
-            _x_21078 = inst_21065.ord_0
-            _x_21079 = _x_21078(vi_1350, vp)
-            _x_21080 = -1
-            _x_21081 = _x_21079 == _x_21080
-            if _x_21081:
-                _x_21085 = swap_at(None, xs_1347, i_1348, _x_21075)
-                _x_21086 = sift_up(None, inst_21065, _x_21085, _x_21075)
-                return _x_21086
-            else:
-                return xs_1347
-        _alt_21089 = _f_21088
-        def _f_21092(x_21090: Any | None, x_21091: Any | None):
-            return xs_1347
-        _alt_21093 = _f_21092
-        _x_21094 = xs_1347[i_1348] if 0 <= i_1348 < len(xs_1347) else None
-        if _x_21094 is None:
-            _x_21095 = None
-            _x_21096 = xs_1347[_x_21075] if 0 <= _x_21075 < len(xs_1347) else None
-            _x_21097 = _alt_21093(_x_21095, _x_21096)
-            return _x_21097
+def sift_up(__1269: Any, inst_29282: Any, xs_1270: list[Any], i_1271: int) -> list[Any]:
+    while True:
+        _x_29286 = 0
+        _x_29289 = i_1271 == 0
+        _x_29290 = True
+        _x_29291 = _x_29289 == True
+        if _x_29291:
+            return xs_1270
         else:
-            val_21098 = _x_21094
-            _x_21099 = xs_1347[_x_21075] if 0 <= _x_21075 < len(xs_1347) else None
-            if _x_21099 is None:
-                _x_21100 = val_21098
-                _x_21101 = None
-                _x_21102 = _alt_21093(_x_21100, _x_21101)
-                return _x_21102
+            _x_29293 = parent(i_1271)
+            def _f_29311(x_29309: Any | None, x_29310: Any | None):
+                return xs_1270
+            _alt_29312 = _f_29311
+            _x_29314 = (lambda xs, i: xs[i] if 0 <= i < len(xs) else None)
+            _x_29315 = _x_29314(xs_1270, i_1271)
+            if _x_29315 is None:
+                _x_29330 = (lambda h_29326: _alt_29312(_x_29315, _x_29314(xs_1270, _x_29293)))(None)
+                return _x_29330
             else:
-                val_21103 = _x_21099
-                _x_21104 = _alt_21089(val_21098, val_21103)
-                return _x_21104
+                val_29316 = _x_29315
+                _x_29317 = _x_29314(xs_1270, _x_29293)
+                if _x_29317 is None:
+                    def _f_29323(h_29320: Any):
+                        _x_29321 = val_29316
+                        _x_29322 = _alt_29312(_x_29321, _x_29317)
+                        return _x_29322
+                    _x_29324 = _f_29323(None)
+                    return _x_29324
+                else:
+                    val_29318 = _x_29317
+                    vi_1273 = val_29316
+                    vp = val_29318
+                    _x_29297 = inst_29282.field_0
+                    _x_29298 = _x_29297(vi_1273, vp)
+                    _x_29299 = -1
+                    _x_29300 = _x_29298 == _x_29299
+                    _x_29301 = _x_29300 == True
+                    if _x_29301:
+                        _x_29304 = swap_at(None, xs_1270, i_1271, _x_29293)
+                        return sift_up(None, inst_29282, _x_29304, _x_29293)
+                    else:
+                        return xs_1270
 
 # Lean: Corpus.Advanced.siftDown
-def sift_down(__1351: Any, inst_21110: Any, xs_1352: list[Any], i_1353: int) -> list[Any]:
-    _x_21111 = len(xs_1352)
-    _x_21112 = left_child(i_1353)
-    _x_21113 = right_child(i_1353)
-    _x_21114 = _x_21111 <= _x_21112
-    if _x_21114:
-        return xs_1352
+def sift_down(__1274: Any, inst_29335: Any, xs_1275: list[Any], i_1276: int) -> list[Any]:
+    _x_29336 = len(xs_1275)
+    _x_29337 = left_child(i_1276)
+    _x_29338 = right_child(i_1276)
+    _x_29339 = _x_29336 <= _x_29337
+    if _x_29339:
+        return xs_1275
     else:
-        _x_21116 = _x_21111 <= _x_21113
-        def _jp_21182(_y_21149: int):
-            def _f_21163(vi_1357: Any, vs_1358: Any):
-                _x_21152 = inst_21110.ord_0
-                _x_21153 = _x_21152(vs_1358, vi_1357)
-                _x_21154 = -1
-                _x_21155 = _x_21153 == _x_21154
-                _x_21156 = True
-                if _x_21155:
-                    _x_21160 = swap_at(None, xs_1352, i_1353, _y_21149)
-                    _x_21161 = sift_down(None, inst_21110, _x_21160, _y_21149)
-                    return _x_21161
+        _x_29341 = _x_29336 <= _x_29338
+        def _jp_29421(_y_29381: int):
+            def _f_29396(vi_1280: Any, vs_1281: Any):
+                _x_29385 = inst_29335.field_0
+                _x_29386 = _x_29385(vs_1281, vi_1280)
+                _x_29387 = -1
+                _x_29388 = _x_29386 == _x_29387
+                _x_29389 = True
+                _x_29390 = _x_29388 == True
+                if _x_29390:
+                    _x_29393 = swap_at(None, xs_1275, i_1276, _y_29381)
+                    _x_29394 = sift_down(None, inst_29335, _x_29393, _y_29381)
+                    return _x_29394
                 else:
-                    return xs_1352
-            _alt_21164 = _f_21163
-            def _f_21167(x_21165: Any | None, x_21166: Any | None):
-                return xs_1352
-            _alt_21168 = _f_21167
-            _x_21169 = xs_1352[i_1353] if 0 <= i_1353 < len(xs_1352) else None
-            if _x_21169 is None:
-                _x_21170 = None
-                _x_21171 = xs_1352[_y_21149] if 0 <= _y_21149 < len(xs_1352) else None
-                _x_21172 = _alt_21168(_x_21170, _x_21171)
-                return _x_21172
+                    return xs_1275
+            _alt_29397 = _f_29396
+            def _f_29400(x_29398: Any | None, x_29399: Any | None):
+                return xs_1275
+            _alt_29401 = _f_29400
+            _x_29403 = (lambda xs, i: xs[i] if 0 <= i < len(xs) else None)
+            _x_29404 = _x_29403(xs_1275, i_1276)
+            if _x_29404 is None:
+                _x_29419 = (lambda h_29415: _alt_29401(_x_29404, _x_29403(xs_1275, _y_29381)))(None)
+                return _x_29419
             else:
-                val_21173 = _x_21169
-                _x_21174 = xs_1352[_y_21149] if 0 <= _y_21149 < len(xs_1352) else None
-                if _x_21174 is None:
-                    _x_21175 = val_21173
-                    _x_21176 = None
-                    _x_21177 = _alt_21168(_x_21175, _x_21176)
-                    return _x_21177
+                val_29405 = _x_29404
+                _x_29406 = _x_29403(xs_1275, _y_29381)
+                if _x_29406 is None:
+                    def _f_29412(h_29409: Any):
+                        _x_29410 = val_29405
+                        _x_29411 = _alt_29401(_x_29410, _x_29406)
+                        return _x_29411
+                    _x_29413 = _f_29412(None)
+                    return _x_29413
                 else:
-                    val_21178 = _x_21174
-                    _x_21179 = _alt_21164(val_21173, val_21178)
-                    return _x_21179
-        if _x_21116:
-            return _jp_21182(_x_21112)
+                    val_29407 = _x_29406
+                    _x_29408 = _alt_29397(val_29405, val_29407)
+                    return _x_29408
+        if _x_29341:
+            return _jp_29421(_x_29337)
         else:
-            def _f_21129(vl: Any, vr: Any):
-                _x_21120 = inst_21110.ord_0
-                _x_21121 = _x_21120(vl, vr)
-                _x_21122 = -1
-                _x_21123 = _x_21121 == _x_21122
-                _x_21124 = True
-                if _x_21123:
-                    return _x_21112
+            def _f_29355(vl: Any, vr: Any):
+                _x_29346 = inst_29335.field_0
+                _x_29347 = _x_29346(vl, vr)
+                _x_29348 = -1
+                _x_29349 = _x_29347 == _x_29348
+                _x_29350 = True
+                _x_29351 = _x_29349 == True
+                if _x_29351:
+                    return _x_29337
                 else:
-                    return _x_21113
-            _alt_21130 = _f_21129
-            def _jp_21190(_y_21187: Any, _y_21188: Any):
-                _x_21189 = _alt_21130(_y_21187, _y_21188)
-                return _jp_21182(_x_21189)
-            def _f_21133(x_21131: Any | None, x_21132: Any | None):
-                return _x_21112
-            _alt_21134 = _f_21133
-            def _jp_21186(_y_21183: Any | None, _y_21184: Any | None):
-                _x_21185 = _alt_21134(_y_21183, _y_21184)
-                return _jp_21182(_x_21185)
-            _x_21135 = xs_1352[_x_21112] if 0 <= _x_21112 < len(xs_1352) else None
-            if _x_21135 is None:
-                _x_21136 = None
-                _x_21137 = xs_1352[_x_21113] if 0 <= _x_21113 < len(xs_1352) else None
-                return _jp_21186(_x_21136, _x_21137)
+                    return _x_29338
+            _alt_29356 = _f_29355
+            def _jp_29425(_y_29422: Any, _y_29423: Any):
+                _x_29424 = _alt_29356(_y_29422, _y_29423)
+                return _jp_29421(_x_29424)
+            def _f_29359(x_29357: Any | None, x_29358: Any | None):
+                return _x_29337
+            _alt_29360 = _f_29359
+            _x_29362 = (lambda xs, i: xs[i] if 0 <= i < len(xs) else None)
+            _x_29363 = _x_29362(xs_1275, _x_29337)
+            if _x_29363 is None:
+                _x_29378 = (lambda h_29374: _alt_29360(_x_29363, _x_29362(xs_1275, _x_29338)))(None)
+                return _jp_29421(_x_29378)
             else:
-                val_21139 = _x_21135
-                _x_21140 = xs_1352[_x_21113] if 0 <= _x_21113 < len(xs_1352) else None
-                if _x_21140 is None:
-                    _x_21141 = val_21139
-                    _x_21142 = None
-                    return _jp_21186(_x_21141, _x_21142)
+                val_29364 = _x_29363
+                _x_29365 = _x_29362(xs_1275, _x_29338)
+                if _x_29365 is None:
+                    def _f_29371(h_29368: Any):
+                        _x_29369 = val_29364
+                        _x_29370 = _alt_29360(_x_29369, _x_29365)
+                        return _x_29370
+                    _x_29372 = _f_29371(None)
+                    return _jp_29421(_x_29372)
                 else:
-                    val_21144 = _x_21140
-                    return _jp_21190(val_21139, val_21144)
+                    val_29366 = _x_29365
+                    return _jp_29425(val_29364, val_29366)
 
 # Lean: Corpus.Advanced.Heap.insert
-def advanced_heap_insert(__1359: Any, inst_21194: Any, h_1360: Any, x_1361: Any) -> Any:
-    _x_21198 = h_1360.heap_0
-    _x_21199 = []
-    _x_21200 = [x_1361] + _x_21199
-    _x_21201 = _x_21198 + _x_21200
-    _x_21205 = len(_x_21201)
-    _x_21206 = 1
-    _x_21209 = _x_21205 - 1
-    _x_21210 = sift_up(None, inst_21194, _x_21201, _x_21209)
-    _x_21211 = Heap_mk(None, _x_21210)
-    return _x_21211
+def advanced_heap_insert(__1282: Any, inst_29429: Any, h_1283: Any, x_1284: Any) -> Any:
+    _x_29433 = h_1283.field_0
+    _x_29434 = []
+    _x_29435 = [x_1284] + _x_29434
+    _x_29436 = _x_29433 + _x_29435
+    _x_29440 = len(_x_29436)
+    _x_29441 = 1
+    _x_29444 = _x_29440 - 1
+    _x_29445 = sift_up(None, inst_29429, _x_29436, _x_29444)
+    _x_29446 = Heap_mk(_x_29445)
+    return _x_29446
 
 # Lean: Corpus.Advanced.Heap.min
-def advanced_heap_min(__1362: Any, h_1363: Any) -> Any | None:
-    _x_21213 = h_1363.heap_0
-    _x_21214 = (lambda xs: xs[0] if xs else None)(_x_21213)
-    return _x_21214
+def advanced_heap_min(__1285: Any, h_1286: Any) -> Any | None:
+    _x_29448 = h_1286.field_0
+    _x_29449 = (lambda xs: xs[0] if xs else None)(_x_29448)
+    return _x_29449
 
 # Lean: Corpus.Advanced.Heap.popMin
-def pop_min(__1364: Any, inst_21216: Any, h_1365: Any) -> Any:
-    def _f_21217():
-        return h_1365
-    _alt_21218 = _f_21217
-    def _f_21222(head_21219: Any):
-        _x_21220 = []
-        _x_21221 = Heap_mk(None, _x_21220)
-        return _x_21221
-    _alt_21223 = _f_21222
-    def _f_21244(head_21224: Any, rest_1367: list[Any]):
-        def _f_21227():
-            _x_21225 = []
-            _x_21226 = Heap_mk(None, _x_21225)
-            return _x_21226
-        _alt_21228 = _f_21227
-        def _f_21236(last: Any):
-            _x_21229 = (lambda xs: xs[:-1])(rest_1367)
-            _x_21230 = [last] + _x_21229
-            _x_21231 = 0
-            _x_21234 = sift_down(None, inst_21216, _x_21230, 0)
-            _x_21235 = Heap_mk(None, _x_21234)
-            return _x_21235
-        _alt_21237 = _f_21236
-        _x_21238 = (lambda xs: xs[-1] if xs else None)(rest_1367)
-        if _x_21238 is None:
-            _x_21240 = _alt_21228()
-            return _x_21240
+def pop_min(__1287: Any, inst_29451: Any, h_1288: Any) -> Any:
+    def _f_29452():
+        return h_1288
+    _alt_29453 = _f_29452
+    def _f_29457(head_29454: Any):
+        _x_29455 = []
+        _x_29456 = Heap_mk(_x_29455)
+        return _x_29456
+    _alt_29458 = _f_29457
+    def _f_29479(head_29459: Any, rest_1290: list[Any]):
+        def _f_29462():
+            _x_29460 = []
+            _x_29461 = Heap_mk(_x_29460)
+            return _x_29461
+        _alt_29463 = _f_29462
+        def _f_29471(last: Any):
+            _x_29464 = drop_last_tr(None, rest_1290)
+            _x_29465 = [last] + _x_29464
+            _x_29466 = 0
+            _x_29469 = sift_down(None, inst_29451, _x_29465, 0)
+            _x_29470 = Heap_mk(_x_29469)
+            return _x_29470
+        _alt_29472 = _f_29471
+        _x_29473 = (lambda xs: xs[-1] if xs else None)(rest_1290)
+        if _x_29473 is None:
+            _x_29475 = _alt_29463()
+            return _x_29475
         else:
-            val_21241 = _x_21238
-            _x_21242 = _alt_21237(val_21241)
-            return _x_21242
-    _alt_21245 = _f_21244
-    _x_21246 = h_1365.heap_0
-    if len(_x_21246) == 0:
-        _x_21248 = _alt_21218()
-        return _x_21248
+            val_29476 = _x_29473
+            _x_29477 = _alt_29472(val_29476)
+            return _x_29477
+    _alt_29480 = _f_29479
+    _x_29481 = h_1288.field_0
+    if len(_x_29481) == 0:
+        _x_29483 = _alt_29453()
+        return _x_29483
     else:
-        head_21249 = _x_21246[0]
-        tail_21250 = _x_21246[1:]
-        if len(tail_21250) == 0:
-            _x_21251 = _alt_21223(head_21249)
-            return _x_21251
+        head_29484 = _x_29481[0]
+        tail_29485 = _x_29481[1:]
+        if len(tail_29485) == 0:
+            _x_29486 = _alt_29458(head_29484)
+            return _x_29486
         else:
-            head_21252 = tail_21250[0]
-            tail_21253 = tail_21250[1:]
-            _x_21254 = [head_21252] + tail_21253
-            _x_21255 = _alt_21245(head_21249, _x_21254)
-            return _x_21255
+            _x_29490 = (lambda h_29487: _alt_29480(head_29484, tail_29485))(None)
+            return _x_29490
 
 # Lean: Corpus.Advanced.Heap.ofList
-def of_list(__1369: Any, inst_21259: Any, xs_1370: list[Any]) -> Any:
-    def _f_21263(x1_21260: Any, x2_21261: Any):
-        _x_21262 = advanced_heap_insert(None, inst_21259, x1_21260, x2_21261)
-        return _x_21262
-    _x_21264 = advanced_heap_empty(None)
-    _x_21265 = functools.reduce(_f_21263, xs_1370, _x_21264)
-    return _x_21265
+def of_list(__1292: Any, inst_29494: Any, xs_1293: list[Any]) -> Any:
+    def _f_29498(x1_29495: Any, x2_29496: Any):
+        _x_29497 = advanced_heap_insert(None, inst_29494, x1_29495, x2_29496)
+        return _x_29497
+    _x_29499 = advanced_heap_empty(None)
+    _x_29500 = functools.reduce(_f_29498, xs_1293, _x_29499)
+    return _x_29500
 
 # Lean: Corpus.Advanced.heapSort
-def heap_sort(__1371: Any, inst_21267: Any, xs_1372: list[Any]) -> list[Any]:
-    _x_21268 = of_list(None, inst_21267, xs_1372)
-    _x_21269 = []
-    _x_21273 = len(xs_1372)
-    _x_21274 = 1
-    _x_21277 = _x_21273 + 1
-    _x_21278 = extract(None, inst_21267, _x_21268, _x_21269, _x_21277)
-    return _x_21278
+def heap_sort(__1294: Any, inst_29502: Any, xs_1295: list[Any]) -> list[Any]:
+    _x_29503 = of_list(None, inst_29502, xs_1295)
+    _x_29504 = []
+    _x_29508 = len(xs_1295)
+    _x_29509 = 1
+    _x_29512 = _x_29508 + 1
+    _x_29513 = extract(None, inst_29502, _x_29503, _x_29504, _x_29512)
+    return _x_29513
 
 # Lean: Corpus.Advanced.UnionFind.empty
 def advanced_union_find_empty() -> UnionFind:
-    _x_21280 = []
-    _x_21281 = UnionFind_mk(_x_21280, _x_21280)
-    return _x_21281
+    _x_29515 = []
+    _x_29516 = UnionFind_mk(_x_29515, _x_29515)
+    return _x_29516
 
 # Lean: Corpus.Advanced.UnionFind.size
 def advanced_union_find_size(uf: UnionFind) -> int:
-    _x_21282 = uf.union_find_0
-    _x_21283 = len(_x_21282)
-    return _x_21283
+    _x_29517 = uf.field_0
+    _x_29518 = len(_x_29517)
+    return _x_29518
 
 # Lean: Corpus.Advanced.UnionFind.push
-def advanced_union_find_push(uf_1373: UnionFind) -> UnionFind:
-    _x_21285 = uf_1373.union_find_0
-    _x_21286 = len(_x_21285)
-    _x_21290 = []
-    _x_21291 = [_x_21286] + _x_21290
-    _x_21292 = _x_21285 + _x_21291
-    _x_21293 = uf_1373.union_find_1
-    _x_21294 = 0
-    _x_21297 = [0] + _x_21290
-    _x_21298 = _x_21293 + _x_21297
-    _x_21299 = UnionFind_mk(_x_21292, _x_21298)
-    return _x_21299
+def advanced_union_find_push(uf_1296: UnionFind) -> UnionFind:
+    _x_29520 = uf_1296.field_0
+    _x_29521 = len(_x_29520)
+    _x_29525 = []
+    _x_29526 = [_x_29521] + _x_29525
+    _x_29527 = _x_29520 + _x_29526
+    _x_29528 = uf_1296.field_1
+    _x_29529 = 0
+    _x_29532 = [0] + _x_29525
+    _x_29533 = _x_29528 + _x_29532
+    _x_29534 = UnionFind_mk(_x_29527, _x_29533)
+    return _x_29534
 
 # Lean: Corpus.Advanced.UnionFind.ofSize
-def of_size(n_1375: int) -> UnionFind:
-    _x_21301 = list(range(n_1375))
-    _x_21302 = 0
-    _x_21305 = list_replicate(None, n_1375, 0)
-    _x_21306 = UnionFind_mk(_x_21301, _x_21305)
-    return _x_21306
+def of_size(n_1298: int) -> UnionFind:
+    _x_29536 = list(range(n_1298))
+    _x_29537 = 0
+    _x_29540 = replicate_tr(None, n_1298, 0)
+    _x_29541 = UnionFind_mk(_x_29536, _x_29540)
+    return _x_29541
 
 # Lean: Corpus.Advanced.UnionFind.root
-def root(uf_1376: UnionFind, i_1377: int) -> int:
-    def _f_21308():
-        return i_1377
-    _alt_21309 = _f_21308
-    def _f_21319(p_1379: int):
-        _x_21312 = p_1379 == i_1377
-        _x_21313 = True
-        if _x_21312:
-            return i_1377
+def root(uf_1299: UnionFind, i_1300: int) -> int:
+    while True:
+        def _f_29543():
+            return i_1300
+        _alt_29544 = _f_29543
+        _x_29558 = (lambda xs, i: xs[i] if 0 <= i < len(xs) else None)
+        _x_29559 = uf_1299.field_0
+        _x_29560 = _x_29558(_x_29559, i_1300)
+        if _x_29560 is None:
+            _x_29562 = _alt_29544()
+            return _x_29562
         else:
-            _x_21316 = root(uf_1376, p_1379)
-            return _x_21316
-    _alt_21320 = _f_21319
-    _x_21321 = uf_1376.union_find_0
-    _x_21322 = _x_21321[i_1377] if 0 <= i_1377 < len(_x_21321) else None
-    if _x_21322 is None:
-        _x_21324 = _alt_21309()
-        return _x_21324
-    else:
-        val_21325 = _x_21322
-        _x_21326 = _alt_21320(val_21325)
-        return _x_21326
+            val_29563 = _x_29560
+            p_1302 = val_29563
+            _x_29548 = p_1302 == i_1300
+            _x_29549 = True
+            _x_29550 = _x_29548 == True
+            if _x_29550:
+                return i_1300
+            else:
+                uf_1299, i_1300 = uf_1299, p_1302
+                continue
 
 # Lean: Corpus.Advanced.UnionFind.equiv
-def equiv(uf_1380: UnionFind, i_1381: int, j_1382: int) -> bool:
-    _x_21331 = root(uf_1380, i_1381)
-    _x_21332 = root(uf_1380, j_1382)
-    _x_21333 = _x_21331 == _x_21332
-    return _x_21333
+def equiv(uf_1303: UnionFind, i_1304: int, j_1305: int) -> bool:
+    _x_29570 = root(uf_1303, i_1304)
+    _x_29571 = root(uf_1303, j_1305)
+    _x_29572 = _x_29570 == _x_29571
+    return _x_29572
 
 # Lean: Corpus.Advanced.UnionFind.union
-def union(uf_1383: UnionFind, i_1384: int, j_1385: int) -> UnionFind:
-    _x_21335 = root(uf_1383, i_1384)
-    _x_21336 = root(uf_1383, j_1385)
-    _x_21339 = _x_21335 == _x_21336
-    _x_21340 = True
-    if _x_21339:
-        return uf_1383
+def union(uf_1306: UnionFind, i_1307: int, j_1308: int) -> UnionFind:
+    _x_29574 = root(uf_1306, i_1307)
+    _x_29575 = root(uf_1306, j_1308)
+    _x_29579 = _x_29574 == _x_29575
+    _x_29580 = True
+    _x_29581 = _x_29579 == True
+    if _x_29581:
+        return uf_1306
     else:
-        def _f_21371(ranki: int, rankj: int):
-            _x_21343 = ranki < rankj
-            if _x_21343:
-                _x_21366 = uf_1383.union_find_0
-                _x_21367 = _x_21366[:_x_21335] + [_x_21336] + _x_21366[_x_21335+1:]
-                _x_21368 = uf_1383.union_find_1
-                _x_21369 = UnionFind_mk(_x_21367, _x_21368)
-                return _x_21369
+        def _f_29611(ranki: int, rankj: int):
+            _x_29583 = ranki < rankj
+            if _x_29583:
+                _x_29606 = uf_1306.field_0
+                _x_29607 = set_tr(None, _x_29606, _x_29574, _x_29575)
+                _x_29608 = uf_1306.field_1
+                _x_29609 = UnionFind_mk(_x_29607, _x_29608)
+                return _x_29609
             else:
-                _x_21345 = rankj < ranki
-                if _x_21345:
-                    _x_21360 = uf_1383.union_find_0
-                    _x_21361 = _x_21360[:_x_21336] + [_x_21335] + _x_21360[_x_21336+1:]
-                    _x_21362 = uf_1383.union_find_1
-                    _x_21363 = UnionFind_mk(_x_21361, _x_21362)
-                    return _x_21363
+                _x_29585 = rankj < ranki
+                if _x_29585:
+                    _x_29600 = uf_1306.field_0
+                    _x_29601 = set_tr(None, _x_29600, _x_29575, _x_29574)
+                    _x_29602 = uf_1306.field_1
+                    _x_29603 = UnionFind_mk(_x_29601, _x_29602)
+                    return _x_29603
                 else:
-                    _x_21347 = uf_1383.union_find_0
-                    _x_21348 = _x_21347[:_x_21336] + [_x_21335] + _x_21347[_x_21336+1:]
-                    _x_21349 = uf_1383.union_find_1
-                    _x_21353 = 1
-                    _x_21356 = ranki + 1
-                    _x_21357 = _x_21349[:_x_21335] + [_x_21356] + _x_21349[_x_21335+1:]
-                    _x_21358 = UnionFind_mk(_x_21348, _x_21357)
-                    return _x_21358
-        _alt_21372 = _f_21371
-        def _f_21375(x_21373: int | None, x_21374: int | None):
-            return uf_1383
-        _alt_21376 = _f_21375
-        _x_21377 = uf_1383.union_find_1
-        _x_21378 = _x_21377[_x_21335] if 0 <= _x_21335 < len(_x_21377) else None
-        if _x_21378 is None:
-            _x_21379 = None
-            _x_21380 = _x_21377[_x_21336] if 0 <= _x_21336 < len(_x_21377) else None
-            _x_21381 = _alt_21376(_x_21379, _x_21380)
-            return _x_21381
+                    _x_29587 = uf_1306.field_0
+                    _x_29588 = set_tr(None, _x_29587, _x_29575, _x_29574)
+                    _x_29589 = uf_1306.field_1
+                    _x_29593 = 1
+                    _x_29596 = ranki + 1
+                    _x_29597 = set_tr(None, _x_29589, _x_29574, _x_29596)
+                    _x_29598 = UnionFind_mk(_x_29588, _x_29597)
+                    return _x_29598
+        _alt_29612 = _f_29611
+        def _f_29615(x_29613: int | None, x_29614: int | None):
+            return uf_1306
+        _alt_29616 = _f_29615
+        _x_29618 = (lambda xs, i: xs[i] if 0 <= i < len(xs) else None)
+        _x_29619 = uf_1306.field_1
+        _x_29620 = _x_29618(_x_29619, _x_29574)
+        if _x_29620 is None:
+            _x_29635 = (lambda h_29631: _alt_29616(_x_29620, _x_29618(_x_29619, _x_29575)))(None)
+            return _x_29635
         else:
-            val_21382 = _x_21378
-            _x_21383 = _x_21377[_x_21336] if 0 <= _x_21336 < len(_x_21377) else None
-            if _x_21383 is None:
-                _x_21384 = val_21382
-                _x_21385 = None
-                _x_21386 = _alt_21376(_x_21384, _x_21385)
-                return _x_21386
+            val_29621 = _x_29620
+            _x_29622 = _x_29618(_x_29619, _x_29575)
+            if _x_29622 is None:
+                def _f_29628(h_29625: Any):
+                    _x_29626 = val_29621
+                    _x_29627 = _alt_29616(_x_29626, _x_29622)
+                    return _x_29627
+                _x_29629 = _f_29628(None)
+                return _x_29629
             else:
-                val_21387 = _x_21383
-                _x_21388 = _alt_21372(val_21382, val_21387)
-                return _x_21388
+                val_29623 = _x_29622
+                _x_29624 = _alt_29612(val_29621, val_29623)
+                return _x_29624
 
 # Lean: Corpus.Advanced.UnionFind.numSets
-def num_sets(uf_1386: UnionFind) -> int:
-    def _f_21398(i_1387: int):
-        _x_21396 = root(uf_1386, i_1387)
-        _x_21397 = _x_21396 == i_1387
-        return _x_21397
-    _x_21399 = advanced_union_find_size(uf_1386)
-    _x_21400 = list(range(_x_21399))
-    _x_21401 = [x for x in _x_21400 if _f_21398(x)]
-    _x_21402 = len(_x_21401)
-    return _x_21402
+def num_sets(uf_1309: UnionFind) -> int:
+    def _f_29645(i_1310: int):
+        _x_29643 = root(uf_1309, i_1310)
+        _x_29644 = _x_29643 == i_1310
+        return _x_29644
+    _x_29646 = advanced_union_find_size(uf_1309)
+    _x_29647 = list(range(_x_29646))
+    _x_29648 = [x for x in _x_29647 if _f_29645(x)]
+    _x_29649 = len(_x_29648)
+    return _x_29649
 
 # Lean: Corpus.Advanced.Graph.empty
 def advanced_graph_empty() -> Graph:
-    _x_21404 = 0
-    _x_21407 = []
-    _x_21408 = Graph_mk(0, _x_21407)
-    return _x_21408
+    _x_29651 = 0
+    _x_29654 = []
+    _x_29655 = Graph_mk(0, _x_29654)
+    return _x_29655
 
 # Lean: Corpus.Advanced.Graph.addVertex
-def advanced_graph_add_vertex(g_1388: Graph) -> Graph:
-    _x_21412 = g_1388.advanced_graph_0
-    _x_21413 = 1
-    _x_21416 = _x_21412 + 1
-    _x_21417 = g_1388.advanced_graph_1
-    _x_21418 = Graph_mk(_x_21416, _x_21417)
-    return _x_21418
+def advanced_graph_add_vertex(g_1311: Graph) -> Graph:
+    _x_29659 = g_1311.field_0
+    _x_29660 = 1
+    _x_29663 = _x_29659 + 1
+    _x_29664 = g_1311.field_1
+    _x_29665 = Graph_mk(_x_29663, _x_29664)
+    return _x_29665
 
 # Lean: Corpus.Advanced.Graph.addEdge
-def advanced_graph_add_edge(g_1389: Graph, u_1390: int, v_1391: int) -> Graph:
-    _x_21420 = g_1389.advanced_graph_0
-    _x_21421 = (u_1390, v_1391)
-    _x_21422 = g_1389.advanced_graph_1
-    _x_21423 = [_x_21421] + _x_21422
-    _x_21424 = Graph_mk(_x_21420, _x_21423)
-    return _x_21424
+def advanced_graph_add_edge(g_1312: Graph, u_1313: int, v_1314: int) -> Graph:
+    _x_29667 = g_1312.field_0
+    _x_29668 = (u_1313, v_1314)
+    _x_29669 = g_1312.field_1
+    _x_29670 = [_x_29668] + _x_29669
+    _x_29671 = Graph_mk(_x_29667, _x_29670)
+    return _x_29671
 
 # Lean: Corpus.Advanced.Graph.neighbors
-def advanced_graph_neighbors(g_1392: Graph, v_1393: int) -> list[int]:
-    def _f_21449(x_21426: tuple[int, int]):
-        def _f_21443(u_1394: int, w_1395: int):
-            _x_21429 = u_1394 == v_1393
-            _x_21430 = True
-            if _x_21429:
-                _x_21441 = w_1395
-                return _x_21441
+def advanced_graph_neighbors(g_1315: Graph, v_1316: int) -> list[int]:
+    def _f_29697(x_29673: tuple[int, int]):
+        def _f_29691(u_1317: int, w_1318: int):
+            _x_29677 = u_1317 == v_1316
+            _x_29678 = True
+            _x_29679 = _x_29677 == True
+            if _x_29679:
+                _x_29689 = w_1318
+                return _x_29689
             else:
-                _x_21433 = w_1395 == v_1393
-                if _x_21433:
-                    _x_21438 = u_1394
-                    return _x_21438
+                _x_29681 = w_1318 == v_1316
+                _x_29682 = _x_29681 == True
+                if _x_29682:
+                    _x_29686 = u_1317
+                    return _x_29686
                 else:
-                    _x_21436 = None
-                    return _x_21436
-        _alt_21444 = _f_21443
-        match x_21426:
-            case (fst_21445, snd_21446):
-                _x_21447 = _alt_21444(fst_21445, snd_21446)
-                return _x_21447
-    _x_21450 = g_1392.advanced_graph_1
-    _x_21451 = [y for x in _x_21450 if (y := _f_21449(x)) is not None]
-    return _x_21451
+                    _x_29684 = None
+                    return _x_29684
+        _alt_29692 = _f_29691
+        match x_29673:
+            case (fst_29693, snd_29694):
+                _x_29695 = _alt_29692(fst_29693, snd_29694)
+                return _x_29695
+    _x_29698 = g_1315.field_1
+    _x_29699 = [_y for x in _x_29698 if (_y := _f_29697(x)) is not None]
+    return _x_29699
 
 # Lean: Corpus.Advanced.Graph.bfs
-def bfs(g_1396: Graph, start_1397: int) -> list[int]:
-    _x_21453 = []
-    _x_21454 = [start_1397] + _x_21453
-    _x_21458 = g_1396.advanced_graph_0
-    _x_21459 = g_1396.advanced_graph_1
-    _x_21460 = len(_x_21459)
-    _x_21461 = _x_21458 + _x_21460
-    _x_21462 = 1
-    _x_21465 = _x_21461 + 1
-    _x_21466 = bfs_loop(g_1396, _x_21454, _x_21453, _x_21465)
-    return _x_21466
+def bfs(g_1319: Graph, start_1320: int) -> list[int]:
+    _x_29701 = []
+    _x_29702 = [start_1320] + _x_29701
+    _x_29706 = g_1319.field_0
+    _x_29707 = g_1319.field_1
+    _x_29708 = len(_x_29707)
+    _x_29709 = _x_29706 + _x_29708
+    _x_29710 = 1
+    _x_29713 = _x_29709 + 1
+    _x_29714 = bfs_loop(g_1319, _x_29702, _x_29701, _x_29713)
+    return _x_29714
 
 # Lean: Corpus.Advanced.Graph.dfs
-def dfs(g_1398: Graph, start_1399: int) -> list[int]:
-    _x_21468 = []
-    _x_21469 = [start_1399] + _x_21468
-    _x_21473 = g_1398.advanced_graph_0
-    _x_21474 = g_1398.advanced_graph_1
-    _x_21475 = len(_x_21474)
-    _x_21476 = _x_21473 + _x_21475
-    _x_21477 = 1
-    _x_21480 = _x_21476 + 1
-    _x_21481 = dfs_loop(g_1398, _x_21469, _x_21468, _x_21480)
-    return _x_21481
+def dfs(g_1321: Graph, start_1322: int) -> list[int]:
+    _x_29716 = []
+    _x_29717 = [start_1322] + _x_29716
+    _x_29721 = g_1321.field_0
+    _x_29722 = g_1321.field_1
+    _x_29723 = len(_x_29722)
+    _x_29724 = _x_29721 + _x_29723
+    _x_29725 = 1
+    _x_29728 = _x_29724 + 1
+    _x_29729 = dfs_loop(g_1321, _x_29717, _x_29716, _x_29728)
+    return _x_29729
 
 # Lean: Corpus.Advanced.Graph.isConnected
-def is_connected(g_1400: Graph) -> bool:
-    _x_21485 = g_1400.advanced_graph_0
-    _x_21486 = 0
-    _x_21489 = _x_21485 == 0
-    _x_21490 = True
-    if _x_21489:
+def is_connected(g_1323: Graph) -> bool:
+    _x_29734 = g_1323.field_0
+    _x_29735 = 0
+    _x_29738 = _x_29734 == 0
+    _x_29739 = True
+    _x_29740 = _x_29738 == True
+    if _x_29740:
+        _x_29746 = True
         return True
     else:
-        _x_21493 = bfs(g_1400, 0)
-        _x_21494 = len(_x_21493)
-        _x_21495 = _x_21494 == _x_21485
-        return _x_21495
+        _x_29742 = bfs(g_1323, 0)
+        _x_29743 = len(_x_29742)
+        _x_29744 = _x_29743 == _x_29734
+        return _x_29744
 
 # Lean: Corpus.Advanced.Graph.topoSort
-def topo_sort(g_1402: Graph) -> list[int] | None:
-    def _f_21508(v_1403: int):
-        def _f_21504(x_21499: tuple[int, int]):
-            _x_21502 = x_21499[1]
-            _x_21503 = _x_21502 == v_1403
-            return _x_21503
-        _x_21505 = g_1402.advanced_graph_1
-        _x_21506 = [x for x in _x_21505 if _f_21504(x)]
-        _x_21507 = len(_x_21506)
-        return _x_21507
-    _x_21509 = g_1402.advanced_graph_0
-    _x_21510 = list(range(_x_21509))
-    _x_21511 = [_f_21508(x) for x in _x_21510]
-    def _f_21532(v_1404: int):
-        def _f_21512(x_1405: bool):
-            return x_1405
-        _alt_21513 = _f_21512
-        def _f_21515():
-            _x_21514 = False
+def topo_sort(g_1325: Graph) -> list[int] | None:
+    def _f_29759(v_1326: int):
+        _x_29756 = g_1325.field_1
+        _x_29757 = [x_29749 for x_29749 in _x_29756 if (x_29749[1] == v_1326)]
+        _x_29758 = len(_x_29757)
+        return _x_29758
+    _x_29760 = g_1325.field_0
+    _x_29761 = list(range(_x_29760))
+    _x_29762 = [_f_29759(x) for x in _x_29761]
+    def _f_29786(v_1327: int):
+        _alt_29764 = (lambda x_1328: x_1328)
+        def _f_29766():
+            _x_29765 = False
             return False
-        _alt_21516 = _f_21515
-        def _f_21524(x_21517: int):
-            _x_21520 = 0
-            _x_21523 = x_21517 == 0
-            return _x_21523
-        _x_21525 = _x_21511[v_1404] if 0 <= v_1404 < len(_x_21511) else None
-        _x_21526 = option_map(None, None, _f_21524, _x_21525)
-        if _x_21526 is None:
-            _x_21528 = _alt_21516()
-            return _x_21528
+        _alt_29767 = _f_29766
+        _x_29778 = (lambda xs, i: xs[i] if 0 <= i < len(xs) else None)
+        _x_29779 = _x_29778(_x_29762, v_1327)
+        _x_29780 = option_map(None, None, (lambda x_29768: (x_29768 == 0)), _x_29779)
+        if _x_29780 is None:
+            _x_29782 = _alt_29767()
+            return _x_29782
         else:
-            val_21529 = _x_21526
-            _x_21530 = _alt_21513(val_21529)
-            return _x_21530
-    _x_21533 = [x for x in _x_21510 if _f_21532(x)]
-    _x_21534 = []
-    _x_21538 = 1
-    _x_21541 = _x_21509 + 1
-    _x_21542 = topo_sort_loop(g_1402, _x_21533, _x_21511, _x_21534, _x_21541)
-    return _x_21542
+            val_29783 = _x_29780
+            _x_29784 = _alt_29764(val_29783)
+            return _x_29784
+    _x_29787 = [x for x in _x_29761 if _f_29786(x)]
+    _x_29788 = []
+    _x_29792 = 1
+    _x_29795 = _x_29760 + 1
+    _x_29796 = topo_sort_loop(g_1325, _x_29787, _x_29762, _x_29788, _x_29795)
+    return _x_29796
 
 # Lean: Corpus.Advanced.Graph.hasCycle
-def has_cycle(g_1407: Graph) -> bool:
-    _x_21544 = topo_sort(g_1407)
-    _x_21545 = (lambda x: x is None)(_x_21544)
-    return _x_21545
+def has_cycle(g_1330: Graph) -> bool:
+    _x_29798 = topo_sort(g_1330)
+    _x_29799 = (lambda x: x is None)(_x_29798)
+    return _x_29799
 
 # Lean: Corpus.Advanced.Matrix.get
-def advanced_matrix_get(m_1408: list[list[int]], i_1409: int, j_1410: int) -> int | None:
-    def _f_21548():
-        _x_21547 = None
-        return _x_21547
-    _alt_21549 = _f_21548
-    def _f_21551(row_1412: list[int]):
-        _x_21550 = row_1412[j_1410] if 0 <= j_1410 < len(row_1412) else None
-        return _x_21550
-    _alt_21552 = _f_21551
-    _x_21553 = m_1408[i_1409] if 0 <= i_1409 < len(m_1408) else None
-    if _x_21553 is None:
-        _x_21555 = _alt_21549()
-        return _x_21555
+def advanced_matrix_get(m_1331: list[list[int]], i_1332: int, j_1333: int) -> int | None:
+    def _f_29802():
+        _x_29801 = None
+        return _x_29801
+    _alt_29803 = _f_29802
+    def _f_29807(row_1335: list[int]):
+        _x_29805 = (lambda xs, i: xs[i] if 0 <= i < len(xs) else None)
+        _x_29806 = _x_29805(row_1335, j_1333)
+        return _x_29806
+    _alt_29808 = _f_29807
+    _x_29810 = (lambda xs, i: xs[i] if 0 <= i < len(xs) else None)
+    _x_29811 = _x_29810(m_1331, i_1332)
+    if _x_29811 is None:
+        _x_29813 = _alt_29803()
+        return _x_29813
     else:
-        val_21556 = _x_21553
-        _x_21557 = _alt_21552(val_21556)
-        return _x_21557
+        val_29814 = _x_29811
+        _x_29815 = _alt_29808(val_29814)
+        return _x_29815
 
 # Lean: Corpus.Advanced.Matrix.set
-def advanced_matrix_set(m_1413: list[list[int]], i_1414: int, j_1415: int, v_1416: int) -> list[list[int]]:
-    def _f_21590(x_21560: tuple[int, list[int]]):
-        def _f_21584(idx_1417: int, row_1418: list[int]):
-            _x_21563 = idx_1417 == i_1414
-            _x_21564 = True
-            if _x_21563:
-                def _f_21580(x_21568: tuple[int, int]):
-                    def _f_21574(jdx: int, val_1419: int):
-                        _x_21569 = jdx == j_1415
-                        if _x_21569:
-                            return v_1416
+def advanced_matrix_set(m_1336: list[list[int]], i_1337: int, j_1338: int, v_1339: int) -> list[list[int]]:
+    def _f_29852(x_29818: tuple[list[int], int]):
+        def _f_29846(row_1340: list[int], idx_1341: int):
+            _x_29822 = idx_1341 == i_1337
+            _x_29823 = True
+            _x_29824 = _x_29822 == True
+            if _x_29824:
+                def _f_29839(x_29827: tuple[int, int]):
+                    def _f_29833(val_1342: int, jdx: int):
+                        _x_29828 = jdx == j_1338
+                        _x_29829 = _x_29828 == True
+                        if _x_29829:
+                            return v_1339
                         else:
-                            return val_1419
-                    _alt_21575 = _f_21574
-                    match x_21568:
-                        case (fst_21576, snd_21577):
-                            _x_21578 = _alt_21575(fst_21576, snd_21577)
-                            return _x_21578
-                _x_21581 = list(enumerate(row_1418))
-                _x_21582 = [_f_21580(x) for x in _x_21581]
-                return _x_21582
+                            return val_1342
+                    _alt_29834 = _f_29833
+                    match x_29827:
+                        case (fst_29835, snd_29836):
+                            _x_29837 = _alt_29834(fst_29835, snd_29836)
+                            return _x_29837
+                _x_29840 = 0
+                _x_29843 = zip_idx_tr(None, row_1340, 0)
+                _x_29844 = [_f_29839(x) for x in _x_29843]
+                return _x_29844
             else:
-                return row_1418
-        _alt_21585 = _f_21584
-        match x_21560:
-            case (fst_21586, snd_21587):
-                _x_21588 = _alt_21585(fst_21586, snd_21587)
-                return _x_21588
-    _x_21591 = list(enumerate(m_1413))
-    _x_21592 = [_f_21590(x) for x in _x_21591]
-    return _x_21592
+                return row_1340
+        _alt_29847 = _f_29846
+        match x_29818:
+            case (fst_29848, snd_29849):
+                _x_29850 = _alt_29847(fst_29848, snd_29849)
+                return _x_29850
+    _x_29853 = 0
+    _x_29856 = zip_idx_tr(None, m_1336, 0)
+    _x_29857 = [_f_29852(x) for x in _x_29856]
+    return _x_29857
 
 # Lean: Corpus.Advanced.Matrix.create
-def advanced_matrix_create(n_1420: int, fill: int) -> list[list[int]]:
-    _x_21594 = list_replicate(None, n_1420, fill)
-    _x_21595 = list_replicate(None, n_1420, _x_21594)
-    return _x_21595
+def advanced_matrix_create(n_1343: int, fill: int) -> list[list[int]]:
+    _x_29859 = replicate_tr(None, n_1343, fill)
+    _x_29860 = replicate_tr(None, n_1343, _x_29859)
+    return _x_29860
 
 # Lean: Corpus.Advanced.floydWarshall
-def floyd_warshall(n_1421: int, edges: list[tuple[int, tuple[int, int]]]) -> list[list[int]]:
-    _x_21597 = 1000000000
-    _x_21600 = advanced_matrix_create(n_1421, 1000000000)
-    def _f_21605(m_1424: list[list[int]], i_1425: int):
-        _x_21601 = 0
-        _x_21604 = advanced_matrix_set(m_1424, i_1425, i_1425, 0)
-        return _x_21604
-    _x_21606 = list(range(n_1421))
-    _x_21607 = functools.reduce(_f_21605, _x_21606, _x_21600)
-    def _f_21619(m_1426: list[list[int]], x_21608: tuple[int, tuple[int, int]]):
-        def _f_21610(u_1427: int, v_1428: int, w_1429: int):
-            _x_21609 = advanced_matrix_set(m_1426, u_1427, v_1428, w_1429)
-            return _x_21609
-        _alt_21611 = _f_21610
-        match x_21608:
-            case (fst_21612, snd_21613):
-                match snd_21613:
-                    case (fst_21614, snd_21615):
-                        _x_21616 = _alt_21611(fst_21612, fst_21614, snd_21615)
-                        return _x_21616
-    _x_21620 = functools.reduce(_f_21619, edges, _x_21607)
-    def _f_21663(dist: list[list[int]], k_1430: int):
-        def _f_21661(d_1431: list[list[int]], i_1432: int):
-            def _f_21659(d_: list[list[int]], j_1433: int):
-                def _f_21630(dik: int, dkj: int, dij: int):
-                    _x_21624 = dik + dkj
-                    _x_21625 = _x_21624 < dij
-                    if _x_21625:
-                        _x_21628 = advanced_matrix_set(d_, i_1432, j_1433, _x_21624)
-                        return _x_21628
+def floyd_warshall(n_1344: int, edges: list[tuple[int, tuple[int, int]]]) -> list[list[int]]:
+    _x_29862 = 1000000000
+    _x_29865 = advanced_matrix_create(n_1344, 1000000000)
+    def _f_29870(m_1347: list[list[int]], i_1348: int):
+        _x_29866 = 0
+        _x_29869 = advanced_matrix_set(m_1347, i_1348, i_1348, 0)
+        return _x_29869
+    _x_29871 = list(range(n_1344))
+    _x_29872 = functools.reduce(_f_29870, _x_29871, _x_29865)
+    def _f_29884(m_1349: list[list[int]], x_29873: tuple[int, tuple[int, int]]):
+        def _f_29875(u_1350: int, v_1351: int, w_1352: int):
+            _x_29874 = advanced_matrix_set(m_1349, u_1350, v_1351, w_1352)
+            return _x_29874
+        _alt_29876 = _f_29875
+        match x_29873:
+            case (fst_29877, snd_29878):
+                match snd_29878:
+                    case (fst_29879, snd_29880):
+                        _x_29881 = _alt_29876(fst_29877, fst_29879, snd_29880)
+                        return _x_29881
+    _x_29885 = functools.reduce(_f_29884, edges, _x_29872)
+    def _f_29934(dist: list[list[int]], k_1353: int):
+        def _f_29932(d_1354: list[list[int]], i_1355: int):
+            def _f_29930(d_: list[list[int]], j_1356: int):
+                def _f_29895(dik: int, dkj: int, dij: int):
+                    _x_29889 = dik + dkj
+                    _x_29890 = _x_29889 < dij
+                    if _x_29890:
+                        _x_29893 = advanced_matrix_set(d_, i_1355, j_1356, _x_29889)
+                        return _x_29893
                     else:
                         return d_
-                _alt_21631 = _f_21630
-                def _f_21635(x_21632: int | None, x_21633: int | None, x_21634: int | None):
+                _alt_29896 = _f_29895
+                def _f_29900(x_29897: int | None, x_29898: int | None, x_29899: int | None):
                     return d_
-                _alt_21636 = _f_21635
-                _x_21637 = advanced_matrix_get(d_, i_1432, k_1430)
-                if _x_21637 is None:
-                    _x_21638 = None
-                    _x_21639 = advanced_matrix_get(d_, k_1430, j_1433)
-                    _x_21640 = advanced_matrix_get(d_, i_1432, j_1433)
-                    _x_21641 = _alt_21636(_x_21638, _x_21639, _x_21640)
-                    return _x_21641
+                _alt_29901 = _f_29900
+                _x_29902 = advanced_matrix_get(d_, i_1355, k_1353)
+                if _x_29902 is None:
+                    def _f_29927(h_29923: Any):
+                        _x_29924 = advanced_matrix_get(d_, k_1353, j_1356)
+                        _x_29925 = advanced_matrix_get(d_, i_1355, j_1356)
+                        _x_29926 = _alt_29901(_x_29902, _x_29924, _x_29925)
+                        return _x_29926
+                    _x_29928 = _f_29927(None)
+                    return _x_29928
                 else:
-                    val_21642 = _x_21637
-                    _x_21643 = advanced_matrix_get(d_, k_1430, j_1433)
-                    if _x_21643 is None:
-                        _x_21644 = val_21642
-                        _x_21645 = None
-                        _x_21646 = advanced_matrix_get(d_, i_1432, j_1433)
-                        _x_21647 = _alt_21636(_x_21644, _x_21645, _x_21646)
-                        return _x_21647
+                    val_29903 = _x_29902
+                    _x_29904 = advanced_matrix_get(d_, k_1353, j_1356)
+                    if _x_29904 is None:
+                        def _f_29920(h_29916: Any):
+                            _x_29917 = val_29903
+                            _x_29918 = advanced_matrix_get(d_, i_1355, j_1356)
+                            _x_29919 = _alt_29901(_x_29917, _x_29904, _x_29918)
+                            return _x_29919
+                        _x_29921 = _f_29920(None)
+                        return _x_29921
                     else:
-                        val_21648 = _x_21643
-                        _x_21649 = advanced_matrix_get(d_, i_1432, j_1433)
-                        if _x_21649 is None:
-                            _x_21650 = val_21642
-                            _x_21651 = val_21648
-                            _x_21652 = None
-                            _x_21653 = _alt_21636(_x_21650, _x_21651, _x_21652)
-                            return _x_21653
+                        val_29905 = _x_29904
+                        _x_29906 = advanced_matrix_get(d_, i_1355, j_1356)
+                        if _x_29906 is None:
+                            def _f_29913(h_29909: Any):
+                                _x_29910 = val_29903
+                                _x_29911 = val_29905
+                                _x_29912 = _alt_29901(_x_29910, _x_29911, _x_29906)
+                                return _x_29912
+                            _x_29914 = _f_29913(None)
+                            return _x_29914
                         else:
-                            val_21654 = _x_21649
-                            _x_21655 = _alt_21631(val_21642, val_21648, val_21654)
-                            return _x_21655
-            _x_21660 = functools.reduce(_f_21659, _x_21606, d_1431)
-            return _x_21660
-        _x_21662 = functools.reduce(_f_21661, _x_21606, dist)
-        return _x_21662
-    _x_21664 = functools.reduce(_f_21663, _x_21606, _x_21620)
-    return _x_21664
+                            val_29907 = _x_29906
+                            _x_29908 = _alt_29896(val_29903, val_29905, val_29907)
+                            return _x_29908
+            _x_29931 = functools.reduce(_f_29930, _x_29871, d_1354)
+            return _x_29931
+        _x_29933 = functools.reduce(_f_29932, _x_29871, dist)
+        return _x_29933
+    _x_29935 = functools.reduce(_f_29934, _x_29871, _x_29885)
+    return _x_29935
 
 # Lean: Corpus.NumberTheory.extGcd
-def ext_gcd(a_1434: int, b_1435: int) -> tuple[int, tuple[int, int]]:
-    _x_21668 = 0
-    _x_21671 = b_1435 == 0
-    _x_21672 = True
-    if _x_21671:
-        _x_21707 = 1
-        _x_21712 = (1, a_1434)
-        _x_21713 = (1, _x_21712)
-        return _x_21713
+def ext_gcd(a_1357: int, b_1358: int) -> tuple[int, tuple[int, int]]:
+    _x_29940 = 0
+    _x_29943 = b_1358 == 0
+    _x_29944 = True
+    _x_29945 = _x_29943 == True
+    if _x_29945:
+        _x_29979 = 1
+        _x_29984 = (1, a_1357)
+        _x_29985 = (1, _x_29984)
+        return _x_29985
     else:
-        def _f_21692(x_1436: int, y_1437: int, g_1438: int):
-            _x_21685 = cast(None, _x_21684, a_1434)
-            _x_21686 = cast(None, _x_21684, b_1435)
-            _x_21687 = _x_21685 // _x_21686
-            _x_21688 = _x_21687 * y_1437
-            _x_21689 = x_1436 - _x_21688
-            _x_21690 = (_x_21689, g_1438)
-            _x_21691 = (y_1437, _x_21690)
-            return _x_21691
-        _alt_21693 = _f_21692
-        _x_21697 = a_1434 % b_1435
-        _x_21698 = ext_gcd(b_1435, _x_21697)
-        match _x_21698:
-            case (fst_21699, snd_21700):
-                match snd_21700:
-                    case (fst_21701, snd_21702):
-                        _x_21703 = _alt_21693(fst_21699, fst_21701, snd_21702)
-                        return _x_21703
+        def _f_29964(x_1359: int, y_1360: int, g_1361: int):
+            _x_29957 = cast(None, _x_29956, a_1357)
+            _x_29958 = cast(None, _x_29956, b_1358)
+            _x_29959 = _x_29957 // _x_29958
+            _x_29960 = _x_29959 * y_1360
+            _x_29961 = x_1359 - _x_29960
+            _x_29962 = (_x_29961, g_1361)
+            _x_29963 = (y_1360, _x_29962)
+            return _x_29963
+        _alt_29965 = _f_29964
+        _x_29969 = a_1357 % b_1358
+        _x_29970 = ext_gcd(b_1358, _x_29969)
+        match _x_29970:
+            case (fst_29971, snd_29972):
+                match snd_29972:
+                    case (fst_29973, snd_29974):
+                        _x_29975 = _alt_29965(fst_29971, fst_29973, snd_29974)
+                        return _x_29975
 
 # Lean: Corpus.NumberTheory.modInverse
-def mod_inverse(a_1439: int, m_1440: int) -> int | None:
-    def _f_21742(x_1441: int, fst_21716: int, g_1442: int):
-        _x_21719 = 1
-        _x_21722 = g_1442 == 1
-        _x_21723 = True
-        if _x_21722:
-            _x_21735 = cast(None, _x_21734, m_1440)
-            _x_21736 = x_1441 % _x_21735
-            _x_21737 = _x_21736 + _x_21735
-            _x_21738 = _x_21737 % _x_21735
-            _x_21739 = to_nat(_x_21738)
-            _x_21740 = _x_21739
-            return _x_21740
+def mod_inverse(a_1362: int, m_1363: int) -> int | None:
+    def _f_30015(x_1364: int, fst_29988: int, g_1365: int):
+        _x_29992 = 1
+        _x_29995 = g_1365 == 1
+        _x_29996 = True
+        _x_29997 = _x_29995 == True
+        if _x_29997:
+            _x_30008 = cast(None, _x_30007, m_1363)
+            _x_30009 = x_1364 % _x_30008
+            _x_30010 = _x_30009 + _x_30008
+            _x_30011 = _x_30010 % _x_30008
+            _x_30012 = to_nat(_x_30011)
+            _x_30013 = _x_30012
+            return _x_30013
         else:
-            _x_21726 = None
-            return _x_21726
-    _alt_21743 = _f_21742
-    _x_21744 = ext_gcd(a_1439, m_1440)
-    match _x_21744:
-        case (fst_21745, snd_21746):
-            match snd_21746:
-                case (fst_21747, snd_21748):
-                    _x_21749 = _alt_21743(fst_21745, fst_21747, snd_21748)
-                    return _x_21749
+            _x_29999 = None
+            return _x_29999
+    _alt_30016 = _f_30015
+    _x_30017 = ext_gcd(a_1362, m_1363)
+    match _x_30017:
+        case (fst_30018, snd_30019):
+            match snd_30019:
+                case (fst_30020, snd_30021):
+                    _x_30022 = _alt_30016(fst_30018, fst_30020, snd_30021)
+                    return _x_30022
 
 # Lean: Corpus.NumberTheory.totient
-def totient(n_1443: int) -> int:
-    _x_21753 = 1
-    _x_21756 = n_1443 <= 1
-    if _x_21756:
-        return n_1443
+def totient(n_1366: int) -> int:
+    _x_30026 = 1
+    _x_30029 = n_1366 <= 1
+    if _x_30029:
+        return n_1366
     else:
-        _x_21758 = 0
-        _x_21761 = count(n_1443, 1, 0)
-        return _x_21761
+        _x_30031 = 0
+        _x_30034 = count(n_1366, 1, 0)
+        return _x_30034
 
 # Lean: Corpus.NumberTheory.isPerfect
-def is_perfect(n_1444: int) -> bool:
-    _x_21765 = 2
-    _x_21768 = n_1444 < 2
-    if _x_21768:
-        _x_21821 = False
+def is_perfect(n_1367: int) -> bool:
+    _x_30038 = 2
+    _x_30041 = n_1367 < 2
+    if _x_30041:
+        _x_30096 = False
         return False
     else:
-        def _f_21811(acc_1445: int, i_1446: int):
-            def _f_21771():
-                _x_21770 = False
+        def _f_30085(acc_1368: int, i_1369: int):
+            def _f_30044():
+                _x_30043 = False
                 return False
-            _alt_21772 = _f_21771
-            def _f_21783():
-                _x_21778 = n_1444 % i_1446
-                _x_21779 = 0
-                _x_21782 = _x_21778 == 0
-                return _x_21782
-            _alt_21784 = _f_21783
-            _x_21785 = 0
-            _x_21788 = 0 < i_1446
-            def _jp_21804(_y_21794: bool):
-                _x_21795 = True
-                if _y_21794:
-                    _x_21802 = acc_1445 + i_1446
-                    return _x_21802
+            _alt_30045 = _f_30044
+            def _f_30057():
+                _x_30052 = n_1367 % i_1369
+                _x_30053 = 0
+                _x_30056 = _x_30052 == 0
+                return _x_30056
+            _alt_30058 = _f_30057
+            _x_30059 = 0
+            _x_30062 = 0 < i_1369
+            def _jp_30078(_y_30068: bool):
+                _x_30069 = True
+                _x_30070 = _y_30068 == True
+                if _x_30070:
+                    _x_30076 = acc_1368 + i_1369
+                    return _x_30076
                 else:
-                    return acc_1445
-            def _jp_21807():
-                _x_21806 = _alt_21772()
-                return _jp_21804(_x_21806)
-            def _jp_21810():
-                _x_21809 = _alt_21784()
-                return _jp_21804(_x_21809)
-            if _x_21788:
-                return _jp_21810()
+                    return acc_1368
+            def _jp_30081():
+                _x_30080 = _alt_30045()
+                return _jp_30078(_x_30080)
+            def _jp_30084():
+                _x_30083 = _alt_30058()
+                return _jp_30078(_x_30083)
+            if _x_30062:
+                return _jp_30084()
             else:
-                return _jp_21807()
-        _x_21812 = 0
-        _x_21815 = list(range(n_1444))
-        _x_21816 = functools.reduce(_f_21811, _x_21815, 0)
-        _x_21819 = _x_21816 == n_1444
-        return _x_21819
+                return _jp_30081()
+        _x_30086 = 0
+        _x_30089 = list(range(n_1367))
+        _x_30090 = functools.reduce(_f_30085, _x_30089, 0)
+        _x_30094 = _x_30090 == n_1367
+        return _x_30094
 
 # Lean: Corpus.NumberTheory.isAbundant
-def is_abundant(n_1449: int) -> bool:
-    _x_21824 = 2
-    _x_21827 = n_1449 < 2
-    if _x_21827:
-        _x_21879 = False
+def is_abundant(n_1372: int) -> bool:
+    _x_30099 = 2
+    _x_30102 = n_1372 < 2
+    if _x_30102:
+        _x_30155 = False
         return False
     else:
-        def _f_21870(acc_1450: int, i_1451: int):
-            def _f_21830():
-                _x_21829 = False
+        def _f_30146(acc_1373: int, i_1374: int):
+            def _f_30105():
+                _x_30104 = False
                 return False
-            _alt_21831 = _f_21830
-            def _f_21842():
-                _x_21837 = n_1449 % i_1451
-                _x_21838 = 0
-                _x_21841 = _x_21837 == 0
-                return _x_21841
-            _alt_21843 = _f_21842
-            _x_21844 = 0
-            _x_21847 = 0 < i_1451
-            def _jp_21863(_y_21853: bool):
-                _x_21854 = True
-                if _y_21853:
-                    _x_21861 = acc_1450 + i_1451
-                    return _x_21861
+            _alt_30106 = _f_30105
+            def _f_30118():
+                _x_30113 = n_1372 % i_1374
+                _x_30114 = 0
+                _x_30117 = _x_30113 == 0
+                return _x_30117
+            _alt_30119 = _f_30118
+            _x_30120 = 0
+            _x_30123 = 0 < i_1374
+            def _jp_30139(_y_30129: bool):
+                _x_30130 = True
+                _x_30131 = _y_30129 == True
+                if _x_30131:
+                    _x_30137 = acc_1373 + i_1374
+                    return _x_30137
                 else:
-                    return acc_1450
-            def _jp_21869():
-                _x_21868 = _alt_21843()
-                return _jp_21863(_x_21868)
-            def _jp_21866():
-                _x_21865 = _alt_21831()
-                return _jp_21863(_x_21865)
-            if _x_21847:
-                return _jp_21869()
+                    return acc_1373
+            def _jp_30142():
+                _x_30141 = _alt_30106()
+                return _jp_30139(_x_30141)
+            def _jp_30145():
+                _x_30144 = _alt_30119()
+                return _jp_30139(_x_30144)
+            if _x_30123:
+                return _jp_30145()
             else:
-                return _jp_21866()
-        _x_21871 = 0
-        _x_21874 = list(range(n_1449))
-        _x_21875 = functools.reduce(_f_21870, _x_21874, 0)
-        _x_21876 = n_1449 < _x_21875
-        return _x_21876
+                return _jp_30142()
+        _x_30147 = 0
+        _x_30150 = list(range(n_1372))
+        _x_30151 = functools.reduce(_f_30146, _x_30150, 0)
+        _x_30152 = n_1372 < _x_30151
+        return _x_30152
 
 # Lean: Corpus.NumberTheory.isDeficient
-def is_deficient(n_1455: int) -> bool:
-    _x_21882 = 1
-    _x_21885 = n_1455 < 1
-    if _x_21885:
-        _x_21937 = False
+def is_deficient(n_1378: int) -> bool:
+    _x_30158 = 1
+    _x_30161 = n_1378 < 1
+    if _x_30161:
+        _x_30214 = False
         return False
     else:
-        def _f_21928(acc_1456: int, i_1457: int):
-            def _f_21888():
-                _x_21887 = False
+        def _f_30205(acc_1379: int, i_1380: int):
+            def _f_30164():
+                _x_30163 = False
                 return False
-            _alt_21889 = _f_21888
-            def _f_21900():
-                _x_21895 = n_1455 % i_1457
-                _x_21896 = 0
-                _x_21899 = _x_21895 == 0
-                return _x_21899
-            _alt_21901 = _f_21900
-            _x_21902 = 0
-            _x_21905 = 0 < i_1457
-            def _jp_21921(_y_21911: bool):
-                _x_21912 = True
-                if _y_21911:
-                    _x_21919 = acc_1456 + i_1457
-                    return _x_21919
+            _alt_30165 = _f_30164
+            def _f_30177():
+                _x_30172 = n_1378 % i_1380
+                _x_30173 = 0
+                _x_30176 = _x_30172 == 0
+                return _x_30176
+            _alt_30178 = _f_30177
+            _x_30179 = 0
+            _x_30182 = 0 < i_1380
+            def _jp_30198(_y_30188: bool):
+                _x_30189 = True
+                _x_30190 = _y_30188 == True
+                if _x_30190:
+                    _x_30196 = acc_1379 + i_1380
+                    return _x_30196
                 else:
-                    return acc_1456
-            def _jp_21927():
-                _x_21926 = _alt_21901()
-                return _jp_21921(_x_21926)
-            def _jp_21924():
-                _x_21923 = _alt_21889()
-                return _jp_21921(_x_21923)
-            if _x_21905:
-                return _jp_21927()
+                    return acc_1379
+            def _jp_30204():
+                _x_30203 = _alt_30178()
+                return _jp_30198(_x_30203)
+            def _jp_30201():
+                _x_30200 = _alt_30165()
+                return _jp_30198(_x_30200)
+            if _x_30182:
+                return _jp_30204()
             else:
-                return _jp_21924()
-        _x_21929 = 0
-        _x_21932 = list(range(n_1455))
-        _x_21933 = functools.reduce(_f_21928, _x_21932, 0)
-        _x_21934 = _x_21933 < n_1455
-        return _x_21934
+                return _jp_30201()
+        _x_30206 = 0
+        _x_30209 = list(range(n_1378))
+        _x_30210 = functools.reduce(_f_30205, _x_30209, 0)
+        _x_30211 = _x_30210 < n_1378
+        return _x_30211
 
 # Lean: Corpus.NumberTheory.collatzLength
-def collatz_length(n_1461: int) -> int:
-    _x_21940 = 1
-    _x_21943 = n_1461 <= 1
-    if _x_21943:
-        _x_21982 = 0
+def collatz_length(n_1384: int) -> int:
+    _x_30217 = 1
+    _x_30220 = n_1384 <= 1
+    if _x_30220:
+        _x_30260 = 0
         return 0
     else:
-        _x_21953 = 2
-        _x_21956 = n_1461 % 2
-        _x_21957 = 0
-        _x_21960 = _x_21956 == 0
-        _x_21961 = True
-        def _jp_21980(_y_21977: int):
-            _x_21978 = collatz_length(_y_21977)
-            _x_21979 = 1 + _x_21978
-            return _x_21979
-        if _x_21960:
-            _x_21976 = n_1461 // 2
-            return _jp_21980(_x_21976)
+        _x_30231 = 2
+        _x_30234 = n_1384 % 2
+        _x_30235 = 0
+        _x_30238 = _x_30234 == 0
+        _x_30239 = True
+        _x_30240 = _x_30238 == True
+        def _jp_30258(_y_30255: int):
+            _x_30256 = collatz_length(_y_30255)
+            _x_30257 = 1 + _x_30256
+            return _x_30257
+        if _x_30240:
+            _x_30254 = n_1384 // 2
+            return _jp_30258(_x_30254)
         else:
-            _x_21967 = 3
-            _x_21970 = 3 * n_1461
-            _x_21971 = _x_21970 + 1
-            return _jp_21980(_x_21971)
+            _x_30245 = 3
+            _x_30248 = 3 * n_1384
+            _x_30249 = _x_30248 + 1
+            return _jp_30258(_x_30249)
 
 # Lean: Corpus.NumberTheory.isqrt
-def isqrt(n_1462: int) -> int:
-    _x_21989 = 0
-    _x_21992 = n_1462 == 0
-    _x_21993 = True
-    if _x_21992:
+def isqrt(n_1385: int) -> int:
+    _x_30268 = 0
+    _x_30271 = n_1385 == 0
+    _x_30272 = True
+    _x_30273 = _x_30271 == True
+    if _x_30273:
         return 0
     else:
-        _x_21996 = isqrt_go(n_1462, n_1462, n_1462)
-        return _x_21996
+        _x_30275 = isqrt_go(n_1385, n_1385, n_1385)
+        return _x_30275
 
 # Lean: Corpus.NumberTheory.isPerfectSquare
-def is_perfect_square(n_1463: int) -> bool:
-    _x_22000 = isqrt(n_1463)
-    _x_22006 = _x_22000 * _x_22000
-    _x_22007 = _x_22006 == n_1463
-    return _x_22007
+def is_perfect_square(n_1386: int) -> bool:
+    _x_30280 = isqrt(n_1386)
+    _x_30287 = _x_30280 * _x_30280
+    _x_30288 = _x_30287 == n_1386
+    return _x_30288
 
 # Lean: Corpus.NumberTheory.digitalRoot
-def digital_root(n_1465: int) -> int:
-    _x_22009 = 10
-    _x_22012 = n_1465 < 10
-    if _x_22012:
-        return n_1465
-    else:
-        _x_22014 = digit_sum(n_1465)
-        _x_22015 = digital_root(_x_22014)
-        return _x_22015
+def digital_root(n_1388: int) -> int:
+    while True:
+        _x_30290 = 10
+        _x_30293 = n_1388 < 10
+        if _x_30293:
+            return n_1388
+        else:
+            _x_30295 = digit_sum(n_1388)
+            n_1388 = _x_30295
+            continue
 
 # Lean: Corpus.NumberTheory.isHarshad
-def is_harshad(n_1466: int) -> bool:
-    _x_22021 = 0
-    _x_22024 = n_1466 == 0
-    _x_22025 = True
-    if _x_22024:
-        _x_22047 = False
+def is_harshad(n_1389: int) -> bool:
+    _x_30303 = 0
+    _x_30306 = n_1389 == 0
+    _x_30307 = True
+    _x_30308 = _x_30306 == True
+    if _x_30308:
+        _x_30329 = False
         return False
     else:
-        _x_22028 = digit_sum(n_1466)
-        def _f_22030():
-            _x_22029 = False
+        _x_30310 = digit_sum(n_1389)
+        def _f_30312():
+            _x_30311 = False
             return False
-        _alt_22031 = _f_22030
-        def _f_22037():
-            _x_22035 = n_1466 % _x_22028
-            _x_22036 = _x_22035 == 0
-            return _x_22036
-        _alt_22038 = _f_22037
-        _x_22039 = 0 < _x_22028
-        if _x_22039:
-            _x_22044 = _alt_22038()
-            return _x_22044
+        _alt_30313 = _f_30312
+        def _f_30319():
+            _x_30317 = n_1389 % _x_30310
+            _x_30318 = _x_30317 == 0
+            return _x_30318
+        _alt_30320 = _f_30319
+        _x_30321 = 0 < _x_30310
+        if _x_30321:
+            _x_30326 = _alt_30320()
+            return _x_30326
         else:
-            _x_22042 = _alt_22031()
-            return _x_22042
+            _x_30324 = _alt_30313()
+            return _x_30324
 
 # Lean: Corpus.NumberTheory.hammingWeight
-def hamming_weight(n_1470: int) -> int:
-    _x_22052 = 0
-    _x_22055 = n_1470 == 0
-    _x_22056 = True
-    if _x_22055:
+def hamming_weight(n_1393: int) -> int:
+    _x_30335 = 0
+    _x_30338 = n_1393 == 0
+    _x_30339 = True
+    _x_30340 = _x_30338 == True
+    if _x_30340:
         return 0
     else:
-        _x_22065 = 2
-        _x_22068 = n_1470 % 2
-        _x_22072 = n_1470 // 2
-        _x_22073 = hamming_weight(_x_22072)
-        _x_22074 = _x_22068 + _x_22073
-        return _x_22074
+        _x_30348 = 2
+        _x_30351 = n_1393 % 2
+        _x_30355 = n_1393 // 2
+        _x_30356 = hamming_weight(_x_30355)
+        _x_30357 = _x_30351 + _x_30356
+        return _x_30357
 
 # Lean: Corpus.NumberTheory.josephus
-def josephus(n_1471: int, k_1472: int) -> int:
-    _x_22080 = 1
-    _x_22083 = n_1471 == 1
-    _x_22084 = True
-    if _x_22083:
-        _x_22101 = 0
+def josephus(n_1394: int, k_1395: int) -> int:
+    _x_30365 = 1
+    _x_30368 = n_1394 == 1
+    _x_30369 = True
+    _x_30370 = _x_30368 == True
+    if _x_30370:
+        _x_30386 = 0
         return 0
     else:
-        _x_22096 = n_1471 - 1
-        _x_22097 = josephus(_x_22096, k_1472)
-        _x_22098 = _x_22097 + k_1472
-        _x_22099 = _x_22098 % n_1471
-        return _x_22099
+        _x_30381 = n_1394 - 1
+        _x_30382 = josephus(_x_30381, k_1395)
+        _x_30383 = _x_30382 + k_1395
+        _x_30384 = _x_30383 % n_1394
+        return _x_30384
 
 # Lean: Corpus.Geometry.dist2D
-def dist2d(p1_1473: Point2D, p2_1474: Point2D) -> float:
-    _x_22109 = p2_1474.point2d_0
-    _x_22110 = p1_1473.point2d_0
-    _x_22111 = _x_22109 - _x_22110
-    _x_22112 = p2_1474.point2d_1
-    _x_22113 = p1_1473.point2d_1
-    _x_22114 = _x_22112 - _x_22113
-    _x_22121 = _x_22111 * _x_22111
-    _x_22122 = _x_22114 * _x_22114
-    _x_22123 = _x_22121 + _x_22122
-    _x_22124 = sqrt(_x_22123)
-    return _x_22124
+def dist2d(p1_1396: Point2D, p2_1397: Point2D) -> float:
+    _x_30394 = p2_1397.field_0
+    _x_30395 = p1_1396.field_0
+    _x_30396 = _x_30394 - _x_30395
+    _x_30397 = p2_1397.field_1
+    _x_30398 = p1_1396.field_1
+    _x_30399 = _x_30397 - _x_30398
+    _x_30406 = _x_30396 * _x_30396
+    _x_30407 = _x_30399 * _x_30399
+    _x_30408 = _x_30406 + _x_30407
+    _x_30409 = sqrt(_x_30408)
+    return _x_30409
 
 # Lean: Corpus.Geometry.dist3D
-def dist3d(p1_1475: Point3D, p2_1476: Point3D) -> float:
-    _x_22129 = p2_1476.point3d_0
-    _x_22130 = p1_1475.point3d_0
-    _x_22131 = _x_22129 - _x_22130
-    _x_22132 = p2_1476.point3d_1
-    _x_22133 = p1_1475.point3d_1
-    _x_22134 = _x_22132 - _x_22133
-    _x_22135 = p2_1476.point3d_2
-    _x_22136 = p1_1475.point3d_2
-    _x_22137 = _x_22135 - _x_22136
-    _x_22144 = _x_22131 * _x_22131
-    _x_22145 = _x_22134 * _x_22134
-    _x_22146 = _x_22144 + _x_22145
-    _x_22147 = _x_22137 * _x_22137
-    _x_22148 = _x_22146 + _x_22147
-    _x_22149 = sqrt(_x_22148)
-    return _x_22149
+def dist3d(p1_1398: Point3D, p2_1399: Point3D) -> float:
+    _x_30414 = p2_1399.field_0
+    _x_30415 = p1_1398.field_0
+    _x_30416 = _x_30414 - _x_30415
+    _x_30417 = p2_1399.field_1
+    _x_30418 = p1_1398.field_1
+    _x_30419 = _x_30417 - _x_30418
+    _x_30420 = p2_1399.field_2
+    _x_30421 = p1_1398.field_2
+    _x_30422 = _x_30420 - _x_30421
+    _x_30429 = _x_30416 * _x_30416
+    _x_30430 = _x_30419 * _x_30419
+    _x_30431 = _x_30429 + _x_30430
+    _x_30432 = _x_30422 * _x_30422
+    _x_30433 = _x_30431 + _x_30432
+    _x_30434 = sqrt(_x_30433)
+    return _x_30434
 
 # Lean: Corpus.Geometry.manhattan2D
-def manhattan2d(p1_1479: Point2D, p2_1480: Point2D) -> float:
-    _x_22157 = p2_1480.point2d_0
-    _x_22158 = p1_1479.point2d_0
-    _x_22159 = _x_22157 - _x_22158
-    _x_22160 = float_abs(_x_22159)
-    _x_22161 = p2_1480.point2d_1
-    _x_22162 = p1_1479.point2d_1
-    _x_22163 = _x_22161 - _x_22162
-    _x_22164 = float_abs(_x_22163)
-    _x_22165 = _x_22160 + _x_22164
-    return _x_22165
+def manhattan2d(p1_1402: Point2D, p2_1403: Point2D) -> float:
+    _x_30442 = p2_1403.field_0
+    _x_30443 = p1_1402.field_0
+    _x_30444 = _x_30442 - _x_30443
+    _x_30445 = float_abs(_x_30444)
+    _x_30446 = p2_1403.field_1
+    _x_30447 = p1_1402.field_1
+    _x_30448 = _x_30446 - _x_30447
+    _x_30449 = float_abs(_x_30448)
+    _x_30450 = _x_30445 + _x_30449
+    return _x_30450
 
 # Lean: Corpus.Geometry.chebyshev2D
-def chebyshev2d(p1_1481: Point2D, p2_1482: Point2D) -> float:
-    _x_22168 = max
-    _x_22172 = p2_1482.point2d_0
-    _x_22173 = p1_1481.point2d_0
-    _x_22174 = _x_22172 - _x_22173
-    _x_22175 = float_abs(_x_22174)
-    _x_22176 = p2_1482.point2d_1
-    _x_22177 = p1_1481.point2d_1
-    _x_22178 = _x_22176 - _x_22177
-    _x_22179 = float_abs(_x_22178)
-    _x_22180 = _x_22168(_x_22175, _x_22179)
-    return _x_22180
+def chebyshev2d(p1_1404: Point2D, p2_1405: Point2D) -> float:
+    _x_30453 = max
+    _x_30457 = p2_1405.field_0
+    _x_30458 = p1_1404.field_0
+    _x_30459 = _x_30457 - _x_30458
+    _x_30460 = float_abs(_x_30459)
+    _x_30461 = p2_1405.field_1
+    _x_30462 = p1_1404.field_1
+    _x_30463 = _x_30461 - _x_30462
+    _x_30464 = float_abs(_x_30463)
+    _x_30465 = _x_30453(_x_30460, _x_30464)
+    return _x_30465
 
 # Lean: Corpus.Geometry.midpoint2D
-def midpoint2d(p1_1483: Point2D, p2_1484: Point2D) -> Point2D:
-    _x_22188 = p1_1483.point2d_0
-    _x_22189 = p2_1484.point2d_0
-    _x_22190 = _x_22188 + _x_22189
-    _x_22191 = 2
-    _x_22194 = _x_22190 // 2
-    _x_22195 = p1_1483.point2d_1
-    _x_22196 = p2_1484.point2d_1
-    _x_22197 = _x_22195 + _x_22196
-    _x_22198 = _x_22197 // 2
-    _x_22199 = Point2D_mk(_x_22194, _x_22198)
-    return _x_22199
+def midpoint2d(p1_1406: Point2D, p2_1407: Point2D) -> Point2D:
+    _x_30473 = p1_1406.field_0
+    _x_30474 = p2_1407.field_0
+    _x_30475 = _x_30473 + _x_30474
+    _x_30476 = 2
+    _x_30479 = _x_30475 // 2
+    _x_30480 = p1_1406.field_1
+    _x_30481 = p2_1407.field_1
+    _x_30482 = _x_30480 + _x_30481
+    _x_30483 = _x_30482 // 2
+    _x_30484 = Point2D_mk(_x_30479, _x_30483)
+    return _x_30484
 
 # Lean: Corpus.Geometry.midpoint3D
-def midpoint3d(p1_1485: Point3D, p2_1486: Point3D) -> Point3D:
-    _x_22207 = p1_1485.point3d_0
-    _x_22208 = p2_1486.point3d_0
-    _x_22209 = _x_22207 + _x_22208
-    _x_22210 = 2
-    _x_22213 = _x_22209 // 2
-    _x_22214 = p1_1485.point3d_1
-    _x_22215 = p2_1486.point3d_1
-    _x_22216 = _x_22214 + _x_22215
-    _x_22217 = _x_22216 // 2
-    _x_22218 = p1_1485.point3d_2
-    _x_22219 = p2_1486.point3d_2
-    _x_22220 = _x_22218 + _x_22219
-    _x_22221 = _x_22220 // 2
-    _x_22222 = Point3D_mk(_x_22213, _x_22217, _x_22221)
-    return _x_22222
+def midpoint3d(p1_1408: Point3D, p2_1409: Point3D) -> Point3D:
+    _x_30492 = p1_1408.field_0
+    _x_30493 = p2_1409.field_0
+    _x_30494 = _x_30492 + _x_30493
+    _x_30495 = 2
+    _x_30498 = _x_30494 // 2
+    _x_30499 = p1_1408.field_1
+    _x_30500 = p2_1409.field_1
+    _x_30501 = _x_30499 + _x_30500
+    _x_30502 = _x_30501 // 2
+    _x_30503 = p1_1408.field_2
+    _x_30504 = p2_1409.field_2
+    _x_30505 = _x_30503 + _x_30504
+    _x_30506 = _x_30505 // 2
+    _x_30507 = Point3D_mk(_x_30498, _x_30502, _x_30506)
+    return _x_30507
 
 # Lean: Corpus.Geometry.dot2D
-def dot2d(p1_1487: Point2D, p2_1488: Point2D) -> float:
-    _x_22230 = p1_1487.point2d_0
-    _x_22231 = p2_1488.point2d_0
-    _x_22232 = _x_22230 * _x_22231
-    _x_22233 = p1_1487.point2d_1
-    _x_22234 = p2_1488.point2d_1
-    _x_22235 = _x_22233 * _x_22234
-    _x_22236 = _x_22232 + _x_22235
-    return _x_22236
+def dot2d(p1_1410: Point2D, p2_1411: Point2D) -> float:
+    _x_30515 = p1_1410.field_0
+    _x_30516 = p2_1411.field_0
+    _x_30517 = _x_30515 * _x_30516
+    _x_30518 = p1_1410.field_1
+    _x_30519 = p2_1411.field_1
+    _x_30520 = _x_30518 * _x_30519
+    _x_30521 = _x_30517 + _x_30520
+    return _x_30521
 
 # Lean: Corpus.Geometry.dot3D
-def dot3d(p1_1489: Point3D, p2_1490: Point3D) -> float:
-    _x_22244 = p1_1489.point3d_0
-    _x_22245 = p2_1490.point3d_0
-    _x_22246 = _x_22244 * _x_22245
-    _x_22247 = p1_1489.point3d_1
-    _x_22248 = p2_1490.point3d_1
-    _x_22249 = _x_22247 * _x_22248
-    _x_22250 = _x_22246 + _x_22249
-    _x_22251 = p1_1489.point3d_2
-    _x_22252 = p2_1490.point3d_2
-    _x_22253 = _x_22251 * _x_22252
-    _x_22254 = _x_22250 + _x_22253
-    return _x_22254
+def dot3d(p1_1412: Point3D, p2_1413: Point3D) -> float:
+    _x_30529 = p1_1412.field_0
+    _x_30530 = p2_1413.field_0
+    _x_30531 = _x_30529 * _x_30530
+    _x_30532 = p1_1412.field_1
+    _x_30533 = p2_1413.field_1
+    _x_30534 = _x_30532 * _x_30533
+    _x_30535 = _x_30531 + _x_30534
+    _x_30536 = p1_1412.field_2
+    _x_30537 = p2_1413.field_2
+    _x_30538 = _x_30536 * _x_30537
+    _x_30539 = _x_30535 + _x_30538
+    return _x_30539
 
 # Lean: Corpus.Geometry.cross2D
-def cross2d(p1_1491: Point2D, p2_1492: Point2D) -> float:
-    _x_22262 = p1_1491.point2d_0
-    _x_22263 = p2_1492.point2d_1
-    _x_22264 = _x_22262 * _x_22263
-    _x_22265 = p1_1491.point2d_1
-    _x_22266 = p2_1492.point2d_0
-    _x_22267 = _x_22265 * _x_22266
-    _x_22268 = _x_22264 - _x_22267
-    return _x_22268
+def cross2d(p1_1414: Point2D, p2_1415: Point2D) -> float:
+    _x_30547 = p1_1414.field_0
+    _x_30548 = p2_1415.field_1
+    _x_30549 = _x_30547 * _x_30548
+    _x_30550 = p1_1414.field_1
+    _x_30551 = p2_1415.field_0
+    _x_30552 = _x_30550 * _x_30551
+    _x_30553 = _x_30549 - _x_30552
+    return _x_30553
 
 # Lean: Corpus.Geometry.cross3D
-def cross3d(p1_1493: Point3D, p2_1494: Point3D) -> Point3D:
-    _x_22276 = p1_1493.point3d_1
-    _x_22277 = p2_1494.point3d_2
-    _x_22278 = _x_22276 * _x_22277
-    _x_22279 = p1_1493.point3d_2
-    _x_22280 = p2_1494.point3d_1
-    _x_22281 = _x_22279 * _x_22280
-    _x_22282 = _x_22278 - _x_22281
-    _x_22283 = p2_1494.point3d_0
-    _x_22284 = _x_22279 * _x_22283
-    _x_22285 = p1_1493.point3d_0
-    _x_22286 = _x_22285 * _x_22277
-    _x_22287 = _x_22284 - _x_22286
-    _x_22288 = _x_22285 * _x_22280
-    _x_22289 = _x_22276 * _x_22283
-    _x_22290 = _x_22288 - _x_22289
-    _x_22291 = Point3D_mk(_x_22282, _x_22287, _x_22290)
-    return _x_22291
+def cross3d(p1_1416: Point3D, p2_1417: Point3D) -> Point3D:
+    _x_30561 = p1_1416.field_1
+    _x_30562 = p2_1417.field_2
+    _x_30563 = _x_30561 * _x_30562
+    _x_30564 = p1_1416.field_2
+    _x_30565 = p2_1417.field_1
+    _x_30566 = _x_30564 * _x_30565
+    _x_30567 = _x_30563 - _x_30566
+    _x_30568 = p2_1417.field_0
+    _x_30569 = _x_30564 * _x_30568
+    _x_30570 = p1_1416.field_0
+    _x_30571 = _x_30570 * _x_30562
+    _x_30572 = _x_30569 - _x_30571
+    _x_30573 = _x_30570 * _x_30565
+    _x_30574 = _x_30561 * _x_30568
+    _x_30575 = _x_30573 - _x_30574
+    _x_30576 = Point3D_mk(_x_30567, _x_30572, _x_30575)
+    return _x_30576
 
 # Lean: Corpus.Geometry.magnitude2D
-def magnitude2d(p_1495: Point2D) -> float:
-    _x_22299 = p_1495.point2d_0
-    _x_22300 = _x_22299 * _x_22299
-    _x_22301 = p_1495.point2d_1
-    _x_22302 = _x_22301 * _x_22301
-    _x_22303 = _x_22300 + _x_22302
-    _x_22304 = sqrt(_x_22303)
-    return _x_22304
+def magnitude2d(p_1418: Point2D) -> float:
+    _x_30584 = p_1418.field_0
+    _x_30585 = _x_30584 * _x_30584
+    _x_30586 = p_1418.field_1
+    _x_30587 = _x_30586 * _x_30586
+    _x_30588 = _x_30585 + _x_30587
+    _x_30589 = sqrt(_x_30588)
+    return _x_30589
 
 # Lean: Corpus.Geometry.magnitude3D
-def magnitude3d(p_1496: Point3D) -> float:
-    _x_22312 = p_1496.point3d_0
-    _x_22313 = _x_22312 * _x_22312
-    _x_22314 = p_1496.point3d_1
-    _x_22315 = _x_22314 * _x_22314
-    _x_22316 = _x_22313 + _x_22315
-    _x_22317 = p_1496.point3d_2
-    _x_22318 = _x_22317 * _x_22317
-    _x_22319 = _x_22316 + _x_22318
-    _x_22320 = sqrt(_x_22319)
-    return _x_22320
+def magnitude3d(p_1419: Point3D) -> float:
+    _x_30597 = p_1419.field_0
+    _x_30598 = _x_30597 * _x_30597
+    _x_30599 = p_1419.field_1
+    _x_30600 = _x_30599 * _x_30599
+    _x_30601 = _x_30598 + _x_30600
+    _x_30602 = p_1419.field_2
+    _x_30603 = _x_30602 * _x_30602
+    _x_30604 = _x_30601 + _x_30603
+    _x_30605 = sqrt(_x_30604)
+    return _x_30605
 
 # Lean: Corpus.Geometry.normalize2D
-def normalize2d(p_1497: Point2D) -> Point2D:
-    _x_22322 = magnitude2d(p_1497)
-    _x_22325 = 0
-    _x_22328 = _x_22322 == 0
-    _x_22329 = True
-    if _x_22328:
-        return p_1497
+def normalize2d(p_1420: Point2D) -> Point2D:
+    _x_30607 = magnitude2d(p_1420)
+    _x_30610 = 0
+    _x_30613 = _x_30607 == 0
+    _x_30614 = True
+    _x_30615 = _x_30613 == True
+    if _x_30615:
+        return p_1420
     else:
-        _x_22335 = p_1497.point2d_0
-        _x_22336 = _x_22335 // _x_22322
-        _x_22337 = p_1497.point2d_1
-        _x_22338 = _x_22337 // _x_22322
-        _x_22339 = Point2D_mk(_x_22336, _x_22338)
-        return _x_22339
+        _x_30620 = p_1420.field_0
+        _x_30621 = _x_30620 // _x_30607
+        _x_30622 = p_1420.field_1
+        _x_30623 = _x_30622 // _x_30607
+        _x_30624 = Point2D_mk(_x_30621, _x_30623)
+        return _x_30624
 
 # Lean: Corpus.Geometry.normalize3D
-def normalize3d(p_1499: Point3D) -> Point3D:
-    _x_22343 = magnitude3d(p_1499)
-    _x_22346 = 0
-    _x_22349 = _x_22343 == 0
-    _x_22350 = True
-    if _x_22349:
-        return p_1499
+def normalize3d(p_1422: Point3D) -> Point3D:
+    _x_30628 = magnitude3d(p_1422)
+    _x_30631 = 0
+    _x_30634 = _x_30628 == 0
+    _x_30635 = True
+    _x_30636 = _x_30634 == True
+    if _x_30636:
+        return p_1422
     else:
-        _x_22356 = p_1499.point3d_0
-        _x_22357 = _x_22356 // _x_22343
-        _x_22358 = p_1499.point3d_1
-        _x_22359 = _x_22358 // _x_22343
-        _x_22360 = p_1499.point3d_2
-        _x_22361 = _x_22360 // _x_22343
-        _x_22362 = Point3D_mk(_x_22357, _x_22359, _x_22361)
-        return _x_22362
+        _x_30641 = p_1422.field_0
+        _x_30642 = _x_30641 // _x_30628
+        _x_30643 = p_1422.field_1
+        _x_30644 = _x_30643 // _x_30628
+        _x_30645 = p_1422.field_2
+        _x_30646 = _x_30645 // _x_30628
+        _x_30647 = Point3D_mk(_x_30642, _x_30644, _x_30646)
+        return _x_30647
 
 # Lean: Corpus.Geometry.triangleArea
-def triangle_area(p1_1501: Point2D, p2_1502: Point2D, p3_1503: Point2D) -> float:
-    _x_22375 = p2_1502.point2d_0
-    _x_22376 = p1_1501.point2d_0
-    _x_22377 = _x_22375 - _x_22376
-    _x_22378 = p3_1503.point2d_1
-    _x_22379 = p1_1501.point2d_1
-    _x_22380 = _x_22378 - _x_22379
-    _x_22381 = _x_22377 * _x_22380
-    _x_22382 = p3_1503.point2d_0
-    _x_22383 = _x_22382 - _x_22376
-    _x_22384 = p2_1502.point2d_1
-    _x_22385 = _x_22384 - _x_22379
-    _x_22386 = _x_22383 * _x_22385
-    _x_22387 = _x_22381 - _x_22386
-    _x_22388 = float_abs(_x_22387)
-    _x_22389 = 2
-    _x_22392 = _x_22388 // 2
-    return _x_22392
+def triangle_area(p1_1424: Point2D, p2_1425: Point2D, p3_1426: Point2D) -> float:
+    _x_30660 = p2_1425.field_0
+    _x_30661 = p1_1424.field_0
+    _x_30662 = _x_30660 - _x_30661
+    _x_30663 = p3_1426.field_1
+    _x_30664 = p1_1424.field_1
+    _x_30665 = _x_30663 - _x_30664
+    _x_30666 = _x_30662 * _x_30665
+    _x_30667 = p3_1426.field_0
+    _x_30668 = _x_30667 - _x_30661
+    _x_30669 = p2_1425.field_1
+    _x_30670 = _x_30669 - _x_30664
+    _x_30671 = _x_30668 * _x_30670
+    _x_30672 = _x_30666 - _x_30671
+    _x_30673 = float_abs(_x_30672)
+    _x_30674 = 2
+    _x_30677 = _x_30673 // 2
+    return _x_30677
 
 # Lean: Corpus.Geometry.pointInTriangle
-def point_in_triangle(p_1504: Point2D, p1_1505: Point2D, p2_1506: Point2D, p3_1507: Point2D) -> bool:
-    _x_22394 = sign(p_1504, p1_1505, p2_1506)
-    _x_22395 = sign(p_1504, p2_1506, p3_1507)
-    _x_22396 = sign(p_1504, p3_1507, p1_1505)
-    def _f_22398():
-        _x_22397 = True
+def point_in_triangle(p_1427: Point2D, p1_1428: Point2D, p2_1429: Point2D, p3_1430: Point2D) -> bool:
+    _x_30679 = sign(p_1427, p1_1428, p2_1429)
+    _x_30680 = sign(p_1427, p2_1429, p3_1430)
+    _x_30681 = sign(p_1427, p3_1430, p1_1428)
+    def _f_30683():
+        _x_30682 = True
         return True
-    _alt_22399 = _f_22398
-    def _f_22405():
-        _x_22400 = 0
-        _x_22403 = float_dec_lt(_x_22396, 0)
-        return _x_22403
-    _alt_22406 = _f_22405
-    _alt_22407 = _f_22398
-    def _f_22413():
-        _x_22408 = 0
-        _x_22411 = float_dec_lt(_x_22395, 0)
-        return _x_22411
-    _alt_22414 = _f_22413
-    _x_22415 = 0
-    _x_22418 = float_dec_lt(_x_22394, 0)
-    def _jp_22491(_y_22424: bool):
-        def _jp_22484(_y_22429: bool):
-            _alt_22430 = _f_22398
-            def _f_22433():
-                _x_22431 = float_dec_lt(0, _x_22396)
-                return _x_22431
-            _alt_22434 = _f_22433
-            _alt_22435 = _f_22398
-            def _f_22438():
-                _x_22436 = float_dec_lt(0, _x_22395)
-                return _x_22436
-            _alt_22439 = _f_22438
-            _x_22440 = float_dec_lt(0, _x_22394)
-            def _jp_22477(_y_22446: bool):
-                def _jp_22470(_y_22451: bool):
-                    def _f_22453():
-                        _x_22452 = False
+    _alt_30684 = _f_30683
+    def _f_30690():
+        _x_30685 = 0
+        _x_30688 = dec_lt(_x_30681, 0)
+        return _x_30688
+    _alt_30691 = _f_30690
+    _alt_30692 = _f_30683
+    def _f_30698():
+        _x_30693 = 0
+        _x_30696 = dec_lt(_x_30680, 0)
+        return _x_30696
+    _alt_30699 = _f_30698
+    _x_30700 = 0
+    _x_30703 = dec_lt(_x_30679, 0)
+    def _jp_30776(_y_30709: bool):
+        def _jp_30769(_y_30714: bool):
+            _alt_30715 = _f_30683
+            def _f_30718():
+                _x_30716 = dec_lt(0, _x_30681)
+                return _x_30716
+            _alt_30719 = _f_30718
+            _alt_30720 = _f_30683
+            def _f_30723():
+                _x_30721 = dec_lt(0, _x_30680)
+                return _x_30721
+            _alt_30724 = _f_30723
+            _x_30725 = dec_lt(0, _x_30679)
+            def _jp_30762(_y_30731: bool):
+                def _jp_30755(_y_30736: bool):
+                    def _f_30738():
+                        _x_30737 = False
                         return False
-                    _alt_22454 = _f_22453
-                    def _f_22455():
-                        return _y_22451
-                    _alt_22456 = _f_22455
-                    def _jp_22463(_y_22461: bool):
-                        _x_22462 = not _y_22461
-                        return _x_22462
-                    def _jp_22466():
-                        _x_22465 = _alt_22454()
-                        return _jp_22463(_x_22465)
-                    def _jp_22469():
-                        _x_22468 = _alt_22456()
-                        return _jp_22463(_x_22468)
-                    if _y_22429:
-                        return _jp_22469()
+                    _alt_30739 = _f_30738
+                    def _f_30740():
+                        return _y_30736
+                    _alt_30741 = _f_30740
+                    def _jp_30748(_y_30746: bool):
+                        _x_30747 = not _y_30746
+                        return _x_30747
+                    def _jp_30754():
+                        _x_30753 = _alt_30741()
+                        return _jp_30748(_x_30753)
+                    def _jp_30751():
+                        _x_30750 = _alt_30739()
+                        return _jp_30748(_x_30750)
+                    if _y_30714:
+                        return _jp_30754()
                     else:
-                        return _jp_22466()
-                def _jp_22473():
-                    _x_22472 = _alt_22434()
-                    return _jp_22470(_x_22472)
-                def _jp_22476():
-                    _x_22475 = _alt_22430()
-                    return _jp_22470(_x_22475)
-                if _y_22446:
-                    return _jp_22476()
+                        return _jp_30751()
+                def _jp_30761():
+                    _x_30760 = _alt_30715()
+                    return _jp_30755(_x_30760)
+                def _jp_30758():
+                    _x_30757 = _alt_30719()
+                    return _jp_30755(_x_30757)
+                if _y_30731:
+                    return _jp_30761()
                 else:
-                    return _jp_22473()
-            def _jp_22480():
-                _x_22479 = _alt_22439()
-                return _jp_22477(_x_22479)
-            def _jp_22483():
-                _x_22482 = _alt_22435()
-                return _jp_22477(_x_22482)
-            if _x_22440:
-                return _jp_22483()
+                    return _jp_30758()
+            def _jp_30768():
+                _x_30767 = _alt_30720()
+                return _jp_30762(_x_30767)
+            def _jp_30765():
+                _x_30764 = _alt_30724()
+                return _jp_30762(_x_30764)
+            if _x_30725:
+                return _jp_30768()
             else:
-                return _jp_22480()
-        def _jp_22490():
-            _x_22489 = _alt_22399()
-            return _jp_22484(_x_22489)
-        def _jp_22487():
-            _x_22486 = _alt_22406()
-            return _jp_22484(_x_22486)
-        if _y_22424:
-            return _jp_22490()
+                return _jp_30765()
+        def _jp_30775():
+            _x_30774 = _alt_30684()
+            return _jp_30769(_x_30774)
+        def _jp_30772():
+            _x_30771 = _alt_30691()
+            return _jp_30769(_x_30771)
+        if _y_30709:
+            return _jp_30775()
         else:
-            return _jp_22487()
-    def _jp_22497():
-        _x_22496 = _alt_22407()
-        return _jp_22491(_x_22496)
-    def _jp_22494():
-        _x_22493 = _alt_22414()
-        return _jp_22491(_x_22493)
-    if _x_22418:
-        return _jp_22497()
+            return _jp_30772()
+    def _jp_30779():
+        _x_30778 = _alt_30699()
+        return _jp_30776(_x_30778)
+    def _jp_30782():
+        _x_30781 = _alt_30692()
+        return _jp_30776(_x_30781)
+    if _x_30703:
+        return _jp_30782()
     else:
-        return _jp_22494()
+        return _jp_30779()
 
 # Lean: Corpus.Geometry.circleArea
 def circle_area(radius: float) -> float:
-    _x_22503 = _x_22502.of_scientific_0
-    _x_22504 = 314159265358979
-    _x_22505 = True
-    _x_22506 = 14
-    _x_22507 = _x_22503(_x_22504, True, _x_22506)
-    _x_22508 = _x_22507 * radius
-    _x_22509 = _x_22508 * radius
-    return _x_22509
+    _x_30788 = _x_30787.field_0
+    _x_30789 = 314159265358979
+    _x_30790 = True
+    _x_30791 = 14
+    _x_30792 = _x_30788(_x_30789, True, _x_30791)
+    _x_30793 = _x_30792 * radius
+    _x_30794 = _x_30793 * radius
+    return _x_30794
 
 # Lean: Corpus.Geometry.circleCircumference
-def circle_circumference(radius_1515: float) -> float:
-    _x_22514 = 2
-    _x_22518 = _x_22517.of_scientific_0
-    _x_22519 = 314159265358979
-    _x_22520 = True
-    _x_22521 = 14
-    _x_22522 = _x_22518(_x_22519, True, _x_22521)
-    _x_22523 = 2 * _x_22522
-    _x_22524 = _x_22523 * radius_1515
-    return _x_22524
+def circle_circumference(radius_1438: float) -> float:
+    _x_30799 = 2
+    _x_30803 = _x_30802.field_0
+    _x_30804 = 314159265358979
+    _x_30805 = True
+    _x_30806 = 14
+    _x_30807 = _x_30803(_x_30804, True, _x_30806)
+    _x_30808 = 2 * _x_30807
+    _x_30809 = _x_30808 * radius_1438
+    return _x_30809
 
 # Lean: Corpus.Geometry.sphereVolume
-def sphere_volume(radius_1516: float) -> float:
-    _x_22532 = 4
-    _x_22535 = 3
-    _x_22538 = 4 // 3
-    _x_22540 = _x_22539.of_scientific_0
-    _x_22541 = 314159265358979
-    _x_22542 = True
-    _x_22543 = 14
-    _x_22544 = _x_22540(_x_22541, True, _x_22543)
-    _x_22545 = _x_22538 * _x_22544
-    _x_22546 = _x_22545 * radius_1516
-    _x_22547 = _x_22546 * radius_1516
-    _x_22548 = _x_22547 * radius_1516
-    return _x_22548
+def sphere_volume(radius_1439: float) -> float:
+    _x_30817 = 4
+    _x_30820 = 3
+    _x_30823 = 4 // 3
+    _x_30825 = _x_30824.field_0
+    _x_30826 = 314159265358979
+    _x_30827 = True
+    _x_30828 = 14
+    _x_30829 = _x_30825(_x_30826, True, _x_30828)
+    _x_30830 = _x_30823 * _x_30829
+    _x_30831 = _x_30830 * radius_1439
+    _x_30832 = _x_30831 * radius_1439
+    _x_30833 = _x_30832 * radius_1439
+    return _x_30833
 
 # Lean: Corpus.Geometry.sphereSurfaceArea
-def sphere_surface_area(radius_1517: float) -> float:
-    _x_22553 = 4
-    _x_22557 = _x_22556.of_scientific_0
-    _x_22558 = 314159265358979
-    _x_22559 = True
-    _x_22560 = 14
-    _x_22561 = _x_22557(_x_22558, True, _x_22560)
-    _x_22562 = 4 * _x_22561
-    _x_22563 = _x_22562 * radius_1517
-    _x_22564 = _x_22563 * radius_1517
-    return _x_22564
+def sphere_surface_area(radius_1440: float) -> float:
+    _x_30838 = 4
+    _x_30842 = _x_30841.field_0
+    _x_30843 = 314159265358979
+    _x_30844 = True
+    _x_30845 = 14
+    _x_30846 = _x_30842(_x_30843, True, _x_30845)
+    _x_30847 = 4 * _x_30846
+    _x_30848 = _x_30847 * radius_1440
+    _x_30849 = _x_30848 * radius_1440
+    return _x_30849
 
 # Lean: Corpus.Geometry.rectangleArea
 def rectangle_area(width: float, height: float) -> float:
-    _x_22569 = width * height
-    return _x_22569
+    _x_30854 = width * height
+    return _x_30854
 
 # Lean: Corpus.Geometry.rectanglePerimeter
-def rectangle_perimeter(width_1518: float, height_1519: float) -> float:
-    _x_22574 = 2
-    _x_22580 = width_1518 + height_1519
-    _x_22581 = 2 * _x_22580
-    return _x_22581
+def rectangle_perimeter(width_1441: float, height_1442: float) -> float:
+    _x_30859 = 2
+    _x_30865 = width_1441 + height_1442
+    _x_30866 = 2 * _x_30865
+    return _x_30866
 
 # Lean: Corpus.Geometry.polygonArea
 def polygon_area(vertices: list[Point2D]) -> float:
-    def _f_22586():
-        _x_22583 = 0
+    def _f_30871():
+        _x_30868 = 0
         return 0
-    _alt_22587 = _f_22586
-    def _f_22592(head_22588: Point2D):
-        _x_22589 = 0
-        return 0
-    _alt_22593 = _f_22592
-    def _f_22599(first_1521: Point2D, rest_1522: list[Point2D]):
-        _x_22594 = 0
-        _x_22597 = polygon_area_go(rest_1522, first_1521, first_1521, 0)
-        _x_22598 = float_abs(_x_22597)
-        return _x_22598
-    _alt_22600 = _f_22599
+    _alt_30872 = _f_30871
+    _alt_30878 = (lambda head_30873: 0)
+    def _f_30884(first_1444: Point2D, rest_1445: list[Point2D]):
+        _x_30879 = 0
+        _x_30882 = polygon_area_go(rest_1445, first_1444, first_1444, 0)
+        _x_30883 = float_abs(_x_30882)
+        return _x_30883
+    _alt_30885 = _f_30884
     if len(vertices) == 0:
-        _x_22602 = _alt_22587()
-        return _x_22602
+        _x_30887 = _alt_30872()
+        return _x_30887
     else:
-        head_22603 = vertices[0]
-        tail_22604 = vertices[1:]
-        if len(tail_22604) == 0:
-            _x_22605 = _alt_22593(head_22603)
-            return _x_22605
+        head_30888 = vertices[0]
+        tail_30889 = vertices[1:]
+        if len(tail_30889) == 0:
+            _x_30890 = _alt_30878(head_30888)
+            return _x_30890
         else:
-            head_22606 = tail_22604[0]
-            tail_22607 = tail_22604[1:]
-            _x_22608 = [head_22606] + tail_22607
-            _x_22609 = _alt_22600(head_22603, _x_22608)
-            return _x_22609
+            _x_30894 = (lambda h_30891: _alt_30885(head_30888, tail_30889))(None)
+            return _x_30894
 
 # Lean: Corpus.Geometry.isConvexPolygon
-def is_convex_polygon(vertices_1523: list[Point2D]) -> bool:
-    def _f_22614():
-        _x_22613 = True
+def is_convex_polygon(vertices_1446: list[Point2D]) -> bool:
+    def _f_30899():
+        _x_30898 = True
         return True
-    _alt_22615 = _f_22614
-    def _f_22618(head_22616: Point2D):
-        _x_22617 = True
+    _alt_30900 = _f_30899
+    def _f_30903(head_30901: Point2D):
+        _x_30902 = True
         return True
-    _alt_22619 = _f_22618
-    def _f_22623(head_22620: Point2D, head_22621: Point2D):
-        _x_22622 = True
+    _alt_30904 = _f_30903
+    def _f_30908(head_30905: Point2D, head_30906: Point2D):
+        _x_30907 = True
         return True
-    _alt_22624 = _f_22623
-    def _f_22627(first_1525: Point2D, second_1526: Point2D, rest_1527: list[Point2D]):
-        _x_22625 = None
-        _x_22626 = is_convex_polygon_check(first_1525, second_1526, first_1525, second_1526, rest_1527, _x_22625)
-        return _x_22626
-    _alt_22628 = _f_22627
-    if len(vertices_1523) == 0:
-        _x_22630 = _alt_22615()
-        return _x_22630
+    _alt_30909 = _f_30908
+    def _f_30912(first_1448: Point2D, second_1449: Point2D, rest_1450: list[Point2D]):
+        _x_30910 = None
+        _x_30911 = is_convex_polygon_check(first_1448, second_1449, first_1448, second_1449, rest_1450, _x_30910)
+        return _x_30911
+    _alt_30913 = _f_30912
+    if len(vertices_1446) == 0:
+        _x_30915 = _alt_30900()
+        return _x_30915
     else:
-        head_22631 = vertices_1523[0]
-        tail_22632 = vertices_1523[1:]
-        if len(tail_22632) == 0:
-            _x_22633 = _alt_22619(head_22631)
-            return _x_22633
+        head_30916 = vertices_1446[0]
+        tail_30917 = vertices_1446[1:]
+        if len(tail_30917) == 0:
+            _x_30918 = _alt_30904(head_30916)
+            return _x_30918
         else:
-            head_22634 = tail_22632[0]
-            tail_22635 = tail_22632[1:]
-            if len(tail_22635) == 0:
-                _x_22636 = _alt_22624(head_22631, head_22634)
-                return _x_22636
+            head_30919 = tail_30917[0]
+            tail_30920 = tail_30917[1:]
+            if len(tail_30920) == 0:
+                _x_30921 = _alt_30909(head_30916, head_30919)
+                return _x_30921
             else:
-                head_22637 = tail_22635[0]
-                tail_22638 = tail_22635[1:]
-                _x_22639 = [head_22637] + tail_22638
-                _x_22640 = _alt_22628(head_22631, head_22634, _x_22639)
-                return _x_22640
+                _x_30925 = (lambda h_30922: _alt_30913(head_30916, head_30919, tail_30920))(None)
+                return _x_30925
 
 # Lean: Corpus.Geometry.orientation
-def orientation(p_1528: Point2D, q_1529: Point2D, r_1530: Point2D) -> int:
-    _x_22651 = q_1529.point2d_1
-    _x_22652 = p_1528.point2d_1
-    _x_22653 = _x_22651 - _x_22652
-    _x_22654 = r_1530.point2d_0
-    _x_22655 = q_1529.point2d_0
-    _x_22656 = _x_22654 - _x_22655
-    _x_22657 = _x_22653 * _x_22656
-    _x_22658 = p_1528.point2d_0
-    _x_22659 = _x_22655 - _x_22658
-    _x_22660 = r_1530.point2d_1
-    _x_22661 = _x_22660 - _x_22651
-    _x_22662 = _x_22659 * _x_22661
-    _x_22663 = _x_22657 - _x_22662
-    _x_22666 = 0
-    _x_22669 = _x_22663 == 0
-    _x_22670 = True
-    if _x_22669:
+def orientation(p_1451: Point2D, q_1452: Point2D, r_1453: Point2D) -> int:
+    _x_30936 = q_1452.field_1
+    _x_30937 = p_1451.field_1
+    _x_30938 = _x_30936 - _x_30937
+    _x_30939 = r_1453.field_0
+    _x_30940 = q_1452.field_0
+    _x_30941 = _x_30939 - _x_30940
+    _x_30942 = _x_30938 * _x_30941
+    _x_30943 = p_1451.field_0
+    _x_30944 = _x_30940 - _x_30943
+    _x_30945 = r_1453.field_1
+    _x_30946 = _x_30945 - _x_30936
+    _x_30947 = _x_30944 * _x_30946
+    _x_30948 = _x_30942 - _x_30947
+    _x_30951 = 0
+    _x_30954 = _x_30948 == 0
+    _x_30955 = True
+    _x_30956 = _x_30954 == True
+    if _x_30956:
         return 0
     else:
-        _x_22673 = float_dec_lt(0, _x_22663)
-        if _x_22673:
-            _x_22679 = 1
+        _x_30958 = dec_lt(0, _x_30948)
+        if _x_30958:
+            _x_30964 = 1
             return 1
         else:
-            _x_22675 = 2
+            _x_30960 = 2
             return 2
 
 # Lean: Corpus.Geometry.segmentsIntersect
-def segments_intersect(p1_1532: Point2D, q1: Point2D, p2_1533: Point2D, q2: Point2D) -> bool:
-    _x_22688 = orientation(p1_1532, q1, p2_1533)
-    _x_22689 = orientation(p1_1532, q1, q2)
-    _x_22690 = orientation(p2_1533, q2, p1_1532)
-    _x_22691 = orientation(p2_1533, q2, q1)
-    def _f_22693():
-        _x_22692 = True
+def segments_intersect(p1_1455: Point2D, q1: Point2D, p2_1456: Point2D, q2: Point2D) -> bool:
+    _x_30973 = orientation(p1_1455, q1, p2_1456)
+    _x_30974 = orientation(p1_1455, q1, q2)
+    _x_30975 = orientation(p2_1456, q2, p1_1455)
+    _x_30976 = orientation(p2_1456, q2, q1)
+    def _f_30978():
+        _x_30977 = True
         return True
-    _alt_22694 = _f_22693
-    def _f_22712():
-        def _f_22696():
-            _x_22695 = False
+    _alt_30979 = _f_30978
+    def _f_30998():
+        def _f_30981():
+            _x_30980 = False
             return False
-        _alt_22697 = _f_22696
-        def _f_22699():
-            _x_22698 = on_segment(p2_1533, q1, q2)
-            return _x_22698
-        _alt_22700 = _f_22699
-        _x_22703 = 0
-        _x_22706 = _x_22691 == 0
-        if _x_22706:
-            _x_22710 = _alt_22700()
-            return _x_22710
+        _alt_30982 = _f_30981
+        def _f_30984():
+            _x_30983 = on_segment(p2_1456, q1, q2)
+            return _x_30983
+        _alt_30985 = _f_30984
+        _x_30989 = 0
+        _x_30992 = _x_30976 == 0
+        if _x_30992:
+            _x_30996 = _alt_30985()
+            return _x_30996
         else:
-            _x_22708 = _alt_22697()
-            return _x_22708
-    _alt_22713 = _f_22712
-    _alt_22714 = _f_22693
-    def _f_22732():
-        def _f_22716():
-            _x_22715 = False
+            _x_30994 = _alt_30982()
+            return _x_30994
+    _alt_30999 = _f_30998
+    _alt_31000 = _f_30978
+    def _f_31019():
+        def _f_31002():
+            _x_31001 = False
             return False
-        _alt_22717 = _f_22716
-        def _f_22719():
-            _x_22718 = on_segment(p2_1533, p1_1532, q2)
-            return _x_22718
-        _alt_22720 = _f_22719
-        _x_22723 = 0
-        _x_22726 = _x_22690 == 0
-        if _x_22726:
-            _x_22730 = _alt_22720()
-            return _x_22730
+        _alt_31003 = _f_31002
+        def _f_31005():
+            _x_31004 = on_segment(p2_1456, p1_1455, q2)
+            return _x_31004
+        _alt_31006 = _f_31005
+        _x_31010 = 0
+        _x_31013 = _x_30975 == 0
+        if _x_31013:
+            _x_31017 = _alt_31006()
+            return _x_31017
         else:
-            _x_22728 = _alt_22717()
-            return _x_22728
-    _alt_22733 = _f_22732
-    _alt_22734 = _f_22693
-    def _f_22752():
-        def _f_22736():
-            _x_22735 = False
+            _x_31015 = _alt_31003()
+            return _x_31015
+    _alt_31020 = _f_31019
+    _alt_31021 = _f_30978
+    def _f_31040():
+        def _f_31023():
+            _x_31022 = False
             return False
-        _alt_22737 = _f_22736
-        def _f_22739():
-            _x_22738 = on_segment(p1_1532, q2, q1)
-            return _x_22738
-        _alt_22740 = _f_22739
-        _x_22743 = 0
-        _x_22746 = _x_22689 == 0
-        if _x_22746:
-            _x_22750 = _alt_22740()
-            return _x_22750
+        _alt_31024 = _f_31023
+        def _f_31026():
+            _x_31025 = on_segment(p1_1455, q2, q1)
+            return _x_31025
+        _alt_31027 = _f_31026
+        _x_31031 = 0
+        _x_31034 = _x_30974 == 0
+        if _x_31034:
+            _x_31038 = _alt_31027()
+            return _x_31038
         else:
-            _x_22748 = _alt_22737()
-            return _x_22748
-    _alt_22753 = _f_22752
-    _alt_22754 = _f_22693
-    def _f_22772():
-        def _f_22756():
-            _x_22755 = False
+            _x_31036 = _alt_31024()
+            return _x_31036
+    _alt_31041 = _f_31040
+    _alt_31042 = _f_30978
+    def _f_31061():
+        def _f_31044():
+            _x_31043 = False
             return False
-        _alt_22757 = _f_22756
-        def _f_22759():
-            _x_22758 = on_segment(p1_1532, p2_1533, q1)
-            return _x_22758
-        _alt_22760 = _f_22759
-        _x_22763 = 0
-        _x_22766 = _x_22688 == 0
-        if _x_22766:
-            _x_22770 = _alt_22760()
-            return _x_22770
+        _alt_31045 = _f_31044
+        def _f_31047():
+            _x_31046 = on_segment(p1_1455, p2_1456, q1)
+            return _x_31046
+        _alt_31048 = _f_31047
+        _x_31052 = 0
+        _x_31055 = _x_30973 == 0
+        if _x_31055:
+            _x_31059 = _alt_31048()
+            return _x_31059
         else:
-            _x_22768 = _alt_22757()
-            return _x_22768
-    _alt_22773 = _f_22772
-    def _f_22775():
-        _x_22774 = False
+            _x_31057 = _alt_31045()
+            return _x_31057
+    _alt_31062 = _f_31061
+    def _f_31064():
+        _x_31063 = False
         return False
-    _alt_22776 = _f_22775
-    def _f_22779():
-        _x_22778 = (lambda a, b: a != b)(_x_22691)
-        return _x_22778
-    _alt_22780 = _f_22779
-    _x_22782 = (lambda a, b: a != b)(_x_22689)
-    def _jp_22829(_y_22787: bool):
-        def _jp_22822(_y_22792: bool):
-            def _jp_22815(_y_22797: bool):
-                def _jp_22808(_y_22802: bool):
-                    if _y_22802:
-                        _x_22806 = _alt_22694()
-                        return _x_22806
+    _alt_31065 = _f_31064
+    def _f_31069():
+        _x_31068 = (lambda a, b: a != b)(_x_30976)
+        return _x_31068
+    _alt_31070 = _f_31069
+    _x_31073 = (lambda a, b: a != b)(_x_30974)
+    def _jp_31120(_y_31078: bool):
+        def _jp_31113(_y_31083: bool):
+            def _jp_31106(_y_31088: bool):
+                def _jp_31099(_y_31093: bool):
+                    if _y_31093:
+                        _x_31097 = _alt_30979()
+                        return _x_31097
                     else:
-                        _x_22804 = _alt_22713()
-                        return _x_22804
-                def _jp_22811():
-                    _x_22810 = _alt_22733()
-                    return _jp_22808(_x_22810)
-                def _jp_22814():
-                    _x_22813 = _alt_22714()
-                    return _jp_22808(_x_22813)
-                if _y_22797:
-                    return _jp_22814()
+                        _x_31095 = _alt_30999()
+                        return _x_31095
+                def _jp_31105():
+                    _x_31104 = _alt_31000()
+                    return _jp_31099(_x_31104)
+                def _jp_31102():
+                    _x_31101 = _alt_31020()
+                    return _jp_31099(_x_31101)
+                if _y_31088:
+                    return _jp_31105()
                 else:
-                    return _jp_22811()
-            def _jp_22818():
-                _x_22817 = _alt_22753()
-                return _jp_22815(_x_22817)
-            def _jp_22821():
-                _x_22820 = _alt_22734()
-                return _jp_22815(_x_22820)
-            if _y_22792:
-                return _jp_22821()
+                    return _jp_31102()
+            def _jp_31112():
+                _x_31111 = _alt_31021()
+                return _jp_31106(_x_31111)
+            def _jp_31109():
+                _x_31108 = _alt_31041()
+                return _jp_31106(_x_31108)
+            if _y_31083:
+                return _jp_31112()
             else:
-                return _jp_22818()
-        def _jp_22828():
-            _x_22827 = _alt_22754()
-            return _jp_22822(_x_22827)
-        def _jp_22825():
-            _x_22824 = _alt_22773()
-            return _jp_22822(_x_22824)
-        if _y_22787:
-            return _jp_22828()
+                return _jp_31109()
+        def _jp_31119():
+            _x_31118 = _alt_31042()
+            return _jp_31113(_x_31118)
+        def _jp_31116():
+            _x_31115 = _alt_31062()
+            return _jp_31113(_x_31115)
+        if _y_31078:
+            return _jp_31119()
         else:
-            return _jp_22825()
-    def _jp_22835():
-        _x_22834 = _alt_22780()
-        return _jp_22829(_x_22834)
-    def _jp_22832():
-        _x_22831 = _alt_22776()
-        return _jp_22829(_x_22831)
-    if _x_22782:
-        return _jp_22835()
+            return _jp_31116()
+    def _jp_31126():
+        _x_31125 = _alt_31070()
+        return _jp_31120(_x_31125)
+    def _jp_31123():
+        _x_31122 = _alt_31065()
+        return _jp_31120(_x_31122)
+    if _x_31073:
+        return _jp_31126()
     else:
-        return _jp_22832()
+        return _jp_31123()
 
 # Lean: Corpus.Geometry.rotate2D
-def rotate2d(p_1549: Point2D, angle: float) -> Point2D:
-    _x_22837 = cos(angle)
-    _x_22838 = sin(angle)
-    _x_22845 = p_1549.point2d_0
-    _x_22846 = _x_22845 * _x_22837
-    _x_22847 = p_1549.point2d_1
-    _x_22848 = _x_22847 * _x_22838
-    _x_22849 = _x_22846 - _x_22848
-    _x_22853 = _x_22845 * _x_22838
-    _x_22854 = _x_22847 * _x_22837
-    _x_22855 = _x_22853 + _x_22854
-    _x_22856 = Point2D_mk(_x_22849, _x_22855)
-    return _x_22856
+def rotate2d(p_1472: Point2D, angle: float) -> Point2D:
+    _x_31128 = cos(angle)
+    _x_31129 = sin(angle)
+    _x_31136 = p_1472.field_0
+    _x_31137 = _x_31136 * _x_31128
+    _x_31138 = p_1472.field_1
+    _x_31139 = _x_31138 * _x_31129
+    _x_31140 = _x_31137 - _x_31139
+    _x_31144 = _x_31136 * _x_31129
+    _x_31145 = _x_31138 * _x_31128
+    _x_31146 = _x_31144 + _x_31145
+    _x_31147 = Point2D_mk(_x_31140, _x_31146)
+    return _x_31147
 
 # Lean: Corpus.Geometry.scale2D
-def scale2d(p_1552: Point2D, factor: float) -> Point2D:
-    _x_22861 = p_1552.point2d_0
-    _x_22862 = _x_22861 * factor
-    _x_22863 = p_1552.point2d_1
-    _x_22864 = _x_22863 * factor
-    _x_22865 = Point2D_mk(_x_22862, _x_22864)
-    return _x_22865
+def scale2d(p_1475: Point2D, factor: float) -> Point2D:
+    _x_31152 = p_1475.field_0
+    _x_31153 = _x_31152 * factor
+    _x_31154 = p_1475.field_1
+    _x_31155 = _x_31154 * factor
+    _x_31156 = Point2D_mk(_x_31153, _x_31155)
+    return _x_31156
 
 # Lean: Corpus.Geometry.translate2D
-def translate2d(p_1553: Point2D, dx_1554: float, dy_1555: float) -> Point2D:
-    _x_22870 = p_1553.point2d_0
-    _x_22871 = _x_22870 + dx_1554
-    _x_22872 = p_1553.point2d_1
-    _x_22873 = _x_22872 + dy_1555
-    _x_22874 = Point2D_mk(_x_22871, _x_22873)
-    return _x_22874
+def translate2d(p_1476: Point2D, dx_1477: float, dy_1478: float) -> Point2D:
+    _x_31161 = p_1476.field_0
+    _x_31162 = _x_31161 + dx_1477
+    _x_31163 = p_1476.field_1
+    _x_31164 = _x_31163 + dy_1478
+    _x_31165 = Point2D_mk(_x_31162, _x_31164)
+    return _x_31165
 
 # Lean: Corpus.Geometry.reflectX
-def reflect_x(p_1556: Point2D) -> Point2D:
-    _x_22876 = p_1556.point2d_0
-    _x_22879 = p_1556.point2d_1
-    _x_22880 = -_x_22879
-    _x_22881 = Point2D_mk(_x_22876, _x_22880)
-    return _x_22881
+def reflect_x(p_1479: Point2D) -> Point2D:
+    _x_31167 = p_1479.field_0
+    _x_31170 = p_1479.field_1
+    _x_31171 = -_x_31170
+    _x_31172 = Point2D_mk(_x_31167, _x_31171)
+    return _x_31172
 
 # Lean: Corpus.Geometry.reflectY
-def reflect_y(p_1557: Point2D) -> Point2D:
-    _x_22885 = p_1557.point2d_0
-    _x_22886 = -_x_22885
-    _x_22887 = p_1557.point2d_1
-    _x_22888 = Point2D_mk(_x_22886, _x_22887)
-    return _x_22888
+def reflect_y(p_1480: Point2D) -> Point2D:
+    _x_31176 = p_1480.field_0
+    _x_31177 = -_x_31176
+    _x_31178 = p_1480.field_1
+    _x_31179 = Point2D_mk(_x_31177, _x_31178)
+    return _x_31179
 
 # Lean: Corpus.Geometry.angleBetween
 def angle_between(v1: Point2D, v2: Point2D) -> float:
-    _x_22890 = dot2d(v1, v2)
-    _x_22891 = magnitude2d(v1)
-    _x_22892 = magnitude2d(v2)
-    def _f_22894():
-        _x_22893 = True
+    _x_31181 = dot2d(v1, v2)
+    _x_31182 = magnitude2d(v1)
+    _x_31183 = magnitude2d(v2)
+    def _f_31185():
+        _x_31184 = True
         return True
-    _alt_22895 = _f_22894
-    def _f_22902():
-        _x_22898 = 0
-        _x_22901 = _x_22892 == 0
-        return _x_22901
-    _alt_22903 = _f_22902
-    _x_22906 = 0
-    _x_22909 = _x_22891 == 0
-    def _jp_22929(_y_22914: bool):
-        _x_22915 = True
-        if _y_22914:
+    _alt_31186 = _f_31185
+    def _f_31193():
+        _x_31189 = 0
+        _x_31192 = _x_31183 == 0
+        return _x_31192
+    _alt_31194 = _f_31193
+    _x_31197 = 0
+    _x_31200 = _x_31182 == 0
+    def _jp_31221(_y_31205: bool):
+        _x_31206 = True
+        _x_31207 = _y_31205 == True
+        if _x_31207:
             return 0
         else:
-            _x_22924 = _x_22891 * _x_22892
-            _x_22925 = _x_22890 // _x_22924
-            _x_22926 = acos(_x_22925)
-            return _x_22926
-    def _jp_22932():
-        _x_22931 = _alt_22903()
-        return _jp_22929(_x_22931)
-    def _jp_22935():
-        _x_22934 = _alt_22895()
-        return _jp_22929(_x_22934)
-    if _x_22909:
-        return _jp_22935()
+            _x_31215 = _x_31182 * _x_31183
+            _x_31216 = _x_31181 // _x_31215
+            _x_31217 = acos(_x_31216)
+            return _x_31217
+    def _jp_31227():
+        _x_31226 = _alt_31186()
+        return _jp_31221(_x_31226)
+    def _jp_31224():
+        _x_31223 = _alt_31194()
+        return _jp_31221(_x_31223)
+    if _x_31200:
+        return _jp_31227()
     else:
-        return _jp_22932()
+        return _jp_31224()
 
 # Lean: Corpus.Geometry.projectOntoLine
-def project_onto_line(p_1560: Point2D, a_1561: Point2D, b_1562: Point2D) -> Point2D:
-    _x_22940 = p_1560.point2d_0
-    _x_22941 = a_1561.point2d_0
-    _x_22942 = _x_22940 - _x_22941
-    _x_22943 = p_1560.point2d_1
-    _x_22944 = a_1561.point2d_1
-    _x_22945 = _x_22943 - _x_22944
-    _x_22946 = Point2D_mk(_x_22942, _x_22945)
-    _x_22947 = b_1562.point2d_0
-    _x_22948 = _x_22947 - _x_22941
-    _x_22949 = b_1562.point2d_1
-    _x_22950 = _x_22949 - _x_22944
-    _x_22951 = Point2D_mk(_x_22948, _x_22950)
-    _x_22955 = dot2d(_x_22946, _x_22951)
-    _x_22956 = dot2d(_x_22951, _x_22951)
-    _x_22957 = _x_22955 // _x_22956
-    _x_22964 = _x_22951.point2d_0
-    _x_22965 = _x_22957 * _x_22964
-    _x_22966 = _x_22941 + _x_22965
-    _x_22967 = _x_22951.point2d_1
-    _x_22968 = _x_22957 * _x_22967
-    _x_22969 = _x_22944 + _x_22968
-    _x_22970 = Point2D_mk(_x_22966, _x_22969)
-    return _x_22970
+def project_onto_line(p_1483: Point2D, a_1484: Point2D, b_1485: Point2D) -> Point2D:
+    _x_31232 = p_1483.field_0
+    _x_31233 = a_1484.field_0
+    _x_31234 = _x_31232 - _x_31233
+    _x_31235 = p_1483.field_1
+    _x_31236 = a_1484.field_1
+    _x_31237 = _x_31235 - _x_31236
+    _x_31238 = Point2D_mk(_x_31234, _x_31237)
+    _x_31239 = b_1485.field_0
+    _x_31240 = _x_31239 - _x_31233
+    _x_31241 = b_1485.field_1
+    _x_31242 = _x_31241 - _x_31236
+    _x_31243 = Point2D_mk(_x_31240, _x_31242)
+    _x_31247 = dot2d(_x_31238, _x_31243)
+    _x_31248 = dot2d(_x_31243, _x_31243)
+    _x_31249 = _x_31247 // _x_31248
+    _x_31256 = _x_31243.field_0
+    _x_31257 = _x_31249 * _x_31256
+    _x_31258 = _x_31233 + _x_31257
+    _x_31259 = _x_31243.field_1
+    _x_31260 = _x_31249 * _x_31259
+    _x_31261 = _x_31236 + _x_31260
+    _x_31262 = Point2D_mk(_x_31258, _x_31261)
+    return _x_31262
 
 # Lean: Corpus.Geometry.distanceToLine
-def distance_to_line(p_1564: Point2D, a_1565: Point2D, b_1566: Point2D) -> float:
-    _x_22972 = project_onto_line(p_1564, a_1565, b_1566)
-    _x_22973 = dist2d(p_1564, _x_22972)
-    return _x_22973
+def distance_to_line(p_1487: Point2D, a_1488: Point2D, b_1489: Point2D) -> float:
+    _x_31264 = project_onto_line(p_1487, a_1488, b_1489)
+    _x_31265 = dist2d(p_1487, _x_31264)
+    return _x_31265
 
 # Lean: Corpus.Combinatorics.doubleFactorial
-def double_factorial(n_1567: int) -> int:
-    _x_22975 = 1
-    _x_22978 = n_1567 <= 1
-    if _x_22978:
+def double_factorial(n_1490: int) -> int:
+    _x_31267 = 1
+    _x_31270 = n_1490 <= 1
+    if _x_31270:
         return 1
     else:
-        _x_22986 = 2
-        _x_22989 = n_1567 - 2
-        _x_22990 = double_factorial(_x_22989)
-        _x_22991 = n_1567 * _x_22990
-        return _x_22991
+        _x_31278 = 2
+        _x_31281 = n_1490 - 2
+        _x_31282 = double_factorial(_x_31281)
+        _x_31283 = n_1490 * _x_31282
+        return _x_31283
 
 # Lean: Corpus.Combinatorics.risingFactorial
-def rising_factorial(x_1568: int, n_1569: int) -> int:
-    _x_22995 = 0
-    _x_22998 = 1
-    _x_23001 = rising_factorial_go(x_1568, n_1569, 0, 1)
-    return _x_23001
+def rising_factorial(x_1491: int, n_1492: int) -> int:
+    _x_31288 = 0
+    _x_31291 = 1
+    _x_31294 = rising_factorial_go(x_1491, n_1492, 0, 1)
+    return _x_31294
 
 # Lean: Corpus.Combinatorics.fallingFactorial
-def falling_factorial(x_1570: int, n_1571: int) -> int:
-    _x_23003 = 0
-    _x_23006 = 1
-    _x_23009 = falling_factorial_go(x_1570, n_1571, 0, 1)
-    return _x_23009
+def falling_factorial(x_1493: int, n_1494: int) -> int:
+    _x_31296 = 0
+    _x_31299 = 1
+    _x_31302 = falling_factorial_go(x_1493, n_1494, 0, 1)
+    return _x_31302
 
 # Lean: Corpus.Combinatorics.multinomial
-def multinomial(n_1572: int, ks: list[int]) -> int:
-    def _f_23017(x1_23011: int, x2_23012: int):
-        _x_23016 = x1_23011 + x2_23012
-        return _x_23016
-    _x_23018 = 0
-    _x_23021 = functools.reduce(_f_23017, ks, 0)
-    _x_23023 = (lambda a, b: a != b)(n_1572)
-    _x_23024 = True
-    if _x_23023:
+def multinomial(n_1495: int, ks: list[int]) -> int:
+    def _f_31310(x1_31304: int, x2_31305: int):
+        _x_31309 = x1_31304 + x2_31305
+        return _x_31309
+    _x_31311 = 0
+    _x_31314 = functools.reduce(_f_31310, ks, 0)
+    _x_31317 = (lambda a, b: a != b)(n_1495)
+    _x_31318 = True
+    _x_31319 = _x_31317 == True
+    if _x_31319:
         return 0
     else:
-        _x_23027 = factorial(n_1572)
-        def _f_23033(acc_1574: int, k_1575: int):
-            _x_23031 = factorial(k_1575)
-            _x_23032 = acc_1574 * _x_23031
-            return _x_23032
-        _x_23034 = 1
-        _x_23037 = functools.reduce(_f_23033, ks, 1)
-        _x_23041 = _x_23027 // _x_23037
-        return _x_23041
+        _x_31321 = factorial(n_1495)
+        def _f_31327(acc_1497: int, k_1498: int):
+            _x_31325 = factorial(k_1498)
+            _x_31326 = acc_1497 * _x_31325
+            return _x_31326
+        _x_31328 = 1
+        _x_31331 = functools.reduce(_f_31327, ks, 1)
+        _x_31335 = _x_31321 // _x_31331
+        return _x_31335
 
 # Lean: Corpus.Combinatorics.stirling1
-def stirling1(n_1577: int, k_1578: int) -> int:
-    _x_23047 = 0
-    _x_23050 = k_1578 == 0
-    _x_23051 = True
-    if _x_23050:
-        _x_23078 = n_1577 == 0
-        if _x_23078:
-            _x_23082 = 1
+def stirling1(n_1500: int, k_1501: int) -> int:
+    _x_31343 = 0
+    _x_31346 = k_1501 == 0
+    _x_31347 = True
+    _x_31348 = _x_31346 == True
+    if _x_31348:
+        _x_31375 = n_1500 == 0
+        _x_31376 = _x_31375 == True
+        if _x_31376:
+            _x_31380 = 1
             return 1
         else:
-            return 0
+            return 1
     else:
-        _x_23054 = n_1577 == 0
-        if _x_23054:
-            return 0
+        _x_31350 = n_1500 == 0
+        _x_31351 = _x_31350 == True
+        if _x_31351:
+            return 1
         else:
-            _x_23066 = 1
-            _x_23069 = n_1577 - 1
-            _x_23070 = stirling1(_x_23069, k_1578)
-            _x_23071 = _x_23069 * _x_23070
-            _x_23072 = k_1578 - 1
-            _x_23073 = stirling1(_x_23069, _x_23072)
-            _x_23074 = _x_23071 + _x_23073
-            return _x_23074
+            _x_31362 = 1
+            _x_31365 = n_1500 - 1
+            _x_31366 = stirling1(_x_31365, k_1501)
+            _x_31367 = _x_31365 * _x_31366
+            _x_31368 = k_1501 - 1
+            _x_31369 = stirling1(_x_31365, _x_31368)
+            _x_31370 = _x_31367 + _x_31369
+            return _x_31370
 
 # Lean: Corpus.Combinatorics.stirling2
-def stirling2(n_1579: int, k_1580: int) -> int:
-    _x_23090 = 0
-    _x_23093 = k_1580 == 0
-    _x_23094 = True
-    if _x_23093:
-        _x_23121 = n_1579 == 0
-        if _x_23121:
-            _x_23125 = 1
+def stirling2(n_1502: int, k_1503: int) -> int:
+    _x_31389 = 0
+    _x_31392 = k_1503 == 0
+    _x_31393 = True
+    _x_31394 = _x_31392 == True
+    if _x_31394:
+        _x_31421 = n_1502 == 0
+        _x_31422 = _x_31421 == True
+        if _x_31422:
+            _x_31426 = 1
             return 1
         else:
-            return 0
+            return 1
     else:
-        _x_23097 = n_1579 == 0
-        if _x_23097:
-            return 0
+        _x_31396 = n_1502 == 0
+        _x_31397 = _x_31396 == True
+        if _x_31397:
+            return 1
         else:
-            _x_23109 = 1
-            _x_23112 = n_1579 - 1
-            _x_23113 = stirling2(_x_23112, k_1580)
-            _x_23114 = k_1580 * _x_23113
-            _x_23115 = k_1580 - 1
-            _x_23116 = stirling2(_x_23112, _x_23115)
-            _x_23117 = _x_23114 + _x_23116
-            return _x_23117
+            _x_31408 = 1
+            _x_31411 = n_1502 - 1
+            _x_31412 = stirling2(_x_31411, k_1503)
+            _x_31413 = k_1503 * _x_31412
+            _x_31414 = k_1503 - 1
+            _x_31415 = stirling2(_x_31411, _x_31414)
+            _x_31416 = _x_31413 + _x_31415
+            return _x_31416
 
 # Lean: Corpus.Combinatorics.bell
-def bell(n_1581: int) -> int:
-    _x_23131 = 0
-    _x_23134 = bell_go(n_1581, 0, 0)
-    return _x_23134
+def bell(n_1504: int) -> int:
+    _x_31432 = 0
+    _x_31435 = bell_go(n_1504, 0, 0)
+    return _x_31435
 
 # Lean: Corpus.Combinatorics.catalan
-def catalan(n_1582: int) -> int:
-    _x_23142 = 2
-    _x_23145 = 2 * n_1582
-    _x_23146 = binomial(_x_23145, n_1582)
-    _x_23150 = 1
-    _x_23153 = n_1582 + 1
-    _x_23154 = _x_23146 // _x_23153
-    return _x_23154
+def catalan(n_1505: int) -> int:
+    _x_31443 = 2
+    _x_31446 = 2 * n_1505
+    _x_31447 = binomial(_x_31446, n_1505)
+    _x_31451 = 1
+    _x_31454 = n_1505 + 1
+    _x_31455 = _x_31447 // _x_31454
+    return _x_31455
 
 # Lean: Corpus.Combinatorics.derangement
-def derangement(n_1583: int) -> int:
-    _x_23158 = 0
-    _x_23161 = n_1583 == 0
-    _x_23162 = True
-    if _x_23161:
-        _x_23192 = 1
+def derangement(n_1506: int) -> int:
+    _x_31460 = 0
+    _x_31463 = n_1506 == 0
+    _x_31464 = True
+    _x_31465 = _x_31463 == True
+    if _x_31465:
+        _x_31495 = 1
         return 1
     else:
-        _x_23165 = 1
-        _x_23168 = n_1583 == 1
-        if _x_23168:
-            return 0
-        else:
-            _x_23177 = n_1583 - 1
-            _x_23181 = derangement(_x_23177)
-            _x_23182 = 2
-            _x_23185 = n_1583 - 2
-            _x_23186 = derangement(_x_23185)
-            _x_23187 = _x_23181 + _x_23186
-            _x_23188 = _x_23177 * _x_23187
-            return _x_23188
-
-# Lean: Corpus.Combinatorics.partitionCount
-def partition_count(n_1584: int) -> int:
-    _x_23197 = p(n_1584, n_1584)
-    return _x_23197
-
-# Lean: Corpus.Combinatorics.permutations
-def permutations(__1585: Any, inst_23199: Any, xs_1586: list[Any]) -> list[list[Any]]:
-    def _f_23203():
-        _x_23200 = []
-        _x_23201 = []
-        _x_23202 = [_x_23200] + _x_23201
-        return _x_23202
-    _alt_23204 = _f_23203
-    def _f_23209(x_1588: Any):
-        _x_23205 = []
-        _x_23206 = [x_1588] + _x_23205
-        _x_23207 = []
-        _x_23208 = [_x_23206] + _x_23207
-        return _x_23208
-    _alt_23210 = _f_23209
-    def _f_23223(x_23211: list[Any]):
-        def _f_23221(x_1589: Any):
-            def _f_23214(x_23212: list[Any]):
-                _x_23213 = [x_1589] + x_23212
-                return _x_23213
-            def _f_23217(x_23215: Any):
-                _x_23216 = (lambda a, b: a != b)(x_1589)
-                return _x_23216
-            _x_23218 = [x for x in xs_1586 if _f_23217(x)]
-            _x_23219 = permutations(None, inst_23199, _x_23218)
-            _x_23220 = [_f_23214(x) for x in _x_23219]
-            return _x_23220
-        _x_23222 = [y for x in xs_1586 for y in _f_23221(x)]
-        return _x_23222
-    _alt_23224 = _f_23223
-    if len(xs_1586) == 0:
-        _x_23226 = _alt_23204()
-        return _x_23226
-    else:
-        head_23227 = xs_1586[0]
-        tail_23228 = xs_1586[1:]
-        if len(tail_23228) == 0:
-            _x_23229 = _alt_23210(head_23227)
-            return _x_23229
-        else:
-            head_23230 = tail_23228[0]
-            tail_23231 = tail_23228[1:]
-            _x_23232 = [head_23230] + tail_23231
-            _x_23233 = [head_23227] + _x_23232
-            _x_23234 = _alt_23224(_x_23233)
-            return _x_23234
-
-# Lean: Corpus.Combinatorics.combinations
-def combinations(__1590: Any, k_1591: int, xs_1592: list[Any]) -> list[list[Any]]:
-    _x_23240 = 0
-    _x_23243 = k_1591 == 0
-    _x_23244 = True
-    if _x_23243:
-        _x_23276 = []
-        _x_23277 = []
-        _x_23278 = [_x_23276] + _x_23277
-        return _x_23278
-    else:
-        def _f_23248():
-            _x_23247 = []
-            return _x_23247
-        _alt_23249 = _f_23248
-        def _f_23267(x_1594: Any, rest_1595: list[Any]):
-            def _f_23255(x_23253: list[Any]):
-                _x_23254 = [x_1594] + x_23253
-                return _x_23254
-            _x_23259 = 1
-            _x_23262 = k_1591 - 1
-            _x_23263 = combinations(None, _x_23262, rest_1595)
-            _x_23264 = [_f_23255(x) for x in _x_23263]
-            _x_23265 = combinations(None, k_1591, rest_1595)
-            _x_23266 = _x_23264 + _x_23265
-            return _x_23266
-        _alt_23268 = _f_23267
-        if len(xs_1592) == 0:
-            _x_23270 = _alt_23249()
-            return _x_23270
-        else:
-            head_23271 = xs_1592[0]
-            tail_23272 = xs_1592[1:]
-            _x_23273 = _alt_23268(head_23271, tail_23272)
-            return _x_23273
-
-# Lean: Corpus.Combinatorics.powerSet
-def power_set(__1596: Any, xs_1597: list[Any]) -> list[list[Any]]:
-    def _f_23284():
-        _x_23281 = []
-        _x_23282 = []
-        _x_23283 = [_x_23281] + _x_23282
-        return _x_23283
-    _alt_23285 = _f_23284
-    def _f_23295(x_1599: Any, rest_1600: list[Any]):
-        _x_23286 = power_set(None, rest_1600)
-        def _f_23292(x_23290: list[Any]):
-            _x_23291 = [x_1599] + x_23290
-            return _x_23291
-        _x_23293 = [_f_23292(x) for x in _x_23286]
-        _x_23294 = _x_23286 + _x_23293
-        return _x_23294
-    _alt_23296 = _f_23295
-    if len(xs_1597) == 0:
-        _x_23298 = _alt_23285()
-        return _x_23298
-    else:
-        head_23299 = xs_1597[0]
-        tail_23300 = xs_1597[1:]
-        _x_23301 = _alt_23296(head_23299, tail_23300)
-        return _x_23301
-
-# Lean: Corpus.Combinatorics.countInversions
-def count_inversions(xs_1601: list[int]) -> int:
-    _x_23304 = count(xs_1601)
-    return _x_23304
-
-# Lean: Corpus.Combinatorics.isEvenPermutation
-def is_even_permutation(xs_1602: list[int]) -> bool:
-    _x_23311 = count_inversions(xs_1602)
-    _x_23312 = 2
-    _x_23315 = _x_23311 % 2
-    _x_23316 = 0
-    _x_23319 = _x_23315 == 0
-    return _x_23319
-
-# Lean: Corpus.Combinatorics.lehmerCode
-def lehmer_code(perm_1603: list[int]) -> list[int]:
-    _x_23321 = []
-    _x_23322 = lehmer_code_go(perm_1603, _x_23321)
-    return _x_23322
-
-# Lean: Corpus.Combinatorics.fromLehmerCode
-def from_lehmer_code(code_1604: list[int]) -> list[int]:
-    _x_23324 = len(code_1604)
-    _x_23325 = list(range(_x_23324))
-    _x_23326 = []
-    _x_23327 = from_lehmer_code_go(code_1604, _x_23325, _x_23326)
-    return _x_23327
-
-# Lean: Corpus.Combinatorics.nthPermutation
-def nth_permutation(n_1606: int, k_1607: int) -> list[int]:
-    _x_23329 = list(range(n_1606))
-    _x_23330 = []
-    _x_23331 = nth_permutation_go(k_1607, n_1606, _x_23329, _x_23330)
-    return _x_23331
-
-# Lean: Corpus.Combinatorics.permutationRank
-def permutation_rank(perm_1608: list[int]) -> int:
-    _x_23333 = lehmer_code(perm_1608)
-    _x_23334 = len(_x_23333)
-    _x_23335 = 0
-    _x_23338 = permutation_rank_go(_x_23334, _x_23333, 0, 0)
-    return _x_23338
-
-# Lean: Corpus.Combinatorics.nextPermutation
-def next_permutation(perm_1611: list[int]) -> list[int] | None:
-    _x_23340 = list(perm_1611)
-    _x_23341 = len(_x_23340)
-    def _f_23343():
-        _x_23342 = None
-        return _x_23342
-    _alt_23344 = _f_23343
-    def _f_23357(i_1615: int):
-        _x_23345 = find_j(_x_23340, i_1615, _x_23341)
-        _x_23346 = swap_(None, _x_23340, i_1615, _x_23345)
-        _x_23350 = 1
-        _x_23353 = i_1615 + 1
-        _x_23354 = reverse_from(_x_23346, _x_23353)
-        _x_23355 = list(_x_23354)
-        _x_23356 = _x_23355
-        return _x_23356
-    _alt_23358 = _f_23357
-    _x_23362 = 1
-    _x_23365 = _x_23341 - 1
-    _x_23366 = find_i(_x_23340, _x_23365)
-    if _x_23366 is None:
-        _x_23368 = _alt_23344()
-        return _x_23368
-    else:
-        val_23369 = _x_23366
-        _x_23370 = _alt_23358(val_23369)
-        return _x_23370
-
-# Lean: Corpus.Combinatorics.prevPermutation
-def prev_permutation(perm_1619: list[int]) -> list[int] | None:
-    _x_23373 = list(perm_1619)
-    _x_23374 = len(_x_23373)
-    def _f_23376():
-        _x_23375 = None
-        return _x_23375
-    _alt_23377 = _f_23376
-    def _f_23390(i_1623: int):
-        _x_23378 = find_j(_x_23373, i_1623, _x_23374)
-        _x_23379 = swap_(None, _x_23373, i_1623, _x_23378)
-        _x_23383 = 1
-        _x_23386 = i_1623 + 1
-        _x_23387 = reverse_from(_x_23379, _x_23386)
-        _x_23388 = list(_x_23387)
-        _x_23389 = _x_23388
-        return _x_23389
-    _alt_23391 = _f_23390
-    _x_23395 = 1
-    _x_23398 = _x_23374 - 1
-    _x_23399 = find_i(_x_23373, _x_23398)
-    if _x_23399 is None:
-        _x_23401 = _alt_23377()
-        return _x_23401
-    else:
-        val_23402 = _x_23399
-        _x_23403 = _alt_23391(val_23402)
-        return _x_23403
-
-# Lean: Corpus.Combinatorics.compositions
-def compositions(n_1627: int) -> list[list[int]]:
-    _x_23408 = 0
-    _x_23411 = n_1627 == 0
-    _x_23412 = True
-    if _x_23411:
-        _x_23421 = []
-        _x_23422 = []
-        _x_23423 = [_x_23421] + _x_23422
-        return _x_23423
-    else:
-        _x_23415 = 1
-        _x_23418 = []
-        _x_23419 = compositions_go(n_1627, 1, _x_23418)
-        return _x_23419
-
-# Lean: Corpus.Combinatorics.integerPartitions
-def integer_partitions(n_1628: int) -> list[list[int]]:
-    _x_23426 = integer_partitions_go(n_1628, n_1628)
-    return _x_23426
-
-# Lean: Corpus.Sequences.fibonacci
-def sequences_fibonacci(n_1629: int) -> int:
-    _x_23428 = 0
-    _x_23431 = 1
-    _x_23434 = sequences_fibonacci_go(n_1629, 0, 1)
-    return _x_23434
-
-# Lean: Corpus.Sequences.lucas
-def lucas(n_1630: int) -> int:
-    _x_23436 = 2
-    _x_23439 = 1
-    _x_23442 = lucas_go(n_1630, 2, 1)
-    return _x_23442
-
-# Lean: Corpus.Sequences.tribonacci
-def tribonacci(n_1631: int) -> int:
-    _x_23444 = 0
-    _x_23447 = 1
-    _x_23450 = tribonacci_go(n_1631, 0, 0, 1)
-    return _x_23450
-
-# Lean: Corpus.Sequences.pell
-def pell(n_1632: int) -> int:
-    _x_23452 = 0
-    _x_23455 = 1
-    _x_23458 = pell_go(n_1632, 0, 1)
-    return _x_23458
-
-# Lean: Corpus.Sequences.padovan
-def padovan(n_1633: int) -> int:
-    _x_23460 = 1
-    _x_23463 = padovan_go(n_1633, 1, 1, 1)
-    return _x_23463
-
-# Lean: Corpus.Sequences.perrin
-def perrin(n_1634: int) -> int:
-    _x_23465 = 3
-    _x_23468 = 0
-    _x_23471 = 2
-    _x_23474 = perrin_go(n_1634, 3, 0, 2)
-    return _x_23474
-
-# Lean: Corpus.Sequences.jacobsthal
-def jacobsthal(n_1635: int) -> int:
-    _x_23476 = 0
-    _x_23479 = 1
-    _x_23482 = jacobsthal_go(n_1635, 0, 1)
-    return _x_23482
-
-# Lean: Corpus.Sequences.motzkin
-def motzkin(n_1636: int) -> int:
-    _x_23486 = 0
-    _x_23489 = n_1636 == 0
-    _x_23490 = True
-    if _x_23489:
-        _x_23512 = 1
-        return 1
-    else:
-        _x_23493 = 1
-        _x_23496 = n_1636 == 1
-        if _x_23496:
+        _x_31467 = 1
+        _x_31470 = n_1506 == 1
+        _x_31471 = _x_31470 == True
+        if _x_31471:
             return 1
         else:
-            _x_23505 = n_1636 - 1
-            _x_23506 = motzkin(_x_23505)
-            _x_23507 = motzkin_go(n_1636, 0, 0)
-            _x_23508 = _x_23506 + _x_23507
-            return _x_23508
+            _x_31479 = n_1506 - 1
+            _x_31483 = derangement(_x_31479)
+            _x_31484 = 2
+            _x_31487 = n_1506 - 2
+            _x_31488 = derangement(_x_31487)
+            _x_31489 = _x_31483 + _x_31488
+            _x_31490 = _x_31479 * _x_31489
+            return _x_31490
+
+# Lean: Corpus.Combinatorics.partitionCount
+def partition_count(n_1507: int) -> int:
+    _x_31500 = p(n_1507, n_1507)
+    return _x_31500
+
+# Lean: Corpus.Combinatorics.permutations
+def permutations(__1508: Any, inst_31502: Any, xs_1509: list[Any]) -> list[list[Any]]:
+    def _f_31506():
+        _x_31503 = []
+        _x_31504 = []
+        _x_31505 = [_x_31503] + _x_31504
+        return _x_31505
+    _alt_31507 = _f_31506
+    def _f_31512(x_1511: Any):
+        _x_31508 = []
+        _x_31509 = [x_1511] + _x_31508
+        _x_31510 = []
+        _x_31511 = [_x_31509] + _x_31510
+        return _x_31511
+    _alt_31513 = _f_31512
+    def _f_31526(x_31514: list[Any]):
+        def _f_31524(x_1512: Any):
+            def _f_31517(x_31515: list[Any]):
+                _x_31516 = [x_1512] + x_31515
+                return _x_31516
+            def _f_31520(x_31518: Any):
+                _x_31519 = (lambda a, b: a != b)(x_1512)
+                return _x_31519
+            _x_31521 = [x for x in xs_1509 if _f_31520(x)]
+            _x_31522 = permutations(None, inst_31502, _x_31521)
+            _x_31523 = [_f_31517(x) for x in _x_31522]
+            return _x_31523
+        _x_31525 = flat_map_tr(None, None, _f_31524, xs_1509)
+        return _x_31525
+    _alt_31527 = _f_31526
+    if len(xs_1509) == 0:
+        _x_31529 = _alt_31507()
+        return _x_31529
+    else:
+        head_31530 = xs_1509[0]
+        tail_31531 = xs_1509[1:]
+        if len(tail_31531) == 0:
+            _x_31532 = _alt_31513(head_31530)
+            return _x_31532
+        else:
+            def _f_31536(h_31533: Any):
+                _x_31534 = [head_31530] + tail_31531
+                _x_31535 = _alt_31527(_x_31534)
+                return _x_31535
+            _x_31537 = _f_31536(None)
+            return _x_31537
+
+# Lean: Corpus.Combinatorics.combinations
+def combinations(__1513: Any, k_1514: int, xs_1515: list[Any]) -> list[list[Any]]:
+    _x_31544 = 0
+    _x_31547 = k_1514 == 0
+    _x_31548 = True
+    _x_31549 = _x_31547 == True
+    if _x_31549:
+        _x_31580 = []
+        _x_31581 = []
+        _x_31582 = [_x_31580] + _x_31581
+        return _x_31582
+    else:
+        def _f_31552():
+            _x_31551 = []
+            return _x_31551
+        _alt_31553 = _f_31552
+        def _f_31571(x_1517: Any, rest_1518: list[Any]):
+            def _f_31559(x_31557: list[Any]):
+                _x_31558 = [x_1517] + x_31557
+                return _x_31558
+            _x_31563 = 1
+            _x_31566 = k_1514 - 1
+            _x_31567 = combinations(None, _x_31566, rest_1518)
+            _x_31568 = [_f_31559(x) for x in _x_31567]
+            _x_31569 = combinations(None, k_1514, rest_1518)
+            _x_31570 = _x_31568 + _x_31569
+            return _x_31570
+        _alt_31572 = _f_31571
+        if len(xs_1515) == 0:
+            _x_31574 = _alt_31553()
+            return _x_31574
+        else:
+            head_31575 = xs_1515[0]
+            tail_31576 = xs_1515[1:]
+            _x_31577 = _alt_31572(head_31575, tail_31576)
+            return _x_31577
+
+# Lean: Corpus.Combinatorics.powerSet
+def power_set(__1519: Any, xs_1520: list[Any]) -> list[list[Any]]:
+    def _f_31588():
+        _x_31585 = []
+        _x_31586 = []
+        _x_31587 = [_x_31585] + _x_31586
+        return _x_31587
+    _alt_31589 = _f_31588
+    def _f_31599(x_1522: Any, rest_1523: list[Any]):
+        _x_31590 = power_set(None, rest_1523)
+        def _f_31596(x_31594: list[Any]):
+            _x_31595 = [x_1522] + x_31594
+            return _x_31595
+        _x_31597 = [_f_31596(x) for x in _x_31590]
+        _x_31598 = _x_31590 + _x_31597
+        return _x_31598
+    _alt_31600 = _f_31599
+    if len(xs_1520) == 0:
+        _x_31602 = _alt_31589()
+        return _x_31602
+    else:
+        head_31603 = xs_1520[0]
+        tail_31604 = xs_1520[1:]
+        _x_31605 = _alt_31600(head_31603, tail_31604)
+        return _x_31605
+
+# Lean: Corpus.Combinatorics.countInversions
+def count_inversions(xs_1524: list[int]) -> int:
+    _x_31608 = count(xs_1524)
+    return _x_31608
+
+# Lean: Corpus.Combinatorics.isEvenPermutation
+def is_even_permutation(xs_1525: list[int]) -> bool:
+    _x_31616 = count_inversions(xs_1525)
+    _x_31617 = 2
+    _x_31620 = _x_31616 % 2
+    _x_31621 = 0
+    _x_31624 = _x_31620 == 0
+    return _x_31624
+
+# Lean: Corpus.Combinatorics.lehmerCode
+def lehmer_code(perm_1526: list[int]) -> list[int]:
+    _x_31626 = []
+    _x_31627 = lehmer_code_go(perm_1526, _x_31626)
+    return _x_31627
+
+# Lean: Corpus.Combinatorics.fromLehmerCode
+def from_lehmer_code(code_1527: list[int]) -> list[int]:
+    _x_31629 = len(code_1527)
+    _x_31630 = list(range(_x_31629))
+    _x_31631 = []
+    _x_31632 = from_lehmer_code_go(code_1527, _x_31630, _x_31631)
+    return _x_31632
+
+# Lean: Corpus.Combinatorics.nthPermutation
+def nth_permutation(n_1529: int, k_1530: int) -> list[int]:
+    _x_31634 = list(range(n_1529))
+    _x_31635 = []
+    _x_31636 = nth_permutation_go(k_1530, n_1529, _x_31634, _x_31635)
+    return _x_31636
+
+# Lean: Corpus.Combinatorics.permutationRank
+def permutation_rank(perm_1531: list[int]) -> int:
+    _x_31638 = lehmer_code(perm_1531)
+    _x_31639 = len(_x_31638)
+    _x_31640 = 0
+    _x_31643 = permutation_rank_go(_x_31639, _x_31638, 0, 0)
+    return _x_31643
+
+# Lean: Corpus.Combinatorics.nextPermutation
+def next_permutation(perm_1534: list[int]) -> list[int] | None:
+    _x_31645 = list(perm_1534)
+    _x_31646 = len(_x_31645)
+    def _f_31648():
+        _x_31647 = None
+        return _x_31647
+    _alt_31649 = _f_31648
+    def _f_31662(i_1538: int):
+        _x_31650 = find_j(_x_31645, i_1538, _x_31646)
+        _x_31651 = swap_if_in_bounds(None, _x_31645, i_1538, _x_31650)
+        _x_31655 = 1
+        _x_31658 = i_1538 + 1
+        _x_31659 = reverse_from(_x_31651, _x_31658)
+        _x_31660 = list(_x_31659)
+        _x_31661 = _x_31660
+        return _x_31661
+    _alt_31663 = _f_31662
+    _x_31667 = 1
+    _x_31670 = _x_31646 - 1
+    _x_31671 = find_i(_x_31645, _x_31670)
+    if _x_31671 is None:
+        _x_31673 = _alt_31649()
+        return _x_31673
+    else:
+        val_31674 = _x_31671
+        _x_31675 = _alt_31663(val_31674)
+        return _x_31675
+
+# Lean: Corpus.Combinatorics.prevPermutation
+def prev_permutation(perm_1542: list[int]) -> list[int] | None:
+    _x_31678 = list(perm_1542)
+    _x_31679 = len(_x_31678)
+    def _f_31681():
+        _x_31680 = None
+        return _x_31680
+    _alt_31682 = _f_31681
+    def _f_31695(i_1546: int):
+        _x_31683 = find_j(_x_31678, i_1546, _x_31679)
+        _x_31684 = swap_if_in_bounds(None, _x_31678, i_1546, _x_31683)
+        _x_31688 = 1
+        _x_31691 = i_1546 + 1
+        _x_31692 = reverse_from(_x_31684, _x_31691)
+        _x_31693 = list(_x_31692)
+        _x_31694 = _x_31693
+        return _x_31694
+    _alt_31696 = _f_31695
+    _x_31700 = 1
+    _x_31703 = _x_31679 - 1
+    _x_31704 = find_i(_x_31678, _x_31703)
+    if _x_31704 is None:
+        _x_31706 = _alt_31682()
+        return _x_31706
+    else:
+        val_31707 = _x_31704
+        _x_31708 = _alt_31696(val_31707)
+        return _x_31708
+
+# Lean: Corpus.Combinatorics.compositions
+def compositions(n_1550: int) -> list[list[int]]:
+    _x_31714 = 0
+    _x_31717 = n_1550 == 0
+    _x_31718 = True
+    _x_31719 = _x_31717 == True
+    if _x_31719:
+        _x_31727 = []
+        _x_31728 = []
+        _x_31729 = [_x_31727] + _x_31728
+        return _x_31729
+    else:
+        _x_31721 = 1
+        _x_31724 = []
+        _x_31725 = compositions_go(n_1550, 1, _x_31724)
+        return _x_31725
+
+# Lean: Corpus.Combinatorics.integerPartitions
+def integer_partitions(n_1551: int) -> list[list[int]]:
+    _x_31732 = integer_partitions_go(n_1551, n_1551)
+    return _x_31732
+
+# Lean: Corpus.Sequences.fibonacci
+def sequences_fibonacci(n_1552: int) -> int:
+    _x_31734 = 0
+    _x_31737 = 1
+    _x_31740 = sequences_fibonacci_go(n_1552, 0, 1)
+    return _x_31740
+
+# Lean: Corpus.Sequences.lucas
+def lucas(n_1553: int) -> int:
+    _x_31742 = 2
+    _x_31745 = 1
+    _x_31748 = lucas_go(n_1553, 2, 1)
+    return _x_31748
+
+# Lean: Corpus.Sequences.tribonacci
+def tribonacci(n_1554: int) -> int:
+    _x_31750 = 0
+    _x_31753 = 1
+    _x_31756 = tribonacci_go(n_1554, 0, 0, 1)
+    return _x_31756
+
+# Lean: Corpus.Sequences.pell
+def pell(n_1555: int) -> int:
+    _x_31758 = 0
+    _x_31761 = 1
+    _x_31764 = pell_go(n_1555, 0, 1)
+    return _x_31764
+
+# Lean: Corpus.Sequences.padovan
+def padovan(n_1556: int) -> int:
+    _x_31766 = 1
+    _x_31769 = padovan_go(n_1556, 1, 1, 1)
+    return _x_31769
+
+# Lean: Corpus.Sequences.perrin
+def perrin(n_1557: int) -> int:
+    _x_31771 = 3
+    _x_31774 = 0
+    _x_31777 = 2
+    _x_31780 = perrin_go(n_1557, 3, 0, 2)
+    return _x_31780
+
+# Lean: Corpus.Sequences.jacobsthal
+def jacobsthal(n_1558: int) -> int:
+    _x_31782 = 0
+    _x_31785 = 1
+    _x_31788 = jacobsthal_go(n_1558, 0, 1)
+    return _x_31788
+
+# Lean: Corpus.Sequences.motzkin
+def motzkin(n_1559: int) -> int:
+    _x_31793 = 0
+    _x_31796 = n_1559 == 0
+    _x_31797 = True
+    _x_31798 = _x_31796 == True
+    if _x_31798:
+        _x_31820 = 1
+        return 1
+    else:
+        _x_31800 = 1
+        _x_31803 = n_1559 == 1
+        _x_31804 = _x_31803 == True
+        if _x_31804:
+            return 1
+        else:
+            _x_31812 = n_1559 - 1
+            _x_31813 = motzkin(_x_31812)
+            _x_31814 = motzkin_go(n_1559, 0, 0)
+            _x_31815 = _x_31813 + _x_31814
+            return _x_31815
 
 # Lean: Corpus.Sequences.narayana
-def narayana(n_1637: int, k_1638: int) -> int:
-    def _f_23518():
-        _x_23517 = True
+def narayana(n_1560: int, k_1561: int) -> int:
+    def _f_31826():
+        _x_31825 = True
         return True
-    _alt_23519 = _f_23518
-    def _f_23522():
-        _x_23520 = n_1637 < k_1638
-        return _x_23520
-    _alt_23523 = _f_23522
-    _x_23526 = 0
-    _x_23529 = k_1638 == 0
-    def _jp_23557(_y_23534: bool):
-        _x_23535 = True
-        if _y_23534:
+    _alt_31827 = _f_31826
+    def _f_31830():
+        _x_31828 = n_1560 < k_1561
+        return _x_31828
+    _alt_31831 = _f_31830
+    _x_31835 = 0
+    _x_31838 = k_1561 == 0
+    def _jp_31867(_y_31843: bool):
+        _x_31844 = True
+        _x_31845 = _y_31843 == True
+        if _x_31845:
             return 0
         else:
-            _x_23544 = binomial(n_1637, k_1638)
-            _x_23548 = 1
-            _x_23551 = k_1638 - 1
-            _x_23552 = binomial(n_1637, _x_23551)
-            _x_23553 = _x_23544 * _x_23552
-            _x_23554 = _x_23553 // n_1637
-            return _x_23554
-    def _jp_23560():
-        _x_23559 = _alt_23523()
-        return _jp_23557(_x_23559)
-    def _jp_23563():
-        _x_23562 = _alt_23519()
-        return _jp_23557(_x_23562)
-    if _x_23529:
-        return _jp_23563()
+            _x_31853 = binomial(n_1560, k_1561)
+            _x_31857 = 1
+            _x_31860 = k_1561 - 1
+            _x_31861 = binomial(n_1560, _x_31860)
+            _x_31862 = _x_31853 * _x_31861
+            _x_31863 = _x_31862 // n_1560
+            return _x_31863
+    def _jp_31870():
+        _x_31869 = _alt_31831()
+        return _jp_31867(_x_31869)
+    def _jp_31873():
+        _x_31872 = _alt_31827()
+        return _jp_31867(_x_31872)
+    if _x_31838:
+        return _jp_31873()
     else:
-        return _jp_23560()
+        return _jp_31870()
 
 # Lean: Corpus.Sequences.triangular
-def triangular(n_1641: int) -> int:
-    _x_23574 = 1
-    _x_23577 = n_1641 + 1
-    _x_23578 = n_1641 * _x_23577
-    _x_23579 = 2
-    _x_23582 = _x_23578 // 2
-    return _x_23582
+def triangular(n_1564: int) -> int:
+    _x_31884 = 1
+    _x_31887 = n_1564 + 1
+    _x_31888 = n_1564 * _x_31887
+    _x_31889 = 2
+    _x_31892 = _x_31888 // 2
+    return _x_31892
 
 # Lean: Corpus.Sequences.square
-def square(n_1642: int) -> int:
-    _x_23587 = n_1642 * n_1642
-    return _x_23587
+def square(n_1565: int) -> int:
+    _x_31897 = n_1565 * n_1565
+    return _x_31897
 
 # Lean: Corpus.Sequences.pentagonal
-def pentagonal(n_1643: int) -> int:
-    _x_23598 = 3
-    _x_23601 = 3 * n_1643
-    _x_23602 = 1
-    _x_23605 = _x_23601 - 1
-    _x_23606 = n_1643 * _x_23605
-    _x_23607 = 2
-    _x_23610 = _x_23606 // 2
-    return _x_23610
+def pentagonal(n_1566: int) -> int:
+    _x_31908 = 3
+    _x_31911 = 3 * n_1566
+    _x_31912 = 1
+    _x_31915 = _x_31911 - 1
+    _x_31916 = n_1566 * _x_31915
+    _x_31917 = 2
+    _x_31920 = _x_31916 // 2
+    return _x_31920
 
 # Lean: Corpus.Sequences.hexagonal
-def hexagonal(n_1644: int) -> int:
-    _x_23618 = 2
-    _x_23621 = 2 * n_1644
-    _x_23622 = 1
-    _x_23625 = _x_23621 - 1
-    _x_23626 = n_1644 * _x_23625
-    return _x_23626
+def hexagonal(n_1567: int) -> int:
+    _x_31928 = 2
+    _x_31931 = 2 * n_1567
+    _x_31932 = 1
+    _x_31935 = _x_31931 - 1
+    _x_31936 = n_1567 * _x_31935
+    return _x_31936
 
 # Lean: Corpus.Sequences.heptagonal
-def heptagonal(n_1645: int) -> int:
-    _x_23637 = 5
-    _x_23640 = 5 * n_1645
-    _x_23641 = 3
-    _x_23644 = _x_23640 - 3
-    _x_23645 = n_1645 * _x_23644
-    _x_23646 = 2
-    _x_23649 = _x_23645 // 2
-    return _x_23649
+def heptagonal(n_1568: int) -> int:
+    _x_31947 = 5
+    _x_31950 = 5 * n_1568
+    _x_31951 = 3
+    _x_31954 = _x_31950 - 3
+    _x_31955 = n_1568 * _x_31954
+    _x_31956 = 2
+    _x_31959 = _x_31955 // 2
+    return _x_31959
 
 # Lean: Corpus.Sequences.octagonal
-def octagonal(n_1646: int) -> int:
-    _x_23657 = 3
-    _x_23660 = 3 * n_1646
-    _x_23661 = 2
-    _x_23664 = _x_23660 - 2
-    _x_23665 = n_1646 * _x_23664
-    return _x_23665
+def octagonal(n_1569: int) -> int:
+    _x_31967 = 3
+    _x_31970 = 3 * n_1569
+    _x_31971 = 2
+    _x_31974 = _x_31970 - 2
+    _x_31975 = n_1569 * _x_31974
+    return _x_31975
 
 # Lean: Corpus.Sequences.kGonal
-def k_gonal(k_1647: int, n_1648: int) -> int:
-    _x_23676 = 2
-    _x_23679 = k_1647 - 2
-    _x_23680 = _x_23679 * n_1648
-    _x_23681 = 4
-    _x_23684 = k_1647 - 4
-    _x_23685 = _x_23680 - _x_23684
-    _x_23686 = n_1648 * _x_23685
-    _x_23687 = _x_23686 // 2
-    return _x_23687
+def k_gonal(k_1570: int, n_1571: int) -> int:
+    _x_31986 = 2
+    _x_31989 = k_1570 - 2
+    _x_31990 = _x_31989 * n_1571
+    _x_31991 = 4
+    _x_31994 = k_1570 - 4
+    _x_31995 = _x_31990 - _x_31994
+    _x_31996 = n_1571 * _x_31995
+    _x_31997 = _x_31996 // 2
+    return _x_31997
 
 # Lean: Corpus.Sequences.tetrahedral
-def tetrahedral(n_1649: int) -> int:
-    _x_23698 = 1
-    _x_23701 = n_1649 + 1
-    _x_23702 = n_1649 * _x_23701
-    _x_23703 = 2
-    _x_23706 = n_1649 + 2
-    _x_23707 = _x_23702 * _x_23706
-    _x_23708 = 6
-    _x_23711 = _x_23707 // 6
-    return _x_23711
+def tetrahedral(n_1572: int) -> int:
+    _x_32008 = 1
+    _x_32011 = n_1572 + 1
+    _x_32012 = n_1572 * _x_32011
+    _x_32013 = 2
+    _x_32016 = n_1572 + 2
+    _x_32017 = _x_32012 * _x_32016
+    _x_32018 = 6
+    _x_32021 = _x_32017 // 6
+    return _x_32021
 
 # Lean: Corpus.Sequences.pyramidal
-def pyramidal(n_1650: int) -> int:
-    _x_23722 = 1
-    _x_23725 = n_1650 + 1
-    _x_23726 = n_1650 * _x_23725
-    _x_23727 = 2
-    _x_23730 = 2 * n_1650
-    _x_23731 = _x_23730 + 1
-    _x_23732 = _x_23726 * _x_23731
-    _x_23733 = 6
-    _x_23736 = _x_23732 // 6
-    return _x_23736
+def pyramidal(n_1573: int) -> int:
+    _x_32032 = 1
+    _x_32035 = n_1573 + 1
+    _x_32036 = n_1573 * _x_32035
+    _x_32037 = 2
+    _x_32040 = 2 * n_1573
+    _x_32041 = _x_32040 + 1
+    _x_32042 = _x_32036 * _x_32041
+    _x_32043 = 6
+    _x_32046 = _x_32042 // 6
+    return _x_32046
 
 # Lean: Corpus.Sequences.centeredTriangular
-def centered_triangular(n_1651: int) -> int:
-    _x_23747 = 3
-    _x_23750 = 3 * n_1651
-    _x_23751 = _x_23750 * n_1651
-    _x_23752 = _x_23751 + _x_23750
-    _x_23753 = 2
-    _x_23756 = _x_23752 + 2
-    _x_23757 = _x_23756 // 2
-    return _x_23757
+def centered_triangular(n_1574: int) -> int:
+    _x_32057 = 3
+    _x_32060 = 3 * n_1574
+    _x_32061 = _x_32060 * n_1574
+    _x_32062 = _x_32061 + _x_32060
+    _x_32063 = 2
+    _x_32066 = _x_32062 + 2
+    _x_32067 = _x_32066 // 2
+    return _x_32067
 
 # Lean: Corpus.Sequences.centeredSquare
-def centered_square(n_1652: int) -> int:
-    _x_23765 = n_1652 * n_1652
-    _x_23766 = 1
-    _x_23769 = n_1652 + 1
-    _x_23770 = _x_23769 * _x_23769
-    _x_23771 = _x_23765 + _x_23770
-    return _x_23771
+def centered_square(n_1575: int) -> int:
+    _x_32075 = n_1575 * n_1575
+    _x_32076 = 1
+    _x_32079 = n_1575 + 1
+    _x_32080 = _x_32079 * _x_32079
+    _x_32081 = _x_32075 + _x_32080
+    return _x_32081
 
 # Lean: Corpus.Sequences.centeredHexagonal
-def centered_hexagonal(n_1653: int) -> int:
-    _x_23779 = 3
-    _x_23782 = 3 * n_1653
-    _x_23786 = 1
-    _x_23789 = n_1653 - 1
-    _x_23790 = _x_23782 * _x_23789
-    _x_23791 = _x_23790 + 1
-    return _x_23791
+def centered_hexagonal(n_1576: int) -> int:
+    _x_32089 = 3
+    _x_32092 = 3 * n_1576
+    _x_32096 = 1
+    _x_32099 = n_1576 - 1
+    _x_32100 = _x_32092 * _x_32099
+    _x_32101 = _x_32100 + 1
+    return _x_32101
 
 # Lean: Corpus.Sequences.starNumber
-def star_number(n_1654: int) -> int:
-    _x_23799 = 6
-    _x_23802 = 6 * n_1654
-    _x_23806 = 1
-    _x_23809 = n_1654 - 1
-    _x_23810 = _x_23802 * _x_23809
-    _x_23811 = _x_23810 + 1
-    return _x_23811
+def star_number(n_1577: int) -> int:
+    _x_32109 = 6
+    _x_32112 = 6 * n_1577
+    _x_32116 = 1
+    _x_32119 = n_1577 - 1
+    _x_32120 = _x_32112 * _x_32119
+    _x_32121 = _x_32120 + 1
+    return _x_32121
 
 # Lean: Corpus.Sequences.pronic
-def pronic(n_1655: int) -> int:
-    _x_23819 = 1
-    _x_23822 = n_1655 + 1
-    _x_23823 = n_1655 * _x_23822
-    return _x_23823
+def pronic(n_1578: int) -> int:
+    _x_32129 = 1
+    _x_32132 = n_1578 + 1
+    _x_32133 = n_1578 * _x_32132
+    return _x_32133
 
 # Lean: Corpus.Sequences.cullen
-def cullen(n_1656: int) -> int:
-    _x_23835 = 2
-    _x_23838 = 2 ** n_1656
-    _x_23839 = n_1656 * _x_23838
-    _x_23840 = 1
-    _x_23843 = _x_23839 + 1
-    return _x_23843
+def cullen(n_1579: int) -> int:
+    _x_32145 = 2
+    _x_32148 = 2 ** n_1579
+    _x_32149 = n_1579 * _x_32148
+    _x_32150 = 1
+    _x_32153 = _x_32149 + 1
+    return _x_32153
 
 # Lean: Corpus.Sequences.woodall
-def woodall(n_1657: int) -> int:
-    _x_23855 = 2
-    _x_23858 = 2 ** n_1657
-    _x_23859 = n_1657 * _x_23858
-    _x_23860 = 1
-    _x_23863 = _x_23859 - 1
-    return _x_23863
+def woodall(n_1580: int) -> int:
+    _x_32165 = 2
+    _x_32168 = 2 ** n_1580
+    _x_32169 = n_1580 * _x_32168
+    _x_32170 = 1
+    _x_32173 = _x_32169 - 1
+    return _x_32173
 
 # Lean: Corpus.Sequences.mersenne
-def mersenne(n_1658: int) -> int:
-    _x_23872 = 2
-    _x_23875 = 2 ** n_1658
-    _x_23876 = 1
-    _x_23879 = _x_23875 - 1
-    return _x_23879
+def mersenne(n_1581: int) -> int:
+    _x_32182 = 2
+    _x_32185 = 2 ** n_1581
+    _x_32186 = 1
+    _x_32189 = _x_32185 - 1
+    return _x_32189
 
 # Lean: Corpus.Sequences.fermat
-def fermat(n_1659: int) -> int:
-    _x_23888 = 2
-    _x_23891 = 2 ** n_1659
-    _x_23892 = 2 ** _x_23891
-    _x_23893 = 1
-    _x_23896 = _x_23892 + 1
-    return _x_23896
+def fermat(n_1582: int) -> int:
+    _x_32198 = 2
+    _x_32201 = 2 ** n_1582
+    _x_32202 = 2 ** _x_32201
+    _x_32203 = 1
+    _x_32206 = _x_32202 + 1
+    return _x_32206
 
 # Lean: Corpus.Sequences.safeFromGermain
-def safe_from_germain(p_1660: int) -> int:
-    _x_23904 = 2
-    _x_23907 = 2 * p_1660
-    _x_23908 = 1
-    _x_23911 = _x_23907 + 1
-    return _x_23911
+def safe_from_germain(p_1583: int) -> int:
+    _x_32214 = 2
+    _x_32217 = 2 * p_1583
+    _x_32218 = 1
+    _x_32221 = _x_32217 + 1
+    return _x_32221
 
 # Lean: Corpus.Sequences.repunit
-def repunit(n_1661: int) -> int:
-    _x_23913 = 0
-    _x_23916 = repunit_go(n_1661, 0)
-    return _x_23916
+def repunit(n_1584: int) -> int:
+    _x_32223 = 0
+    _x_32226 = repunit_go(n_1584, 0)
+    return _x_32226
 
 # Lean: Corpus.Sequences.lookAndSayNext
-def look_and_say_next(xs_1662: list[int]) -> list[int]:
-    def _f_23919():
-        _x_23918 = []
-        return _x_23918
-    _alt_23920 = _f_23919
-    def _f_23927(x_1664: int, rest_1665: list[int]):
-        _x_23921 = 1
-        _x_23924 = []
-        _x_23925 = look_and_say_next_go(rest_1665, x_1664, 1, _x_23924)
-        _x_23926 = list(reversed(_x_23925))
-        return _x_23926
-    _alt_23928 = _f_23927
-    if len(xs_1662) == 0:
-        _x_23930 = _alt_23920()
-        return _x_23930
+def look_and_say_next(xs_1585: list[int]) -> list[int]:
+    def _f_32229():
+        _x_32228 = []
+        return _x_32228
+    _alt_32230 = _f_32229
+    def _f_32237(x_1587: int, rest_1588: list[int]):
+        _x_32231 = 1
+        _x_32234 = []
+        _x_32235 = look_and_say_next_go(rest_1588, x_1587, 1, _x_32234)
+        _x_32236 = list(reversed(_x_32235))
+        return _x_32236
+    _alt_32238 = _f_32237
+    if len(xs_1585) == 0:
+        _x_32240 = _alt_32230()
+        return _x_32240
     else:
-        head_23931 = xs_1662[0]
-        tail_23932 = xs_1662[1:]
-        _x_23933 = _alt_23928(head_23931, tail_23932)
-        return _x_23933
+        head_32241 = xs_1585[0]
+        tail_32242 = xs_1585[1:]
+        _x_32243 = _alt_32238(head_32241, tail_32242)
+        return _x_32243
 
 # Lean: Corpus.Sequences.collatzSequence
-def collatz_sequence(n_1666: int) -> list[int]:
-    _x_23936 = 1
-    _x_23939 = n_1666 <= 1
-    if _x_23939:
-        _x_23978 = []
-        _x_23979 = [n_1666] + _x_23978
-        return _x_23979
+def collatz_sequence(n_1589: int) -> list[int]:
+    _x_32246 = 1
+    _x_32249 = n_1589 <= 1
+    if _x_32249:
+        _x_32289 = []
+        _x_32290 = [n_1589] + _x_32289
+        return _x_32290
     else:
-        _x_23946 = 2
-        _x_23949 = n_1666 % 2
-        _x_23950 = 0
-        _x_23953 = _x_23949 == 0
-        _x_23954 = True
-        def _jp_23976(_y_23973: int):
-            _x_23974 = collatz_sequence(_y_23973)
-            _x_23975 = [n_1666] + _x_23974
-            return _x_23975
-        if _x_23953:
-            _x_23972 = n_1666 // 2
-            return _jp_23976(_x_23972)
+        _x_32257 = 2
+        _x_32260 = n_1589 % 2
+        _x_32261 = 0
+        _x_32264 = _x_32260 == 0
+        _x_32265 = True
+        _x_32266 = _x_32264 == True
+        def _jp_32287(_y_32284: int):
+            _x_32285 = collatz_sequence(_y_32284)
+            _x_32286 = [n_1589] + _x_32285
+            return _x_32286
+        if _x_32266:
+            _x_32283 = n_1589 // 2
+            return _jp_32287(_x_32283)
         else:
-            _x_23963 = 3
-            _x_23966 = 3 * n_1666
-            _x_23967 = _x_23966 + 1
-            return _jp_23976(_x_23967)
+            _x_32274 = 3
+            _x_32277 = 3 * n_1589
+            _x_32278 = _x_32277 + 1
+            return _jp_32287(_x_32278)
 
 # Lean: Corpus.Sequences.recaman
-def recaman(n_1667: int) -> list[int]:
-    _x_23982 = 1
-    _x_23985 = 0
-    _x_23988 = []
-    _x_23989 = [0] + _x_23988
-    _x_23990 = recaman_go(n_1667, 1, 0, _x_23989, _x_23989)
-    return _x_23990
+def recaman(n_1590: int) -> list[int]:
+    _x_32293 = 1
+    _x_32296 = 0
+    _x_32299 = []
+    _x_32300 = [0] + _x_32299
+    _x_32301 = recaman_go(n_1590, 1, 0, _x_32300, _x_32300)
+    return _x_32301
 
 # Lean: Corpus.Sequences.sylvester
-def sylvester(n_1668: int) -> int:
-    _x_23994 = 0
-    _x_23997 = n_1668 == 0
-    _x_23998 = True
-    if _x_23997:
-        _x_24019 = 2
+def sylvester(n_1591: int) -> int:
+    _x_32306 = 0
+    _x_32309 = n_1591 == 0
+    _x_32310 = True
+    _x_32311 = _x_32309 == True
+    if _x_32311:
+        _x_32331 = 2
         return 2
     else:
-        _x_24004 = 1
-        _x_24007 = n_1668 - 1
-        _x_24008 = sylvester(_x_24007)
-        _x_24015 = _x_24008 * _x_24008
-        _x_24016 = _x_24015 - _x_24008
-        _x_24017 = _x_24016 + 1
-        return _x_24017
+        _x_32316 = 1
+        _x_32319 = n_1591 - 1
+        _x_32320 = sylvester(_x_32319)
+        _x_32327 = _x_32320 * _x_32320
+        _x_32328 = _x_32327 - _x_32320
+        _x_32329 = _x_32328 + 1
+        return _x_32329
 
 # Lean: Corpus.Sequences.alcuin
-def alcuin(n_1670: int) -> int:
-    _x_24029 = 12
-    _x_24032 = n_1670 % 12
-    _x_24033 = 0
-    _x_24036 = _x_24032 == 0
-    _x_24037 = True
-    if _x_24036:
-        _x_24119 = n_1670 * n_1670
-        _x_24120 = _x_24119 // 12
-        return _x_24120
+def alcuin(n_1593: int) -> int:
+    _x_32342 = 12
+    _x_32345 = n_1593 % 12
+    _x_32346 = 0
+    _x_32349 = _x_32345 == 0
+    _x_32350 = True
+    _x_32351 = _x_32349 == True
+    if _x_32351:
+        _x_32433 = n_1593 * n_1593
+        _x_32434 = _x_32433 // 12
+        return _x_32434
     else:
-        def _f_24040():
+        def _f_32354():
+            _x_32353 = True
             return True
-        _alt_24041 = _f_24040
-        def _f_24046():
-            _x_24042 = 9
-            _x_24045 = _x_24032 == 9
-            return _x_24045
-        _alt_24047 = _f_24046
-        _x_24048 = 3
-        _x_24051 = _x_24032 == 3
-        def _jp_24105(_y_24056: bool):
-            if _y_24056:
-                _x_24101 = n_1670 * n_1670
-                _x_24102 = _x_24101 - 3
-                _x_24103 = _x_24102 // 12
-                return _x_24103
+        _alt_32355 = _f_32354
+        def _f_32360():
+            _x_32356 = 9
+            _x_32359 = _x_32345 == 9
+            return _x_32359
+        _alt_32361 = _f_32360
+        _x_32362 = 3
+        _x_32365 = _x_32345 == 3
+        def _jp_32419(_y_32370: bool):
+            _x_32371 = _y_32370 == True
+            if _x_32371:
+                _x_32415 = n_1593 * n_1593
+                _x_32416 = _x_32415 - 3
+                _x_32417 = _x_32416 // 12
+                return _x_32417
             else:
-                _x_24059 = 6
-                _x_24062 = _x_24032 == 6
-                if _x_24062:
-                    _x_24087 = n_1670 * n_1670
-                    _x_24088 = _x_24087 - 12
-                    _x_24089 = _x_24088 // 12
-                    return _x_24089
+                _x_32373 = 6
+                _x_32376 = _x_32345 == 6
+                _x_32377 = _x_32376 == True
+                if _x_32377:
+                    _x_32401 = n_1593 * n_1593
+                    _x_32402 = _x_32401 - 12
+                    _x_32403 = _x_32402 // 12
+                    return _x_32403
                 else:
-                    _x_24074 = n_1670 * n_1670
-                    _x_24075 = _x_24074 + 3
-                    _x_24076 = _x_24075 // 12
-                    return _x_24076
-        def _jp_24108():
-            _x_24107 = _alt_24047()
-            return _jp_24105(_x_24107)
-        def _jp_24111():
-            _x_24110 = _alt_24041()
-            return _jp_24105(_x_24110)
-        if _x_24051:
-            return _jp_24111()
+                    _x_32388 = n_1593 * n_1593
+                    _x_32389 = _x_32388 + 3
+                    _x_32390 = _x_32389 // 12
+                    return _x_32390
+        def _jp_32425():
+            _x_32424 = _alt_32355()
+            return _jp_32419(_x_32424)
+        def _jp_32422():
+            _x_32421 = _alt_32361()
+            return _jp_32419(_x_32421)
+        if _x_32365:
+            return _jp_32425()
         else:
-            return _jp_24108()
+            return _jp_32422()
 
 # Lean: Corpus.Sequences.firstNPrimes
-def first_nprimes(n_1673: int) -> list[int]:
-    _x_24123 = 2
-    _x_24126 = []
-    _x_24127 = first_nprimes_go(n_1673, 2, _x_24126)
-    return _x_24127
+def first_nprimes(n_1596: int) -> list[int]:
+    _x_32437 = 2
+    _x_32440 = []
+    _x_32441 = first_nprimes_go(n_1596, 2, _x_32440)
+    return _x_32441
 
 # Lean: Corpus.Sequences.vanEck
-def van_eck(n_1674: int) -> list[int]:
-    _x_24129 = 1
-    _x_24132 = 0
-    _x_24135 = []
-    _x_24136 = []
-    _x_24137 = [0] + _x_24136
-    _x_24138 = van_eck_go(n_1674, 1, 0, _x_24135, _x_24137)
-    return _x_24138
+def van_eck(n_1597: int) -> list[int]:
+    _x_32443 = 1
+    _x_32446 = 0
+    _x_32449 = []
+    _x_32450 = []
+    _x_32451 = [0] + _x_32450
+    _x_32452 = van_eck_go(n_1597, 1, 0, _x_32449, _x_32451)
+    return _x_32452
 
 # Lean: Corpus.Sorting.bubbleSort
-def bubble_sort(xs_1675: list[int]) -> list[int]:
-    _x_24140 = len(xs_1675)
-    _x_24141 = list(xs_1675)
-    _x_24142 = 0
-    _x_24145 = outer(_x_24140, 0, _x_24141)
-    _x_24146 = list(_x_24145)
-    return _x_24146
+def bubble_sort(xs_1598: list[int]) -> list[int]:
+    _x_32454 = len(xs_1598)
+    _x_32455 = list(xs_1598)
+    _x_32456 = 0
+    _x_32459 = outer(_x_32454, 0, _x_32455)
+    _x_32460 = list(_x_32459)
+    return _x_32460
 
 # Lean: Corpus.Sorting.selectionSort
-def selection_sort(xs_1678: list[int]) -> list[int]:
-    _x_24148 = len(xs_1678)
-    _x_24149 = list(xs_1678)
-    _x_24150 = 0
-    _x_24153 = selection_sort_go(_x_24148, 0, _x_24149)
-    _x_24154 = list(_x_24153)
-    return _x_24154
+def selection_sort(xs_1601: list[int]) -> list[int]:
+    _x_32462 = len(xs_1601)
+    _x_32463 = list(xs_1601)
+    _x_32464 = 0
+    _x_32467 = selection_sort_go(_x_32462, 0, _x_32463)
+    _x_32468 = list(_x_32467)
+    return _x_32468
 
 # Lean: Corpus.Sorting.countingSort
-def counting_sort(xs_1681: list[int], max_val_1682: int) -> list[int]:
-    def _f_24168(arr_1683: list[int], x_1684: int):
-        _x_24159 = 0
-        _x_24162 = get_d(None, arr_1683, x_1684, 0)
-        _x_24163 = 1
-        _x_24166 = _x_24162 + 1
-        _x_24167 = set_(None, arr_1683, x_1684, _x_24166)
-        return _x_24167
-    _x_24172 = 1
-    _x_24175 = max_val_1682 + 1
-    _x_24176 = 0
-    _x_24179 = mk_array(None, _x_24175, 0)
-    _x_24180 = functools.reduce(_f_24168, xs_1681, _x_24179)
-    _x_24181 = []
-    _x_24182 = expand(max_val_1682, _x_24180, 0, _x_24181)
-    return _x_24182
+def counting_sort(xs_1604: list[int], max_val_1605: int) -> list[int]:
+    def _f_32482(arr_1606: list[int], x_1607: int):
+        _x_32473 = 0
+        _x_32476 = get_d(None, arr_1606, x_1607, 0)
+        _x_32477 = 1
+        _x_32480 = _x_32476 + 1
+        _x_32481 = set_(None, arr_1606, x_1607, _x_32480)
+        return _x_32481
+    _x_32486 = 1
+    _x_32489 = max_val_1605 + 1
+    _x_32490 = 0
+    _x_32493 = array_replicate(None, _x_32489, 0)
+    _x_32494 = functools.reduce(_f_32482, xs_1604, _x_32493)
+    _x_32495 = []
+    _x_32496 = expand(max_val_1605, _x_32494, 0, _x_32495)
+    return _x_32496
 
 # Lean: Corpus.Sorting.radixSort
-def radix_sort(xs_1686: list[int]) -> list[int]:
-    _x_24185 = max
-    _x_24186 = 0
-    _x_24189 = functools.reduce(_x_24185, xs_1686, 0)
-    _x_24190 = 1
-    _x_24193 = radix_sort_go(_x_24189, 1, xs_1686)
-    return _x_24193
+def radix_sort(xs_1609: list[int]) -> list[int]:
+    _x_32499 = max
+    _x_32500 = 0
+    _x_32503 = functools.reduce(_x_32499, xs_1609, 0)
+    _x_32504 = 1
+    _x_32507 = radix_sort_go(_x_32503, 1, xs_1609)
+    return _x_32507
 
 # Lean: Corpus.Sorting.gnomeSort
-def gnome_sort(xs_1688: list[int]) -> list[int]:
-    _x_24195 = len(xs_1688)
-    _x_24196 = list(xs_1688)
-    _x_24197 = 0
-    _x_24200 = gnome_sort_go(_x_24195, 0, _x_24196)
-    _x_24201 = list(_x_24200)
-    return _x_24201
+def gnome_sort(xs_1611: list[int]) -> list[int]:
+    _x_32509 = len(xs_1611)
+    _x_32510 = list(xs_1611)
+    _x_32511 = 0
+    _x_32514 = gnome_sort_go(_x_32509, 0, _x_32510)
+    _x_32515 = list(_x_32514)
+    return _x_32515
 
 # Lean: Corpus.Sorting.isSorted
-def is_sorted(xs_1691: list[int]) -> bool:
-    def _f_24204():
-        _x_24203 = True
-        return True
-    _alt_24205 = _f_24204
-    def _f_24208(head_24206: int):
-        _x_24207 = True
-        return True
-    _alt_24209 = _f_24208
-    def _f_24224(x_1693: int, y_1694: int, rest_1695: list[int]):
-        def _f_24211():
-            _x_24210 = False
-            return False
-        _alt_24212 = _f_24211
-        def _f_24215():
-            _x_24213 = [y_1694] + rest_1695
-            _x_24214 = is_sorted(_x_24213)
-            return _x_24214
-        _alt_24216 = _f_24215
-        _x_24217 = x_1693 <= y_1694
-        if _x_24217:
-            _x_24222 = _alt_24216()
-            return _x_24222
+def is_sorted(xs_1614: list[int]) -> bool:
+    while True:
+        def _f_32518():
+            _x_32517 = True
+            return True
+        _alt_32519 = _f_32518
+        def _f_32522(head_32520: int):
+            _x_32521 = True
+            return True
+        _alt_32523 = _f_32522
+        if len(xs_1614) == 0:
+            _x_32541 = _alt_32519()
+            return _x_32541
         else:
-            _x_24220 = _alt_24212()
-            return _x_24220
-    _alt_24225 = _f_24224
-    if len(xs_1691) == 0:
-        _x_24227 = _alt_24205()
-        return _x_24227
-    else:
-        head_24228 = xs_1691[0]
-        tail_24229 = xs_1691[1:]
-        if len(tail_24229) == 0:
-            _x_24230 = _alt_24209(head_24228)
-            return _x_24230
-        else:
-            head_24231 = tail_24229[0]
-            tail_24232 = tail_24229[1:]
-            _x_24233 = _alt_24225(head_24228, head_24231, tail_24232)
-            return _x_24233
+            head_32542 = xs_1614[0]
+            tail_32543 = xs_1614[1:]
+            if len(tail_32543) == 0:
+                _x_32544 = _alt_32523(head_32542)
+                return _x_32544
+            else:
+                head_32545 = tail_32543[0]
+                tail_32546 = tail_32543[1:]
+                x_1616 = head_32542
+                y_1617 = head_32545
+                rest_1618 = tail_32546
+                def _f_32525():
+                    _x_32524 = False
+                    return False
+                _alt_32526 = _f_32525
+                _x_32531 = x_1616 <= y_1617
+                if _x_32531:
+                    _x_32527 = [y_1617] + rest_1618
+                    xs_1614 = _x_32527
+                    continue
+                else:
+                    _x_32534 = _alt_32526()
+                    return _x_32534
 
 # Lean: Corpus.Sorting.isSortedDesc
-def is_sorted_desc(xs_1698: list[int]) -> bool:
-    def _f_24238():
-        _x_24237 = True
-        return True
-    _alt_24239 = _f_24238
-    def _f_24242(head_24240: int):
-        _x_24241 = True
-        return True
-    _alt_24243 = _f_24242
-    def _f_24258(x_1700: int, y_1701: int, rest_1702: list[int]):
-        def _f_24245():
-            _x_24244 = False
-            return False
-        _alt_24246 = _f_24245
-        def _f_24249():
-            _x_24247 = [y_1701] + rest_1702
-            _x_24248 = is_sorted_desc(_x_24247)
-            return _x_24248
-        _alt_24250 = _f_24249
-        _x_24251 = y_1701 <= x_1700
-        if _x_24251:
-            _x_24256 = _alt_24250()
-            return _x_24256
+def is_sorted_desc(xs_1621: list[int]) -> bool:
+    while True:
+        def _f_32552():
+            _x_32551 = True
+            return True
+        _alt_32553 = _f_32552
+        def _f_32556(head_32554: int):
+            _x_32555 = True
+            return True
+        _alt_32557 = _f_32556
+        if len(xs_1621) == 0:
+            _x_32575 = _alt_32553()
+            return _x_32575
         else:
-            _x_24254 = _alt_24246()
-            return _x_24254
-    _alt_24259 = _f_24258
-    if len(xs_1698) == 0:
-        _x_24261 = _alt_24239()
-        return _x_24261
-    else:
-        head_24262 = xs_1698[0]
-        tail_24263 = xs_1698[1:]
-        if len(tail_24263) == 0:
-            _x_24264 = _alt_24243(head_24262)
-            return _x_24264
-        else:
-            head_24265 = tail_24263[0]
-            tail_24266 = tail_24263[1:]
-            _x_24267 = _alt_24259(head_24262, head_24265, tail_24266)
-            return _x_24267
+            head_32576 = xs_1621[0]
+            tail_32577 = xs_1621[1:]
+            if len(tail_32577) == 0:
+                _x_32578 = _alt_32557(head_32576)
+                return _x_32578
+            else:
+                head_32579 = tail_32577[0]
+                tail_32580 = tail_32577[1:]
+                x_1623 = head_32576
+                y_1624 = head_32579
+                rest_1625 = tail_32580
+                def _f_32559():
+                    _x_32558 = False
+                    return False
+                _alt_32560 = _f_32559
+                _x_32565 = y_1624 <= x_1623
+                if _x_32565:
+                    _x_32561 = [y_1624] + rest_1625
+                    xs_1621 = _x_32561
+                    continue
+                else:
+                    _x_32568 = _alt_32560()
+                    return _x_32568
 
 # Lean: Corpus.Sorting.findMin
-def find_min(xs_1705: list[int]) -> int | None:
-    def _f_24291(acc_1706: int | None, x_1707: int):
-        def _f_24271():
-            return x_1707
-        _alt_24272 = _f_24271
-        def _f_24276(m_1709: int):
-            _x_24274 = min
-            _x_24275 = _x_24274(m_1709, x_1707)
-            return _x_24275
-        _alt_24277 = _f_24276
-        def _jp_24284(_y_24282: int):
-            _x_24283 = _y_24282
-            return _x_24283
-        def _jp_24287():
-            _x_24286 = _alt_24272()
-            return _jp_24284(_x_24286)
-        def _jp_24290(_y_24288: int):
-            _x_24289 = _alt_24277(_y_24288)
-            return _jp_24284(_x_24289)
-        if acc_1706 is None:
-            return _jp_24287()
+def find_min(xs_1628: list[int]) -> int | None:
+    def _f_32605(acc_1629: int | None, x_1630: int):
+        def _f_32585():
+            return x_1630
+        _alt_32586 = _f_32585
+        def _f_32590(m_1632: int):
+            _x_32588 = min
+            _x_32589 = _x_32588(m_1632, x_1630)
+            return _x_32589
+        _alt_32591 = _f_32590
+        def _jp_32598(_y_32596: int):
+            _x_32597 = _y_32596
+            return _x_32597
+        def _jp_32601():
+            _x_32600 = _alt_32586()
+            return _jp_32598(_x_32600)
+        def _jp_32604(_y_32602: int):
+            _x_32603 = _alt_32591(_y_32602)
+            return _jp_32598(_x_32603)
+        if acc_1629 is None:
+            return _jp_32601()
         else:
-            val_24280 = acc_1706
-            return _jp_24290(val_24280)
-    _x_24292 = None
-    _x_24293 = functools.reduce(_f_24291, xs_1705, _x_24292)
-    return _x_24293
+            val_32594 = acc_1629
+            return _jp_32604(val_32594)
+    _x_32606 = None
+    _x_32607 = functools.reduce(_f_32605, xs_1628, _x_32606)
+    return _x_32607
 
 # Lean: Corpus.Sorting.findMax
-def find_max(xs_1710: list[int]) -> int | None:
-    def _f_24315(acc_1711: int | None, x_1712: int):
-        def _f_24295():
-            return x_1712
-        _alt_24296 = _f_24295
-        def _f_24300(m_1714: int):
-            _x_24298 = max
-            _x_24299 = _x_24298(m_1714, x_1712)
-            return _x_24299
-        _alt_24301 = _f_24300
-        def _jp_24308(_y_24306: int):
-            _x_24307 = _y_24306
-            return _x_24307
-        def _jp_24314(_y_24312: int):
-            _x_24313 = _alt_24301(_y_24312)
-            return _jp_24308(_x_24313)
-        def _jp_24311():
-            _x_24310 = _alt_24296()
-            return _jp_24308(_x_24310)
-        if acc_1711 is None:
-            return _jp_24311()
+def find_max(xs_1633: list[int]) -> int | None:
+    def _f_32629(acc_1634: int | None, x_1635: int):
+        def _f_32609():
+            return x_1635
+        _alt_32610 = _f_32609
+        def _f_32614(m_1637: int):
+            _x_32612 = max
+            _x_32613 = _x_32612(m_1637, x_1635)
+            return _x_32613
+        _alt_32615 = _f_32614
+        def _jp_32622(_y_32620: int):
+            _x_32621 = _y_32620
+            return _x_32621
+        def _jp_32628(_y_32626: int):
+            _x_32627 = _alt_32615(_y_32626)
+            return _jp_32622(_x_32627)
+        def _jp_32625():
+            _x_32624 = _alt_32610()
+            return _jp_32622(_x_32624)
+        if acc_1634 is None:
+            return _jp_32625()
         else:
-            val_24304 = acc_1711
-            return _jp_24314(val_24304)
-    _x_24316 = None
-    _x_24317 = functools.reduce(_f_24315, xs_1710, _x_24316)
-    return _x_24317
+            val_32618 = acc_1634
+            return _jp_32628(val_32618)
+    _x_32630 = None
+    _x_32631 = functools.reduce(_f_32629, xs_1633, _x_32630)
+    return _x_32631
 
 # Lean: Corpus.Sorting.kthSmallest
-def kth_smallest(xs_1715: list[int], k_1716: int) -> int | None:
-    _x_24319 = insertion_sort(xs_1715)
-    _x_24320 = _x_24319[k_1716] if 0 <= k_1716 < len(_x_24319) else None
-    return _x_24320
+def kth_smallest(xs_1638: list[int], k_1639: int) -> int | None:
+    _x_32633 = insertion_sort(xs_1638)
+    _x_32635 = (lambda xs, i: xs[i] if 0 <= i < len(xs) else None)
+    _x_32636 = _x_32635(_x_32633, k_1639)
+    return _x_32636
 
 # Lean: Corpus.Sorting.kthLargest
-def kth_largest(xs_1718: list[int], k_1719: int) -> int | None:
-    _x_24322 = insertion_sort(xs_1718)
-    _x_24323 = len(_x_24322)
-    _x_24324 = _x_24323 <= k_1719
-    if _x_24324:
-        _x_24336 = None
-        return _x_24336
+def kth_largest(xs_1641: list[int], k_1642: int) -> int | None:
+    _x_32638 = insertion_sort(xs_1641)
+    _x_32639 = len(_x_32638)
+    _x_32640 = _x_32639 <= k_1642
+    if _x_32640:
+        _x_32654 = None
+        return _x_32654
     else:
-        _x_24329 = 1
-        _x_24332 = _x_24323 - 1
-        _x_24333 = _x_24332 - k_1719
-        _x_24334 = _x_24322[_x_24333] if 0 <= _x_24333 < len(_x_24322) else None
-        return _x_24334
+        _x_32643 = (lambda xs, i: xs[i] if 0 <= i < len(xs) else None)
+        _x_32647 = 1
+        _x_32650 = _x_32639 - 1
+        _x_32651 = _x_32650 - k_1642
+        _x_32652 = _x_32643(_x_32638, _x_32651)
+        return _x_32652
 
 # Lean: Corpus.Sorting.median
-def median(xs_1721: list[int]) -> int | None:
-    _x_24339 = len(xs_1721) == 0
-    _x_24340 = True
-    if _x_24339:
-        _x_24354 = None
-        return _x_24354
+def median(xs_1644: list[int]) -> int | None:
+    _x_32657 = len(xs_1644) == 0
+    _x_32658 = True
+    _x_32659 = _x_32657 == True
+    if _x_32659:
+        _x_32674 = None
+        return _x_32674
     else:
-        _x_24343 = insertion_sort(xs_1721)
-        _x_24344 = len(_x_24343)
-        _x_24348 = 2
-        _x_24351 = _x_24344 // 2
-        _x_24352 = _x_24343[_x_24351] if 0 <= _x_24351 < len(_x_24343) else None
-        return _x_24352
+        _x_32661 = insertion_sort(xs_1644)
+        _x_32662 = len(_x_32661)
+        _x_32664 = (lambda xs, i: xs[i] if 0 <= i < len(xs) else None)
+        _x_32668 = 2
+        _x_32671 = _x_32662 // 2
+        _x_32672 = _x_32664(_x_32661, _x_32671)
+        return _x_32672
 
 # Lean: Corpus.Sorting.mode
-def mode(xs_1724: list[int]) -> int | None:
-    _x_24357 = None
-    _x_24358 = 0
-    _x_24361 = mode_go(xs_1724, _x_24357, 0)
-    return _x_24361
+def mode(xs_1647: list[int]) -> int | None:
+    _x_32677 = None
+    _x_32678 = 0
+    _x_32681 = mode_go(xs_1647, _x_32677, 0)
+    return _x_32681
 
 # Lean: Corpus.Sorting.unique
-def unique(xs_1725: list[int]) -> list[int]:
-    _x_24363 = []
-    _x_24364 = unique_go(xs_1725, _x_24363)
-    return _x_24364
+def unique(xs_1648: list[int]) -> list[int]:
+    _x_32683 = []
+    _x_32684 = unique_go(xs_1648, _x_32683)
+    return _x_32684
 
 # Lean: Corpus.Sorting.removeDupsSorted
-def remove_dups_sorted(xs_1726: list[int]) -> list[int]:
-    def _f_24367():
-        _x_24366 = []
-        return _x_24366
-    _alt_24368 = _f_24367
-    def _f_24371(x_1728: int):
-        _x_24369 = []
-        _x_24370 = [x_1728] + _x_24369
-        return _x_24370
-    _alt_24372 = _f_24371
-    def _f_24386(x_1729: int, y_1730: int, rest_1731: list[int]):
-        _x_24375 = x_1729 == y_1730
-        _x_24376 = True
-        if _x_24375:
-            _x_24383 = [y_1730] + rest_1731
-            _x_24384 = remove_dups_sorted(_x_24383)
-            return _x_24384
+def remove_dups_sorted(xs_1649: list[int]) -> list[int]:
+    def _f_32687():
+        _x_32686 = []
+        return _x_32686
+    _alt_32688 = _f_32687
+    def _f_32691(x_1651: int):
+        _x_32689 = []
+        _x_32690 = [x_1651] + _x_32689
+        return _x_32690
+    _alt_32692 = _f_32691
+    def _f_32707(x_1652: int, y_1653: int, rest_1654: list[int]):
+        _x_32696 = x_1652 == y_1653
+        _x_32697 = True
+        _x_32698 = _x_32696 == True
+        if _x_32698:
+            _x_32704 = [y_1653] + rest_1654
+            _x_32705 = remove_dups_sorted(_x_32704)
+            return _x_32705
         else:
-            _x_24379 = [y_1730] + rest_1731
-            _x_24380 = remove_dups_sorted(_x_24379)
-            _x_24381 = [x_1729] + _x_24380
-            return _x_24381
-    _alt_24387 = _f_24386
-    if len(xs_1726) == 0:
-        _x_24389 = _alt_24368()
-        return _x_24389
+            _x_32700 = [y_1653] + rest_1654
+            _x_32701 = remove_dups_sorted(_x_32700)
+            _x_32702 = [x_1652] + _x_32701
+            return _x_32702
+    _alt_32708 = _f_32707
+    if len(xs_1649) == 0:
+        _x_32710 = _alt_32688()
+        return _x_32710
     else:
-        head_24390 = xs_1726[0]
-        tail_24391 = xs_1726[1:]
-        if len(tail_24391) == 0:
-            _x_24392 = _alt_24372(head_24390)
-            return _x_24392
+        head_32711 = xs_1649[0]
+        tail_32712 = xs_1649[1:]
+        if len(tail_32712) == 0:
+            _x_32713 = _alt_32692(head_32711)
+            return _x_32713
         else:
-            head_24393 = tail_24391[0]
-            tail_24394 = tail_24391[1:]
-            _x_24395 = _alt_24387(head_24390, head_24393, tail_24394)
-            return _x_24395
+            head_32714 = tail_32712[0]
+            tail_32715 = tail_32712[1:]
+            _x_32716 = _alt_32708(head_32711, head_32714, tail_32715)
+            return _x_32716
 
 # Lean: Corpus.Production.RBTree.singleton
-def singleton(__1732: Any, x_1733: Any) -> Any:
-    _x_24399 = red()
-    _x_24400 = RBTree_empty(None)
-    _x_24401 = RBTree_node(None, _x_24399, _x_24400, x_1733, _x_24400)
-    return _x_24401
+def singleton(__1655: Any, x_1656: Any) -> Any:
+    _x_32720 = red()
+    _x_32721 = RBTree_empty()
+    _x_32722 = RBTree_node(_x_32720, _x_32721, x_1656, _x_32721)
+    return _x_32722
 
 # Lean: Corpus.Production.RBTree.member
-def member(__1734: Any, inst_24403: Any, x_1735: Any, x_24404: Any) -> bool:
-    def _f_24406():
-        _x_24405 = False
-        return False
-    _alt_24407 = _f_24406
-    def _f_24427(a_24408: Color, l_1737: Any, y_1738: Any, r_1739: Any):
-        def _f_24410():
-            _x_24409 = member(None, inst_24403, x_1735, l_1737)
-            return _x_24409
-        _alt_24411 = _f_24410
-        def _f_24413():
-            _x_24412 = True
-            return True
-        _alt_24414 = _f_24413
-        def _f_24416():
-            _x_24415 = member(None, inst_24403, x_1735, r_1739)
-            return _x_24415
-        _alt_24417 = _f_24416
-        _x_24418 = inst_24403.ord_0
-        _x_24419 = _x_24418(x_1735, y_1738)
-        match _x_24419:
-            case lt():
-                _x_24421 = _alt_24411()
-                return _x_24421
-            case eq():
-                _x_24423 = _alt_24414()
-                return _x_24423
-            case gt():
-                _x_24425 = _alt_24417()
-                return _x_24425
-    _alt_24428 = _f_24427
-    match x_24404:
-        case RBTree_empty():
-            _x_24430 = _alt_24407()
-            return _x_24430
-        case RBTree_node(a_24431, a_24432, a_24433, a_24434):
-            _x_24435 = _alt_24428(a_24431, a_24432, a_24433, a_24434)
-            return _x_24435
+def member(__1657: Any, inst_32724: Any, x_1658: Any, x_32725: Any) -> bool:
+    while True:
+        def _f_32727():
+            _x_32726 = False
+            return False
+        _alt_32728 = _f_32727
+        match x_32725:
+            case RBTree_empty():
+                _x_32751 = _alt_32728()
+                return _x_32751
+            case RBTree_node(a_32752, a_32753, a_32754, a_32755):
+                a_32729 = a_32752
+                l_1660 = a_32753
+                y_1661 = a_32754
+                r_1662 = a_32755
+                def _f_32734():
+                    _x_32733 = True
+                    return True
+                _alt_32735 = _f_32734
+                _x_32739 = inst_32724.field_0
+                _x_32740 = _x_32739(x_1658, y_1661)
+                match _x_32740:
+                    case lt():
+                        return member(None, inst_32724, x_1658, l_1660)
+                    case eq():
+                        _x_32744 = _alt_32735()
+                        return _x_32744
+                    case gt():
+                        return member(None, inst_32724, x_1658, r_1662)
 
 # Lean: Corpus.Production.RBTree.balance
-def balance(__1743: Any, x_24438: Color, x_24439: Any, x_24440: Any, x_24441: Any) -> Any:
-    def _f_24447(a_1744: Any, x_1745: Any, b_1746: Any, y_1747: Any, c_1748: Any, z_1749: Any, d_1750: Any):
-        _x_24442 = red()
-        _x_24443 = black()
-        _x_24444 = RBTree_node(None, _x_24443, a_1744, x_1745, b_1746)
-        _x_24445 = RBTree_node(None, _x_24443, c_1748, z_1749, d_1750)
-        _x_24446 = RBTree_node(None, _x_24442, _x_24444, y_1747, _x_24445)
-        return _x_24446
-    _alt_24448 = _f_24447
-    _alt_24449 = _f_24447
-    _alt_24450 = _f_24447
-    _alt_24451 = _f_24447
-    def _f_24453(c_1751: Color, l_1752: Any, x_1753: Any, r_1754: Any):
-        _x_24452 = RBTree_node(None, c_1751, l_1752, x_1753, r_1754)
-        return _x_24452
-    _alt_24454 = _f_24453
-    match x_24438:
-        case red():
-            _x_24455 = red()
-            _x_24456 = _alt_24454(_x_24455, x_24439, x_24440, x_24441)
-            return _x_24456
+def balance(__1666: Any, x_32759: Color, x_32760: Any, x_32761: Any, x_32762: Any) -> Any:
+    def _f_32768(a_1667: Any, x_1668: Any, b_1669: Any, y_1670: Any, c_1671: Any, z_1672: Any, d_1673: Any):
+        _x_32763 = red()
+        _x_32764 = black()
+        _x_32765 = RBTree_node(_x_32764, a_1667, x_1668, b_1669)
+        _x_32766 = RBTree_node(_x_32764, c_1671, z_1672, d_1673)
+        _x_32767 = RBTree_node(_x_32763, _x_32765, y_1670, _x_32766)
+        return _x_32767
+    _alt_32769 = _f_32768
+    _alt_32770 = _f_32768
+    _alt_32771 = _f_32768
+    _alt_32772 = _f_32768
+    def _f_32774(c_1674: Color, l_1675: Any, x_1676: Any, r_1677: Any):
+        _x_32773 = RBTree_node(c_1674, l_1675, x_1676, r_1677)
+        return _x_32773
+    _alt_32775 = _f_32774
+    match x_32759:
         case black():
-            match x_24439:
-                case RBTree_empty():
-                    match x_24441:
-                        case RBTree_empty():
-                            _x_24457 = black()
-                            _x_24458 = RBTree_empty(None)
-                            _x_24459 = _alt_24454(_x_24457, _x_24458, x_24440, _x_24458)
-                            return _x_24459
-                        case RBTree_node(a_24460, a_24461, a_24462, a_24463):
-                            match a_24460:
-                                case red():
-                                    match a_24461:
-                                        case RBTree_empty():
-                                            match a_24463:
-                                                case RBTree_empty():
-                                                    _x_24464 = black()
-                                                    _x_24465 = RBTree_empty(None)
-                                                    _x_24466 = red()
-                                                    _x_24467 = RBTree_node(None, _x_24466, _x_24465, a_24462, _x_24465)
-                                                    _x_24468 = _alt_24454(_x_24464, _x_24465, x_24440, _x_24467)
-                                                    return _x_24468
-                                                case RBTree_node(a_24469, a_24470, a_24471, a_24472):
-                                                    match a_24469:
-                                                        case red():
-                                                            _x_24473 = RBTree_empty(None)
-                                                            _x_24474 = _alt_24451(_x_24473, x_24440, _x_24473, a_24462, a_24470, a_24471, a_24472)
-                                                            return _x_24474
-                                                        case black():
-                                                            _x_24475 = black()
-                                                            _x_24476 = RBTree_empty(None)
-                                                            _x_24477 = red()
-                                                            _x_24478 = RBTree_node(None, _x_24475, a_24470, a_24471, a_24472)
-                                                            _x_24479 = RBTree_node(None, _x_24477, _x_24476, a_24462, _x_24478)
-                                                            _x_24480 = _alt_24454(_x_24475, _x_24476, x_24440, _x_24479)
-                                                            return _x_24480
-                                        case RBTree_node(a_24483, a_24484, a_24485, a_24486):
-                                            match a_24483:
-                                                case red():
-                                                    match a_24463:
-                                                        case RBTree_empty():
-                                                            _x_24487 = RBTree_empty(None)
-                                                            _x_24488 = _alt_24450(_x_24487, x_24440, a_24484, a_24485, a_24486, a_24462, _x_24487)
-                                                            return _x_24488
-                                                        case RBTree_node(a_24489, a_24490, a_24491, a_24492):
-                                                            match a_24489:
-                                                                case red():
-                                                                    _x_24493 = RBTree_empty(None)
-                                                                    _x_24494 = red()
-                                                                    _x_24495 = RBTree_node(None, _x_24494, a_24490, a_24491, a_24492)
-                                                                    _x_24496 = _alt_24450(_x_24493, x_24440, a_24484, a_24485, a_24486, a_24462, _x_24495)
-                                                                    return _x_24496
-                                                                case black():
-                                                                    _x_24497 = RBTree_empty(None)
-                                                                    _x_24498 = black()
-                                                                    _x_24499 = RBTree_node(None, _x_24498, a_24490, a_24491, a_24492)
-                                                                    _x_24500 = _alt_24450(_x_24497, x_24440, a_24484, a_24485, a_24486, a_24462, _x_24499)
-                                                                    return _x_24500
-                                                case black():
-                                                    match a_24463:
-                                                        case RBTree_empty():
-                                                            _x_24503 = black()
-                                                            _x_24504 = RBTree_empty(None)
-                                                            _x_24505 = red()
-                                                            _x_24506 = RBTree_node(None, _x_24503, a_24484, a_24485, a_24486)
-                                                            _x_24507 = RBTree_node(None, _x_24505, _x_24506, a_24462, _x_24504)
-                                                            _x_24508 = _alt_24454(_x_24503, _x_24504, x_24440, _x_24507)
-                                                            return _x_24508
-                                                        case RBTree_node(a_24509, a_24510, a_24511, a_24512):
-                                                            match a_24509:
-                                                                case red():
-                                                                    _x_24513 = RBTree_empty(None)
-                                                                    _x_24514 = black()
-                                                                    _x_24515 = RBTree_node(None, _x_24514, a_24484, a_24485, a_24486)
-                                                                    _x_24516 = _alt_24451(_x_24513, x_24440, _x_24515, a_24462, a_24510, a_24511, a_24512)
-                                                                    return _x_24516
-                                                                case black():
-                                                                    _x_24517 = black()
-                                                                    _x_24518 = RBTree_empty(None)
-                                                                    _x_24519 = red()
-                                                                    _x_24520 = RBTree_node(None, _x_24517, a_24484, a_24485, a_24486)
-                                                                    _x_24521 = RBTree_node(None, _x_24517, a_24510, a_24511, a_24512)
-                                                                    _x_24522 = RBTree_node(None, _x_24519, _x_24520, a_24462, _x_24521)
-                                                                    _x_24523 = _alt_24454(_x_24517, _x_24518, x_24440, _x_24522)
-                                                                    return _x_24523
-                                case black():
-                                    _x_24528 = black()
-                                    _x_24529 = RBTree_empty(None)
-                                    _x_24530 = RBTree_node(None, _x_24528, a_24461, a_24462, a_24463)
-                                    _x_24531 = _alt_24454(_x_24528, _x_24529, x_24440, _x_24530)
-                                    return _x_24531
-                case RBTree_node(a_24534, a_24535, a_24536, a_24537):
-                    match a_24534:
+            match x_32760:
+                case RBTree_node(a_32776, a_32777, a_32778, a_32779):
+                    match a_32776:
                         case red():
-                            match a_24535:
-                                case RBTree_empty():
-                                    match a_24537:
-                                        case RBTree_empty():
-                                            match x_24441:
-                                                case RBTree_empty():
-                                                    _x_24538 = black()
-                                                    _x_24539 = red()
-                                                    _x_24540 = RBTree_empty(None)
-                                                    _x_24541 = RBTree_node(None, _x_24539, _x_24540, a_24536, _x_24540)
-                                                    _x_24542 = _alt_24454(_x_24538, _x_24541, x_24440, _x_24540)
-                                                    return _x_24542
-                                                case RBTree_node(a_24543, a_24544, a_24545, a_24546):
-                                                    match a_24543:
-                                                        case red():
-                                                            match a_24544:
-                                                                case RBTree_empty():
-                                                                    match a_24546:
-                                                                        case RBTree_empty():
-                                                                            _x_24547 = black()
-                                                                            _x_24548 = red()
-                                                                            _x_24549 = RBTree_empty(None)
-                                                                            _x_24550 = RBTree_node(None, _x_24548, _x_24549, a_24536, _x_24549)
-                                                                            _x_24551 = RBTree_node(None, _x_24548, _x_24549, a_24545, _x_24549)
-                                                                            _x_24552 = _alt_24454(_x_24547, _x_24550, x_24440, _x_24551)
-                                                                            return _x_24552
-                                                                        case RBTree_node(a_24553, a_24554, a_24555, a_24556):
-                                                                            match a_24553:
-                                                                                case red():
-                                                                                    _x_24557 = red()
-                                                                                    _x_24558 = RBTree_empty(None)
-                                                                                    _x_24559 = RBTree_node(None, _x_24557, _x_24558, a_24536, _x_24558)
-                                                                                    _x_24560 = _alt_24451(_x_24559, x_24440, _x_24558, a_24545, a_24554, a_24555, a_24556)
-                                                                                    return _x_24560
-                                                                                case black():
-                                                                                    _x_24561 = black()
-                                                                                    _x_24562 = red()
-                                                                                    _x_24563 = RBTree_empty(None)
-                                                                                    _x_24564 = RBTree_node(None, _x_24562, _x_24563, a_24536, _x_24563)
-                                                                                    _x_24565 = RBTree_node(None, _x_24561, a_24554, a_24555, a_24556)
-                                                                                    _x_24566 = RBTree_node(None, _x_24562, _x_24563, a_24545, _x_24565)
-                                                                                    _x_24567 = _alt_24454(_x_24561, _x_24564, x_24440, _x_24566)
-                                                                                    return _x_24567
-                                                                case RBTree_node(a_24570, a_24571, a_24572, a_24573):
-                                                                    match a_24570:
-                                                                        case red():
-                                                                            match a_24546:
-                                                                                case RBTree_empty():
-                                                                                    _x_24574 = red()
-                                                                                    _x_24575 = RBTree_empty(None)
-                                                                                    _x_24576 = RBTree_node(None, _x_24574, _x_24575, a_24536, _x_24575)
-                                                                                    _x_24577 = _alt_24450(_x_24576, x_24440, a_24571, a_24572, a_24573, a_24545, _x_24575)
-                                                                                    return _x_24577
-                                                                                case RBTree_node(a_24578, a_24579, a_24580, a_24581):
-                                                                                    match a_24578:
-                                                                                        case red():
-                                                                                            _x_24582 = red()
-                                                                                            _x_24583 = RBTree_empty(None)
-                                                                                            _x_24584 = RBTree_node(None, _x_24582, _x_24583, a_24536, _x_24583)
-                                                                                            _x_24585 = RBTree_node(None, _x_24582, a_24579, a_24580, a_24581)
-                                                                                            _x_24586 = _alt_24450(_x_24584, x_24440, a_24571, a_24572, a_24573, a_24545, _x_24585)
-                                                                                            return _x_24586
-                                                                                        case black():
-                                                                                            _x_24587 = red()
-                                                                                            _x_24588 = RBTree_empty(None)
-                                                                                            _x_24589 = RBTree_node(None, _x_24587, _x_24588, a_24536, _x_24588)
-                                                                                            _x_24590 = black()
-                                                                                            _x_24591 = RBTree_node(None, _x_24590, a_24579, a_24580, a_24581)
-                                                                                            _x_24592 = _alt_24450(_x_24589, x_24440, a_24571, a_24572, a_24573, a_24545, _x_24591)
-                                                                                            return _x_24592
-                                                                        case black():
-                                                                            match a_24546:
-                                                                                case RBTree_empty():
-                                                                                    _x_24595 = black()
-                                                                                    _x_24596 = red()
-                                                                                    _x_24597 = RBTree_empty(None)
-                                                                                    _x_24598 = RBTree_node(None, _x_24596, _x_24597, a_24536, _x_24597)
-                                                                                    _x_24599 = RBTree_node(None, _x_24595, a_24571, a_24572, a_24573)
-                                                                                    _x_24600 = RBTree_node(None, _x_24596, _x_24599, a_24545, _x_24597)
-                                                                                    _x_24601 = _alt_24454(_x_24595, _x_24598, x_24440, _x_24600)
-                                                                                    return _x_24601
-                                                                                case RBTree_node(a_24602, a_24603, a_24604, a_24605):
-                                                                                    match a_24602:
-                                                                                        case red():
-                                                                                            _x_24606 = red()
-                                                                                            _x_24607 = RBTree_empty(None)
-                                                                                            _x_24608 = RBTree_node(None, _x_24606, _x_24607, a_24536, _x_24607)
-                                                                                            _x_24609 = black()
-                                                                                            _x_24610 = RBTree_node(None, _x_24609, a_24571, a_24572, a_24573)
-                                                                                            _x_24611 = _alt_24451(_x_24608, x_24440, _x_24610, a_24545, a_24603, a_24604, a_24605)
-                                                                                            return _x_24611
-                                                                                        case black():
-                                                                                            _x_24612 = black()
-                                                                                            _x_24613 = red()
-                                                                                            _x_24614 = RBTree_empty(None)
-                                                                                            _x_24615 = RBTree_node(None, _x_24613, _x_24614, a_24536, _x_24614)
-                                                                                            _x_24616 = RBTree_node(None, _x_24612, a_24571, a_24572, a_24573)
-                                                                                            _x_24617 = RBTree_node(None, _x_24612, a_24603, a_24604, a_24605)
-                                                                                            _x_24618 = RBTree_node(None, _x_24613, _x_24616, a_24545, _x_24617)
-                                                                                            _x_24619 = _alt_24454(_x_24612, _x_24615, x_24440, _x_24618)
-                                                                                            return _x_24619
-                                                        case black():
-                                                            _x_24624 = black()
-                                                            _x_24625 = red()
-                                                            _x_24626 = RBTree_empty(None)
-                                                            _x_24627 = RBTree_node(None, _x_24625, _x_24626, a_24536, _x_24626)
-                                                            _x_24628 = RBTree_node(None, _x_24624, a_24544, a_24545, a_24546)
-                                                            _x_24629 = _alt_24454(_x_24624, _x_24627, x_24440, _x_24628)
-                                                            return _x_24629
-                                        case RBTree_node(a_24632, a_24633, a_24634, a_24635):
-                                            match a_24632:
-                                                case red():
-                                                    match x_24441:
-                                                        case RBTree_empty():
-                                                            _x_24636 = RBTree_empty(None)
-                                                            _x_24637 = _alt_24449(_x_24636, a_24536, a_24633, a_24634, a_24635, x_24440, _x_24636)
-                                                            return _x_24637
-                                                        case RBTree_node(a_24638, a_24639, a_24640, a_24641):
-                                                            match a_24638:
-                                                                case red():
-                                                                    match a_24639:
-                                                                        case RBTree_empty():
-                                                                            match a_24641:
-                                                                                case RBTree_empty():
-                                                                                    _x_24642 = RBTree_empty(None)
-                                                                                    _x_24643 = red()
-                                                                                    _x_24644 = RBTree_node(None, _x_24643, _x_24642, a_24640, _x_24642)
-                                                                                    _x_24645 = _alt_24449(_x_24642, a_24536, a_24633, a_24634, a_24635, x_24440, _x_24644)
-                                                                                    return _x_24645
-                                                                                case RBTree_node(a_24646, a_24647, a_24648, a_24649):
-                                                                                    match a_24646:
-                                                                                        case red():
-                                                                                            _x_24650 = RBTree_empty(None)
-                                                                                            _x_24651 = red()
-                                                                                            _x_24652 = RBTree_node(None, _x_24651, a_24647, a_24648, a_24649)
-                                                                                            _x_24653 = RBTree_node(None, _x_24651, _x_24650, a_24640, _x_24652)
-                                                                                            _x_24654 = _alt_24449(_x_24650, a_24536, a_24633, a_24634, a_24635, x_24440, _x_24653)
-                                                                                            return _x_24654
-                                                                                        case black():
-                                                                                            _x_24655 = RBTree_empty(None)
-                                                                                            _x_24656 = red()
-                                                                                            _x_24657 = black()
-                                                                                            _x_24658 = RBTree_node(None, _x_24657, a_24647, a_24648, a_24649)
-                                                                                            _x_24659 = RBTree_node(None, _x_24656, _x_24655, a_24640, _x_24658)
-                                                                                            _x_24660 = _alt_24449(_x_24655, a_24536, a_24633, a_24634, a_24635, x_24440, _x_24659)
-                                                                                            return _x_24660
-                                                                        case RBTree_node(a_24663, a_24664, a_24665, a_24666):
-                                                                            match a_24663:
-                                                                                case red():
-                                                                                    match a_24641:
-                                                                                        case RBTree_empty():
-                                                                                            _x_24667 = RBTree_empty(None)
-                                                                                            _x_24668 = red()
-                                                                                            _x_24669 = RBTree_node(None, _x_24668, a_24664, a_24665, a_24666)
-                                                                                            _x_24670 = RBTree_node(None, _x_24668, _x_24669, a_24640, _x_24667)
-                                                                                            _x_24671 = _alt_24449(_x_24667, a_24536, a_24633, a_24634, a_24635, x_24440, _x_24670)
-                                                                                            return _x_24671
-                                                                                        case RBTree_node(a_24672, a_24673, a_24674, a_24675):
-                                                                                            match a_24672:
-                                                                                                case red():
-                                                                                                    _x_24676 = RBTree_empty(None)
-                                                                                                    _x_24677 = red()
-                                                                                                    _x_24678 = RBTree_node(None, _x_24677, a_24664, a_24665, a_24666)
-                                                                                                    _x_24679 = RBTree_node(None, _x_24677, a_24673, a_24674, a_24675)
-                                                                                                    _x_24680 = RBTree_node(None, _x_24677, _x_24678, a_24640, _x_24679)
-                                                                                                    _x_24681 = _alt_24449(_x_24676, a_24536, a_24633, a_24634, a_24635, x_24440, _x_24680)
-                                                                                                    return _x_24681
-                                                                                                case black():
-                                                                                                    _x_24682 = RBTree_empty(None)
-                                                                                                    _x_24683 = red()
-                                                                                                    _x_24684 = RBTree_node(None, _x_24683, a_24664, a_24665, a_24666)
-                                                                                                    _x_24685 = black()
-                                                                                                    _x_24686 = RBTree_node(None, _x_24685, a_24673, a_24674, a_24675)
-                                                                                                    _x_24687 = RBTree_node(None, _x_24683, _x_24684, a_24640, _x_24686)
-                                                                                                    _x_24688 = _alt_24449(_x_24682, a_24536, a_24633, a_24634, a_24635, x_24440, _x_24687)
-                                                                                                    return _x_24688
-                                                                                case black():
-                                                                                    match a_24641:
-                                                                                        case RBTree_empty():
-                                                                                            _x_24691 = RBTree_empty(None)
-                                                                                            _x_24692 = red()
-                                                                                            _x_24693 = black()
-                                                                                            _x_24694 = RBTree_node(None, _x_24693, a_24664, a_24665, a_24666)
-                                                                                            _x_24695 = RBTree_node(None, _x_24692, _x_24694, a_24640, _x_24691)
-                                                                                            _x_24696 = _alt_24449(_x_24691, a_24536, a_24633, a_24634, a_24635, x_24440, _x_24695)
-                                                                                            return _x_24696
-                                                                                        case RBTree_node(a_24697, a_24698, a_24699, a_24700):
-                                                                                            match a_24697:
-                                                                                                case red():
-                                                                                                    _x_24701 = RBTree_empty(None)
-                                                                                                    _x_24702 = red()
-                                                                                                    _x_24703 = black()
-                                                                                                    _x_24704 = RBTree_node(None, _x_24703, a_24664, a_24665, a_24666)
-                                                                                                    _x_24705 = RBTree_node(None, _x_24702, a_24698, a_24699, a_24700)
-                                                                                                    _x_24706 = RBTree_node(None, _x_24702, _x_24704, a_24640, _x_24705)
-                                                                                                    _x_24707 = _alt_24449(_x_24701, a_24536, a_24633, a_24634, a_24635, x_24440, _x_24706)
-                                                                                                    return _x_24707
-                                                                                                case black():
-                                                                                                    _x_24708 = RBTree_empty(None)
-                                                                                                    _x_24709 = red()
-                                                                                                    _x_24710 = black()
-                                                                                                    _x_24711 = RBTree_node(None, _x_24710, a_24664, a_24665, a_24666)
-                                                                                                    _x_24712 = RBTree_node(None, _x_24710, a_24698, a_24699, a_24700)
-                                                                                                    _x_24713 = RBTree_node(None, _x_24709, _x_24711, a_24640, _x_24712)
-                                                                                                    _x_24714 = _alt_24449(_x_24708, a_24536, a_24633, a_24634, a_24635, x_24440, _x_24713)
-                                                                                                    return _x_24714
-                                                                case black():
-                                                                    _x_24719 = RBTree_empty(None)
-                                                                    _x_24720 = black()
-                                                                    _x_24721 = RBTree_node(None, _x_24720, a_24639, a_24640, a_24641)
-                                                                    _x_24722 = _alt_24449(_x_24719, a_24536, a_24633, a_24634, a_24635, x_24440, _x_24721)
-                                                                    return _x_24722
-                                                case black():
-                                                    match x_24441:
-                                                        case RBTree_empty():
-                                                            _x_24725 = black()
-                                                            _x_24726 = red()
-                                                            _x_24727 = RBTree_empty(None)
-                                                            _x_24728 = RBTree_node(None, _x_24725, a_24633, a_24634, a_24635)
-                                                            _x_24729 = RBTree_node(None, _x_24726, _x_24727, a_24536, _x_24728)
-                                                            _x_24730 = _alt_24454(_x_24725, _x_24729, x_24440, _x_24727)
-                                                            return _x_24730
-                                                        case RBTree_node(a_24731, a_24732, a_24733, a_24734):
-                                                            match a_24731:
-                                                                case red():
-                                                                    match a_24732:
-                                                                        case RBTree_empty():
-                                                                            match a_24734:
-                                                                                case RBTree_empty():
-                                                                                    _x_24735 = black()
-                                                                                    _x_24736 = red()
-                                                                                    _x_24737 = RBTree_empty(None)
-                                                                                    _x_24738 = RBTree_node(None, _x_24735, a_24633, a_24634, a_24635)
-                                                                                    _x_24739 = RBTree_node(None, _x_24736, _x_24737, a_24536, _x_24738)
-                                                                                    _x_24740 = RBTree_node(None, _x_24736, _x_24737, a_24733, _x_24737)
-                                                                                    _x_24741 = _alt_24454(_x_24735, _x_24739, x_24440, _x_24740)
-                                                                                    return _x_24741
-                                                                                case RBTree_node(a_24742, a_24743, a_24744, a_24745):
-                                                                                    match a_24742:
-                                                                                        case red():
-                                                                                            _x_24746 = red()
-                                                                                            _x_24747 = RBTree_empty(None)
-                                                                                            _x_24748 = black()
-                                                                                            _x_24749 = RBTree_node(None, _x_24748, a_24633, a_24634, a_24635)
-                                                                                            _x_24750 = RBTree_node(None, _x_24746, _x_24747, a_24536, _x_24749)
-                                                                                            _x_24751 = _alt_24451(_x_24750, x_24440, _x_24747, a_24733, a_24743, a_24744, a_24745)
-                                                                                            return _x_24751
-                                                                                        case black():
-                                                                                            _x_24752 = black()
-                                                                                            _x_24753 = red()
-                                                                                            _x_24754 = RBTree_empty(None)
-                                                                                            _x_24755 = RBTree_node(None, _x_24752, a_24633, a_24634, a_24635)
-                                                                                            _x_24756 = RBTree_node(None, _x_24753, _x_24754, a_24536, _x_24755)
-                                                                                            _x_24757 = RBTree_node(None, _x_24752, a_24743, a_24744, a_24745)
-                                                                                            _x_24758 = RBTree_node(None, _x_24753, _x_24754, a_24733, _x_24757)
-                                                                                            _x_24759 = _alt_24454(_x_24752, _x_24756, x_24440, _x_24758)
-                                                                                            return _x_24759
-                                                                        case RBTree_node(a_24762, a_24763, a_24764, a_24765):
-                                                                            match a_24762:
-                                                                                case red():
-                                                                                    match a_24734:
-                                                                                        case RBTree_empty():
-                                                                                            _x_24766 = red()
-                                                                                            _x_24767 = RBTree_empty(None)
-                                                                                            _x_24768 = black()
-                                                                                            _x_24769 = RBTree_node(None, _x_24768, a_24633, a_24634, a_24635)
-                                                                                            _x_24770 = RBTree_node(None, _x_24766, _x_24767, a_24536, _x_24769)
-                                                                                            _x_24771 = _alt_24450(_x_24770, x_24440, a_24763, a_24764, a_24765, a_24733, _x_24767)
-                                                                                            return _x_24771
-                                                                                        case RBTree_node(a_24772, a_24773, a_24774, a_24775):
-                                                                                            match a_24772:
-                                                                                                case red():
-                                                                                                    _x_24776 = red()
-                                                                                                    _x_24777 = RBTree_empty(None)
-                                                                                                    _x_24778 = black()
-                                                                                                    _x_24779 = RBTree_node(None, _x_24778, a_24633, a_24634, a_24635)
-                                                                                                    _x_24780 = RBTree_node(None, _x_24776, _x_24777, a_24536, _x_24779)
-                                                                                                    _x_24781 = RBTree_node(None, _x_24776, a_24773, a_24774, a_24775)
-                                                                                                    _x_24782 = _alt_24450(_x_24780, x_24440, a_24763, a_24764, a_24765, a_24733, _x_24781)
-                                                                                                    return _x_24782
-                                                                                                case black():
-                                                                                                    _x_24783 = red()
-                                                                                                    _x_24784 = RBTree_empty(None)
-                                                                                                    _x_24785 = black()
-                                                                                                    _x_24786 = RBTree_node(None, _x_24785, a_24633, a_24634, a_24635)
-                                                                                                    _x_24787 = RBTree_node(None, _x_24783, _x_24784, a_24536, _x_24786)
-                                                                                                    _x_24788 = RBTree_node(None, _x_24785, a_24773, a_24774, a_24775)
-                                                                                                    _x_24789 = _alt_24450(_x_24787, x_24440, a_24763, a_24764, a_24765, a_24733, _x_24788)
-                                                                                                    return _x_24789
-                                                                                case black():
-                                                                                    match a_24734:
-                                                                                        case RBTree_empty():
-                                                                                            _x_24792 = black()
-                                                                                            _x_24793 = red()
-                                                                                            _x_24794 = RBTree_empty(None)
-                                                                                            _x_24795 = RBTree_node(None, _x_24792, a_24633, a_24634, a_24635)
-                                                                                            _x_24796 = RBTree_node(None, _x_24793, _x_24794, a_24536, _x_24795)
-                                                                                            _x_24797 = RBTree_node(None, _x_24792, a_24763, a_24764, a_24765)
-                                                                                            _x_24798 = RBTree_node(None, _x_24793, _x_24797, a_24733, _x_24794)
-                                                                                            _x_24799 = _alt_24454(_x_24792, _x_24796, x_24440, _x_24798)
-                                                                                            return _x_24799
-                                                                                        case RBTree_node(a_24800, a_24801, a_24802, a_24803):
-                                                                                            match a_24800:
-                                                                                                case red():
-                                                                                                    _x_24804 = red()
-                                                                                                    _x_24805 = RBTree_empty(None)
-                                                                                                    _x_24806 = black()
-                                                                                                    _x_24807 = RBTree_node(None, _x_24806, a_24633, a_24634, a_24635)
-                                                                                                    _x_24808 = RBTree_node(None, _x_24804, _x_24805, a_24536, _x_24807)
-                                                                                                    _x_24809 = RBTree_node(None, _x_24806, a_24763, a_24764, a_24765)
-                                                                                                    _x_24810 = _alt_24451(_x_24808, x_24440, _x_24809, a_24733, a_24801, a_24802, a_24803)
-                                                                                                    return _x_24810
-                                                                                                case black():
-                                                                                                    _x_24811 = black()
-                                                                                                    _x_24812 = red()
-                                                                                                    _x_24813 = RBTree_empty(None)
-                                                                                                    _x_24814 = RBTree_node(None, _x_24811, a_24633, a_24634, a_24635)
-                                                                                                    _x_24815 = RBTree_node(None, _x_24812, _x_24813, a_24536, _x_24814)
-                                                                                                    _x_24816 = RBTree_node(None, _x_24811, a_24763, a_24764, a_24765)
-                                                                                                    _x_24817 = RBTree_node(None, _x_24811, a_24801, a_24802, a_24803)
-                                                                                                    _x_24818 = RBTree_node(None, _x_24812, _x_24816, a_24733, _x_24817)
-                                                                                                    _x_24819 = _alt_24454(_x_24811, _x_24815, x_24440, _x_24818)
-                                                                                                    return _x_24819
-                                                                case black():
-                                                                    _x_24824 = black()
-                                                                    _x_24825 = red()
-                                                                    _x_24826 = RBTree_empty(None)
-                                                                    _x_24827 = RBTree_node(None, _x_24824, a_24633, a_24634, a_24635)
-                                                                    _x_24828 = RBTree_node(None, _x_24825, _x_24826, a_24536, _x_24827)
-                                                                    _x_24829 = RBTree_node(None, _x_24824, a_24732, a_24733, a_24734)
-                                                                    _x_24830 = _alt_24454(_x_24824, _x_24828, x_24440, _x_24829)
-                                                                    return _x_24830
-                                case RBTree_node(a_24835, a_24836, a_24837, a_24838):
-                                    match a_24835:
+                            match a_32777:
+                                case RBTree_node(a_32780, a_32781, a_32782, a_32783):
+                                    match a_32780:
                                         case red():
-                                            match a_24537:
-                                                case RBTree_empty():
-                                                    match x_24441:
-                                                        case RBTree_empty():
-                                                            _x_24839 = RBTree_empty(None)
-                                                            _x_24840 = _alt_24448(a_24836, a_24837, a_24838, a_24536, _x_24839, x_24440, _x_24839)
-                                                            return _x_24840
-                                                        case RBTree_node(a_24841, a_24842, a_24843, a_24844):
-                                                            match a_24841:
-                                                                case red():
-                                                                    match a_24842:
-                                                                        case RBTree_empty():
-                                                                            match a_24844:
-                                                                                case RBTree_empty():
-                                                                                    _x_24845 = RBTree_empty(None)
-                                                                                    _x_24846 = red()
-                                                                                    _x_24847 = RBTree_node(None, _x_24846, _x_24845, a_24843, _x_24845)
-                                                                                    _x_24848 = _alt_24448(a_24836, a_24837, a_24838, a_24536, _x_24845, x_24440, _x_24847)
-                                                                                    return _x_24848
-                                                                                case RBTree_node(a_24849, a_24850, a_24851, a_24852):
-                                                                                    match a_24849:
-                                                                                        case red():
-                                                                                            _x_24853 = RBTree_empty(None)
-                                                                                            _x_24854 = red()
-                                                                                            _x_24855 = RBTree_node(None, _x_24854, a_24850, a_24851, a_24852)
-                                                                                            _x_24856 = RBTree_node(None, _x_24854, _x_24853, a_24843, _x_24855)
-                                                                                            _x_24857 = _alt_24448(a_24836, a_24837, a_24838, a_24536, _x_24853, x_24440, _x_24856)
-                                                                                            return _x_24857
-                                                                                        case black():
-                                                                                            _x_24858 = RBTree_empty(None)
-                                                                                            _x_24859 = red()
-                                                                                            _x_24860 = black()
-                                                                                            _x_24861 = RBTree_node(None, _x_24860, a_24850, a_24851, a_24852)
-                                                                                            _x_24862 = RBTree_node(None, _x_24859, _x_24858, a_24843, _x_24861)
-                                                                                            _x_24863 = _alt_24448(a_24836, a_24837, a_24838, a_24536, _x_24858, x_24440, _x_24862)
-                                                                                            return _x_24863
-                                                                        case RBTree_node(a_24866, a_24867, a_24868, a_24869):
-                                                                            match a_24866:
+                                            _x_32784 = _alt_32769(a_32781, a_32782, a_32783, a_32778, a_32779, x_32761, x_32762)
+                                            return _x_32784
+                                        case _:
+                                            def _f_33009(h_32785: Any):
+                                                match a_32779:
+                                                    case RBTree_node(a_32786, a_32787, a_32788, a_32789):
+                                                        match a_32786:
+                                                            case red():
+                                                                _x_32790 = RBTree_node(a_32780, a_32781, a_32782, a_32783)
+                                                                _x_32791 = _alt_32770(_x_32790, a_32778, a_32787, a_32788, a_32789, x_32761, x_32762)
+                                                                return _x_32791
+                                                            case _:
+                                                                def _f_32902(h_32792: Any):
+                                                                    match x_32762:
+                                                                        case RBTree_node(a_32793, a_32794, a_32795, a_32796):
+                                                                            match a_32793:
                                                                                 case red():
-                                                                                    match a_24844:
-                                                                                        case RBTree_empty():
-                                                                                            _x_24870 = RBTree_empty(None)
-                                                                                            _x_24871 = red()
-                                                                                            _x_24872 = RBTree_node(None, _x_24871, a_24867, a_24868, a_24869)
-                                                                                            _x_24873 = RBTree_node(None, _x_24871, _x_24872, a_24843, _x_24870)
-                                                                                            _x_24874 = _alt_24448(a_24836, a_24837, a_24838, a_24536, _x_24870, x_24440, _x_24873)
-                                                                                            return _x_24874
-                                                                                        case RBTree_node(a_24875, a_24876, a_24877, a_24878):
-                                                                                            match a_24875:
+                                                                                    match a_32794:
+                                                                                        case RBTree_node(a_32797, a_32798, a_32799, a_32800):
+                                                                                            match a_32797:
                                                                                                 case red():
-                                                                                                    _x_24879 = RBTree_empty(None)
-                                                                                                    _x_24880 = red()
-                                                                                                    _x_24881 = RBTree_node(None, _x_24880, a_24867, a_24868, a_24869)
-                                                                                                    _x_24882 = RBTree_node(None, _x_24880, a_24876, a_24877, a_24878)
-                                                                                                    _x_24883 = RBTree_node(None, _x_24880, _x_24881, a_24843, _x_24882)
-                                                                                                    _x_24884 = _alt_24448(a_24836, a_24837, a_24838, a_24536, _x_24879, x_24440, _x_24883)
-                                                                                                    return _x_24884
-                                                                                                case black():
-                                                                                                    _x_24885 = RBTree_empty(None)
-                                                                                                    _x_24886 = red()
-                                                                                                    _x_24887 = RBTree_node(None, _x_24886, a_24867, a_24868, a_24869)
-                                                                                                    _x_24888 = black()
-                                                                                                    _x_24889 = RBTree_node(None, _x_24888, a_24876, a_24877, a_24878)
-                                                                                                    _x_24890 = RBTree_node(None, _x_24886, _x_24887, a_24843, _x_24889)
-                                                                                                    _x_24891 = _alt_24448(a_24836, a_24837, a_24838, a_24536, _x_24885, x_24440, _x_24890)
-                                                                                                    return _x_24891
-                                                                                case black():
-                                                                                    match a_24844:
-                                                                                        case RBTree_empty():
-                                                                                            _x_24894 = RBTree_empty(None)
-                                                                                            _x_24895 = red()
-                                                                                            _x_24896 = black()
-                                                                                            _x_24897 = RBTree_node(None, _x_24896, a_24867, a_24868, a_24869)
-                                                                                            _x_24898 = RBTree_node(None, _x_24895, _x_24897, a_24843, _x_24894)
-                                                                                            _x_24899 = _alt_24448(a_24836, a_24837, a_24838, a_24536, _x_24894, x_24440, _x_24898)
-                                                                                            return _x_24899
-                                                                                        case RBTree_node(a_24900, a_24901, a_24902, a_24903):
-                                                                                            match a_24900:
-                                                                                                case red():
-                                                                                                    _x_24904 = RBTree_empty(None)
-                                                                                                    _x_24905 = red()
-                                                                                                    _x_24906 = black()
-                                                                                                    _x_24907 = RBTree_node(None, _x_24906, a_24867, a_24868, a_24869)
-                                                                                                    _x_24908 = RBTree_node(None, _x_24905, a_24901, a_24902, a_24903)
-                                                                                                    _x_24909 = RBTree_node(None, _x_24905, _x_24907, a_24843, _x_24908)
-                                                                                                    _x_24910 = _alt_24448(a_24836, a_24837, a_24838, a_24536, _x_24904, x_24440, _x_24909)
-                                                                                                    return _x_24910
-                                                                                                case black():
-                                                                                                    _x_24911 = RBTree_empty(None)
-                                                                                                    _x_24912 = red()
-                                                                                                    _x_24913 = black()
-                                                                                                    _x_24914 = RBTree_node(None, _x_24913, a_24867, a_24868, a_24869)
-                                                                                                    _x_24915 = RBTree_node(None, _x_24913, a_24901, a_24902, a_24903)
-                                                                                                    _x_24916 = RBTree_node(None, _x_24912, _x_24914, a_24843, _x_24915)
-                                                                                                    _x_24917 = _alt_24448(a_24836, a_24837, a_24838, a_24536, _x_24911, x_24440, _x_24916)
-                                                                                                    return _x_24917
-                                                                case black():
-                                                                    _x_24922 = RBTree_empty(None)
-                                                                    _x_24923 = black()
-                                                                    _x_24924 = RBTree_node(None, _x_24923, a_24842, a_24843, a_24844)
-                                                                    _x_24925 = _alt_24448(a_24836, a_24837, a_24838, a_24536, _x_24922, x_24440, _x_24924)
-                                                                    return _x_24925
-                                                case RBTree_node(a_24928, a_24929, a_24930, a_24931):
-                                                    match a_24928:
-                                                        case red():
-                                                            match x_24441:
-                                                                case RBTree_empty():
-                                                                    _x_24932 = red()
-                                                                    _x_24933 = RBTree_node(None, _x_24932, a_24929, a_24930, a_24931)
-                                                                    _x_24934 = RBTree_empty(None)
-                                                                    _x_24935 = _alt_24448(a_24836, a_24837, a_24838, a_24536, _x_24933, x_24440, _x_24934)
-                                                                    return _x_24935
-                                                                case RBTree_node(a_24936, a_24937, a_24938, a_24939):
-                                                                    match a_24936:
+                                                                                                    _x_32801 = red()
+                                                                                                    _x_32802 = RBTree_node(a_32780, a_32781, a_32782, a_32783)
+                                                                                                    _x_32803 = RBTree_node(a_32786, a_32787, a_32788, a_32789)
+                                                                                                    _x_32804 = RBTree_node(_x_32801, _x_32802, a_32778, _x_32803)
+                                                                                                    _x_32805 = _alt_32771(_x_32804, x_32761, a_32798, a_32799, a_32800, a_32795, a_32796)
+                                                                                                    return _x_32805
+                                                                                                case _:
+                                                                                                    def _f_32842(h_32806: Any):
+                                                                                                        match a_32796:
+                                                                                                            case RBTree_node(a_32807, a_32808, a_32809, a_32810):
+                                                                                                                match a_32807:
+                                                                                                                    case red():
+                                                                                                                        _x_32811 = red()
+                                                                                                                        _x_32812 = RBTree_node(a_32780, a_32781, a_32782, a_32783)
+                                                                                                                        _x_32813 = RBTree_node(a_32786, a_32787, a_32788, a_32789)
+                                                                                                                        _x_32814 = RBTree_node(_x_32811, _x_32812, a_32778, _x_32813)
+                                                                                                                        _x_32815 = RBTree_node(a_32797, a_32798, a_32799, a_32800)
+                                                                                                                        _x_32816 = _alt_32772(_x_32814, x_32761, _x_32815, a_32795, a_32808, a_32809, a_32810)
+                                                                                                                        return _x_32816
+                                                                                                                    case _:
+                                                                                                                        def _f_32827(h_32817: Any):
+                                                                                                                            _x_32818 = black()
+                                                                                                                            _x_32819 = red()
+                                                                                                                            _x_32820 = RBTree_node(a_32780, a_32781, a_32782, a_32783)
+                                                                                                                            _x_32821 = RBTree_node(a_32786, a_32787, a_32788, a_32789)
+                                                                                                                            _x_32822 = RBTree_node(_x_32819, _x_32820, a_32778, _x_32821)
+                                                                                                                            _x_32823 = RBTree_node(a_32797, a_32798, a_32799, a_32800)
+                                                                                                                            _x_32824 = RBTree_node(a_32807, a_32808, a_32809, a_32810)
+                                                                                                                            _x_32825 = RBTree_node(_x_32819, _x_32823, a_32795, _x_32824)
+                                                                                                                            _x_32826 = _alt_32775(_x_32818, _x_32822, x_32761, _x_32825)
+                                                                                                                            return _x_32826
+                                                                                                                        _x_32828 = _f_32827(None)
+                                                                                                                        return _x_32828
+                                                                                                            case _:
+                                                                                                                def _f_32839(h_32830: Any):
+                                                                                                                    _x_32831 = black()
+                                                                                                                    _x_32832 = red()
+                                                                                                                    _x_32833 = RBTree_node(a_32780, a_32781, a_32782, a_32783)
+                                                                                                                    _x_32834 = RBTree_node(a_32786, a_32787, a_32788, a_32789)
+                                                                                                                    _x_32835 = RBTree_node(_x_32832, _x_32833, a_32778, _x_32834)
+                                                                                                                    _x_32836 = RBTree_node(a_32797, a_32798, a_32799, a_32800)
+                                                                                                                    _x_32837 = RBTree_node(_x_32832, _x_32836, a_32795, a_32796)
+                                                                                                                    _x_32838 = _alt_32775(_x_32831, _x_32835, x_32761, _x_32837)
+                                                                                                                    return _x_32838
+                                                                                                                _x_32840 = _f_32839(None)
+                                                                                                                return _x_32840
+                                                                                                    _x_32843 = _f_32842(None)
+                                                                                                    return _x_32843
+                                                                                        case _:
+                                                                                            def _f_32878(h_32845: Any):
+                                                                                                match a_32796:
+                                                                                                    case RBTree_node(a_32846, a_32847, a_32848, a_32849):
+                                                                                                        match a_32846:
+                                                                                                            case red():
+                                                                                                                _x_32850 = red()
+                                                                                                                _x_32851 = RBTree_node(a_32780, a_32781, a_32782, a_32783)
+                                                                                                                _x_32852 = RBTree_node(a_32786, a_32787, a_32788, a_32789)
+                                                                                                                _x_32853 = RBTree_node(_x_32850, _x_32851, a_32778, _x_32852)
+                                                                                                                _x_32854 = _alt_32772(_x_32853, x_32761, a_32794, a_32795, a_32847, a_32848, a_32849)
+                                                                                                                return _x_32854
+                                                                                                            case _:
+                                                                                                                def _f_32864(h_32855: Any):
+                                                                                                                    _x_32856 = black()
+                                                                                                                    _x_32857 = red()
+                                                                                                                    _x_32858 = RBTree_node(a_32780, a_32781, a_32782, a_32783)
+                                                                                                                    _x_32859 = RBTree_node(a_32786, a_32787, a_32788, a_32789)
+                                                                                                                    _x_32860 = RBTree_node(_x_32857, _x_32858, a_32778, _x_32859)
+                                                                                                                    _x_32861 = RBTree_node(a_32846, a_32847, a_32848, a_32849)
+                                                                                                                    _x_32862 = RBTree_node(_x_32857, a_32794, a_32795, _x_32861)
+                                                                                                                    _x_32863 = _alt_32775(_x_32856, _x_32860, x_32761, _x_32862)
+                                                                                                                    return _x_32863
+                                                                                                                _x_32865 = _f_32864(None)
+                                                                                                                return _x_32865
+                                                                                                    case _:
+                                                                                                        def _f_32875(h_32867: Any):
+                                                                                                            _x_32868 = black()
+                                                                                                            _x_32869 = red()
+                                                                                                            _x_32870 = RBTree_node(a_32780, a_32781, a_32782, a_32783)
+                                                                                                            _x_32871 = RBTree_node(a_32786, a_32787, a_32788, a_32789)
+                                                                                                            _x_32872 = RBTree_node(_x_32869, _x_32870, a_32778, _x_32871)
+                                                                                                            _x_32873 = RBTree_node(_x_32869, a_32794, a_32795, a_32796)
+                                                                                                            _x_32874 = _alt_32775(_x_32868, _x_32872, x_32761, _x_32873)
+                                                                                                            return _x_32874
+                                                                                                        _x_32876 = _f_32875(None)
+                                                                                                        return _x_32876
+                                                                                            _x_32879 = _f_32878(None)
+                                                                                            return _x_32879
+                                                                                case _:
+                                                                                    def _f_32889(h_32881: Any):
+                                                                                        _x_32882 = black()
+                                                                                        _x_32883 = red()
+                                                                                        _x_32884 = RBTree_node(a_32780, a_32781, a_32782, a_32783)
+                                                                                        _x_32885 = RBTree_node(a_32786, a_32787, a_32788, a_32789)
+                                                                                        _x_32886 = RBTree_node(_x_32883, _x_32884, a_32778, _x_32885)
+                                                                                        _x_32887 = RBTree_node(a_32793, a_32794, a_32795, a_32796)
+                                                                                        _x_32888 = _alt_32775(_x_32882, _x_32886, x_32761, _x_32887)
+                                                                                        return _x_32888
+                                                                                    _x_32890 = _f_32889(None)
+                                                                                    return _x_32890
+                                                                        case _:
+                                                                            def _f_32899(h_32892: Any):
+                                                                                _x_32893 = black()
+                                                                                _x_32894 = red()
+                                                                                _x_32895 = RBTree_node(a_32780, a_32781, a_32782, a_32783)
+                                                                                _x_32896 = RBTree_node(a_32786, a_32787, a_32788, a_32789)
+                                                                                _x_32897 = RBTree_node(_x_32894, _x_32895, a_32778, _x_32896)
+                                                                                _x_32898 = _alt_32775(_x_32893, _x_32897, x_32761, x_32762)
+                                                                                return _x_32898
+                                                                            _x_32900 = _f_32899(None)
+                                                                            return _x_32900
+                                                                _x_32903 = _f_32902(None)
+                                                                return _x_32903
+                                                    case _:
+                                                        def _f_33006(h_32905: Any):
+                                                            match x_32762:
+                                                                case RBTree_node(a_32906, a_32907, a_32908, a_32909):
+                                                                    match a_32906:
                                                                         case red():
-                                                                            match a_24937:
-                                                                                case RBTree_empty():
-                                                                                    match a_24939:
-                                                                                        case RBTree_empty():
-                                                                                            _x_24940 = red()
-                                                                                            _x_24941 = RBTree_node(None, _x_24940, a_24929, a_24930, a_24931)
-                                                                                            _x_24942 = RBTree_empty(None)
-                                                                                            _x_24943 = RBTree_node(None, _x_24940, _x_24942, a_24938, _x_24942)
-                                                                                            _x_24944 = _alt_24448(a_24836, a_24837, a_24838, a_24536, _x_24941, x_24440, _x_24943)
-                                                                                            return _x_24944
-                                                                                        case RBTree_node(a_24945, a_24946, a_24947, a_24948):
-                                                                                            match a_24945:
-                                                                                                case red():
-                                                                                                    _x_24949 = red()
-                                                                                                    _x_24950 = RBTree_node(None, _x_24949, a_24929, a_24930, a_24931)
-                                                                                                    _x_24951 = RBTree_empty(None)
-                                                                                                    _x_24952 = RBTree_node(None, _x_24949, a_24946, a_24947, a_24948)
-                                                                                                    _x_24953 = RBTree_node(None, _x_24949, _x_24951, a_24938, _x_24952)
-                                                                                                    _x_24954 = _alt_24448(a_24836, a_24837, a_24838, a_24536, _x_24950, x_24440, _x_24953)
-                                                                                                    return _x_24954
-                                                                                                case black():
-                                                                                                    _x_24955 = red()
-                                                                                                    _x_24956 = RBTree_node(None, _x_24955, a_24929, a_24930, a_24931)
-                                                                                                    _x_24957 = RBTree_empty(None)
-                                                                                                    _x_24958 = black()
-                                                                                                    _x_24959 = RBTree_node(None, _x_24958, a_24946, a_24947, a_24948)
-                                                                                                    _x_24960 = RBTree_node(None, _x_24955, _x_24957, a_24938, _x_24959)
-                                                                                                    _x_24961 = _alt_24448(a_24836, a_24837, a_24838, a_24536, _x_24956, x_24440, _x_24960)
-                                                                                                    return _x_24961
-                                                                                case RBTree_node(a_24964, a_24965, a_24966, a_24967):
-                                                                                    match a_24964:
+                                                                            match a_32907:
+                                                                                case RBTree_node(a_32910, a_32911, a_32912, a_32913):
+                                                                                    match a_32910:
                                                                                         case red():
-                                                                                            match a_24939:
-                                                                                                case RBTree_empty():
-                                                                                                    _x_24968 = red()
-                                                                                                    _x_24969 = RBTree_node(None, _x_24968, a_24929, a_24930, a_24931)
-                                                                                                    _x_24970 = RBTree_node(None, _x_24968, a_24965, a_24966, a_24967)
-                                                                                                    _x_24971 = RBTree_empty(None)
-                                                                                                    _x_24972 = RBTree_node(None, _x_24968, _x_24970, a_24938, _x_24971)
-                                                                                                    _x_24973 = _alt_24448(a_24836, a_24837, a_24838, a_24536, _x_24969, x_24440, _x_24972)
-                                                                                                    return _x_24973
-                                                                                                case RBTree_node(a_24974, a_24975, a_24976, a_24977):
-                                                                                                    match a_24974:
-                                                                                                        case red():
-                                                                                                            _x_24978 = red()
-                                                                                                            _x_24979 = RBTree_node(None, _x_24978, a_24929, a_24930, a_24931)
-                                                                                                            _x_24980 = RBTree_node(None, _x_24978, a_24965, a_24966, a_24967)
-                                                                                                            _x_24981 = RBTree_node(None, _x_24978, a_24975, a_24976, a_24977)
-                                                                                                            _x_24982 = RBTree_node(None, _x_24978, _x_24980, a_24938, _x_24981)
-                                                                                                            _x_24983 = _alt_24448(a_24836, a_24837, a_24838, a_24536, _x_24979, x_24440, _x_24982)
-                                                                                                            return _x_24983
-                                                                                                        case black():
-                                                                                                            _x_24984 = red()
-                                                                                                            _x_24985 = RBTree_node(None, _x_24984, a_24929, a_24930, a_24931)
-                                                                                                            _x_24986 = RBTree_node(None, _x_24984, a_24965, a_24966, a_24967)
-                                                                                                            _x_24987 = black()
-                                                                                                            _x_24988 = RBTree_node(None, _x_24987, a_24975, a_24976, a_24977)
-                                                                                                            _x_24989 = RBTree_node(None, _x_24984, _x_24986, a_24938, _x_24988)
-                                                                                                            _x_24990 = _alt_24448(a_24836, a_24837, a_24838, a_24536, _x_24985, x_24440, _x_24989)
-                                                                                                            return _x_24990
-                                                                                        case black():
-                                                                                            match a_24939:
-                                                                                                case RBTree_empty():
-                                                                                                    _x_24993 = red()
-                                                                                                    _x_24994 = RBTree_node(None, _x_24993, a_24929, a_24930, a_24931)
-                                                                                                    _x_24995 = black()
-                                                                                                    _x_24996 = RBTree_node(None, _x_24995, a_24965, a_24966, a_24967)
-                                                                                                    _x_24997 = RBTree_empty(None)
-                                                                                                    _x_24998 = RBTree_node(None, _x_24993, _x_24996, a_24938, _x_24997)
-                                                                                                    _x_24999 = _alt_24448(a_24836, a_24837, a_24838, a_24536, _x_24994, x_24440, _x_24998)
-                                                                                                    return _x_24999
-                                                                                                case RBTree_node(a_25000, a_25001, a_25002, a_25003):
-                                                                                                    match a_25000:
-                                                                                                        case red():
-                                                                                                            _x_25004 = red()
-                                                                                                            _x_25005 = RBTree_node(None, _x_25004, a_24929, a_24930, a_24931)
-                                                                                                            _x_25006 = black()
-                                                                                                            _x_25007 = RBTree_node(None, _x_25006, a_24965, a_24966, a_24967)
-                                                                                                            _x_25008 = RBTree_node(None, _x_25004, a_25001, a_25002, a_25003)
-                                                                                                            _x_25009 = RBTree_node(None, _x_25004, _x_25007, a_24938, _x_25008)
-                                                                                                            _x_25010 = _alt_24448(a_24836, a_24837, a_24838, a_24536, _x_25005, x_24440, _x_25009)
-                                                                                                            return _x_25010
-                                                                                                        case black():
-                                                                                                            _x_25011 = red()
-                                                                                                            _x_25012 = RBTree_node(None, _x_25011, a_24929, a_24930, a_24931)
-                                                                                                            _x_25013 = black()
-                                                                                                            _x_25014 = RBTree_node(None, _x_25013, a_24965, a_24966, a_24967)
-                                                                                                            _x_25015 = RBTree_node(None, _x_25013, a_25001, a_25002, a_25003)
-                                                                                                            _x_25016 = RBTree_node(None, _x_25011, _x_25014, a_24938, _x_25015)
-                                                                                                            _x_25017 = _alt_24448(a_24836, a_24837, a_24838, a_24536, _x_25012, x_24440, _x_25016)
-                                                                                                            return _x_25017
-                                                                        case black():
-                                                                            _x_25022 = red()
-                                                                            _x_25023 = RBTree_node(None, _x_25022, a_24929, a_24930, a_24931)
-                                                                            _x_25024 = black()
-                                                                            _x_25025 = RBTree_node(None, _x_25024, a_24937, a_24938, a_24939)
-                                                                            _x_25026 = _alt_24448(a_24836, a_24837, a_24838, a_24536, _x_25023, x_24440, _x_25025)
-                                                                            return _x_25026
-                                                        case black():
-                                                            match x_24441:
-                                                                case RBTree_empty():
-                                                                    _x_25029 = black()
-                                                                    _x_25030 = RBTree_node(None, _x_25029, a_24929, a_24930, a_24931)
-                                                                    _x_25031 = RBTree_empty(None)
-                                                                    _x_25032 = _alt_24448(a_24836, a_24837, a_24838, a_24536, _x_25030, x_24440, _x_25031)
-                                                                    return _x_25032
-                                                                case RBTree_node(a_25033, a_25034, a_25035, a_25036):
-                                                                    match a_25033:
+                                                                                            _x_32914 = red()
+                                                                                            _x_32915 = RBTree_node(a_32780, a_32781, a_32782, a_32783)
+                                                                                            _x_32916 = RBTree_node(_x_32914, _x_32915, a_32778, a_32779)
+                                                                                            _x_32917 = _alt_32771(_x_32916, x_32761, a_32911, a_32912, a_32913, a_32908, a_32909)
+                                                                                            return _x_32917
+                                                                                        case _:
+                                                                                            def _f_32951(h_32918: Any):
+                                                                                                match a_32909:
+                                                                                                    case RBTree_node(a_32919, a_32920, a_32921, a_32922):
+                                                                                                        match a_32919:
+                                                                                                            case red():
+                                                                                                                _x_32923 = red()
+                                                                                                                _x_32924 = RBTree_node(a_32780, a_32781, a_32782, a_32783)
+                                                                                                                _x_32925 = RBTree_node(_x_32923, _x_32924, a_32778, a_32779)
+                                                                                                                _x_32926 = RBTree_node(a_32910, a_32911, a_32912, a_32913)
+                                                                                                                _x_32927 = _alt_32772(_x_32925, x_32761, _x_32926, a_32908, a_32920, a_32921, a_32922)
+                                                                                                                return _x_32927
+                                                                                                            case _:
+                                                                                                                def _f_32937(h_32928: Any):
+                                                                                                                    _x_32929 = black()
+                                                                                                                    _x_32930 = red()
+                                                                                                                    _x_32931 = RBTree_node(a_32780, a_32781, a_32782, a_32783)
+                                                                                                                    _x_32932 = RBTree_node(_x_32930, _x_32931, a_32778, a_32779)
+                                                                                                                    _x_32933 = RBTree_node(a_32910, a_32911, a_32912, a_32913)
+                                                                                                                    _x_32934 = RBTree_node(a_32919, a_32920, a_32921, a_32922)
+                                                                                                                    _x_32935 = RBTree_node(_x_32930, _x_32933, a_32908, _x_32934)
+                                                                                                                    _x_32936 = _alt_32775(_x_32929, _x_32932, x_32761, _x_32935)
+                                                                                                                    return _x_32936
+                                                                                                                _x_32938 = _f_32937(None)
+                                                                                                                return _x_32938
+                                                                                                    case _:
+                                                                                                        def _f_32948(h_32940: Any):
+                                                                                                            _x_32941 = black()
+                                                                                                            _x_32942 = red()
+                                                                                                            _x_32943 = RBTree_node(a_32780, a_32781, a_32782, a_32783)
+                                                                                                            _x_32944 = RBTree_node(_x_32942, _x_32943, a_32778, a_32779)
+                                                                                                            _x_32945 = RBTree_node(a_32910, a_32911, a_32912, a_32913)
+                                                                                                            _x_32946 = RBTree_node(_x_32942, _x_32945, a_32908, a_32909)
+                                                                                                            _x_32947 = _alt_32775(_x_32941, _x_32944, x_32761, _x_32946)
+                                                                                                            return _x_32947
+                                                                                                        _x_32949 = _f_32948(None)
+                                                                                                        return _x_32949
+                                                                                            _x_32952 = _f_32951(None)
+                                                                                            return _x_32952
+                                                                                case _:
+                                                                                    def _f_32984(h_32954: Any):
+                                                                                        match a_32909:
+                                                                                            case RBTree_node(a_32955, a_32956, a_32957, a_32958):
+                                                                                                match a_32955:
+                                                                                                    case red():
+                                                                                                        _x_32959 = red()
+                                                                                                        _x_32960 = RBTree_node(a_32780, a_32781, a_32782, a_32783)
+                                                                                                        _x_32961 = RBTree_node(_x_32959, _x_32960, a_32778, a_32779)
+                                                                                                        _x_32962 = _alt_32772(_x_32961, x_32761, a_32907, a_32908, a_32956, a_32957, a_32958)
+                                                                                                        return _x_32962
+                                                                                                    case _:
+                                                                                                        def _f_32971(h_32963: Any):
+                                                                                                            _x_32964 = black()
+                                                                                                            _x_32965 = red()
+                                                                                                            _x_32966 = RBTree_node(a_32780, a_32781, a_32782, a_32783)
+                                                                                                            _x_32967 = RBTree_node(_x_32965, _x_32966, a_32778, a_32779)
+                                                                                                            _x_32968 = RBTree_node(a_32955, a_32956, a_32957, a_32958)
+                                                                                                            _x_32969 = RBTree_node(_x_32965, a_32907, a_32908, _x_32968)
+                                                                                                            _x_32970 = _alt_32775(_x_32964, _x_32967, x_32761, _x_32969)
+                                                                                                            return _x_32970
+                                                                                                        _x_32972 = _f_32971(None)
+                                                                                                        return _x_32972
+                                                                                            case _:
+                                                                                                def _f_32981(h_32974: Any):
+                                                                                                    _x_32975 = black()
+                                                                                                    _x_32976 = red()
+                                                                                                    _x_32977 = RBTree_node(a_32780, a_32781, a_32782, a_32783)
+                                                                                                    _x_32978 = RBTree_node(_x_32976, _x_32977, a_32778, a_32779)
+                                                                                                    _x_32979 = RBTree_node(_x_32976, a_32907, a_32908, a_32909)
+                                                                                                    _x_32980 = _alt_32775(_x_32975, _x_32978, x_32761, _x_32979)
+                                                                                                    return _x_32980
+                                                                                                _x_32982 = _f_32981(None)
+                                                                                                return _x_32982
+                                                                                    _x_32985 = _f_32984(None)
+                                                                                    return _x_32985
+                                                                        case _:
+                                                                            def _f_32994(h_32987: Any):
+                                                                                _x_32988 = black()
+                                                                                _x_32989 = red()
+                                                                                _x_32990 = RBTree_node(a_32780, a_32781, a_32782, a_32783)
+                                                                                _x_32991 = RBTree_node(_x_32989, _x_32990, a_32778, a_32779)
+                                                                                _x_32992 = RBTree_node(a_32906, a_32907, a_32908, a_32909)
+                                                                                _x_32993 = _alt_32775(_x_32988, _x_32991, x_32761, _x_32992)
+                                                                                return _x_32993
+                                                                            _x_32995 = _f_32994(None)
+                                                                            return _x_32995
+                                                                case _:
+                                                                    def _f_33003(h_32997: Any):
+                                                                        _x_32998 = black()
+                                                                        _x_32999 = red()
+                                                                        _x_33000 = RBTree_node(a_32780, a_32781, a_32782, a_32783)
+                                                                        _x_33001 = RBTree_node(_x_32999, _x_33000, a_32778, a_32779)
+                                                                        _x_33002 = _alt_32775(_x_32998, _x_33001, x_32761, x_32762)
+                                                                        return _x_33002
+                                                                    _x_33004 = _f_33003(None)
+                                                                    return _x_33004
+                                                        _x_33007 = _f_33006(None)
+                                                        return _x_33007
+                                            _x_33010 = _f_33009(None)
+                                            return _x_33010
+                                case _:
+                                    def _f_33217(h_33012: Any):
+                                        match a_32779:
+                                            case RBTree_node(a_33013, a_33014, a_33015, a_33016):
+                                                match a_33013:
+                                                    case red():
+                                                        _x_33017 = _alt_32770(a_32777, a_32778, a_33014, a_33015, a_33016, x_32761, x_32762)
+                                                        return _x_33017
+                                                    case _:
+                                                        def _f_33119(h_33018: Any):
+                                                            match x_32762:
+                                                                case RBTree_node(a_33019, a_33020, a_33021, a_33022):
+                                                                    match a_33019:
                                                                         case red():
-                                                                            match a_25034:
-                                                                                case RBTree_empty():
-                                                                                    match a_25036:
-                                                                                        case RBTree_empty():
-                                                                                            _x_25037 = black()
-                                                                                            _x_25038 = RBTree_node(None, _x_25037, a_24929, a_24930, a_24931)
-                                                                                            _x_25039 = red()
-                                                                                            _x_25040 = RBTree_empty(None)
-                                                                                            _x_25041 = RBTree_node(None, _x_25039, _x_25040, a_25035, _x_25040)
-                                                                                            _x_25042 = _alt_24448(a_24836, a_24837, a_24838, a_24536, _x_25038, x_24440, _x_25041)
-                                                                                            return _x_25042
-                                                                                        case RBTree_node(a_25043, a_25044, a_25045, a_25046):
-                                                                                            match a_25043:
-                                                                                                case red():
-                                                                                                    _x_25047 = black()
-                                                                                                    _x_25048 = RBTree_node(None, _x_25047, a_24929, a_24930, a_24931)
-                                                                                                    _x_25049 = red()
-                                                                                                    _x_25050 = RBTree_empty(None)
-                                                                                                    _x_25051 = RBTree_node(None, _x_25049, a_25044, a_25045, a_25046)
-                                                                                                    _x_25052 = RBTree_node(None, _x_25049, _x_25050, a_25035, _x_25051)
-                                                                                                    _x_25053 = _alt_24448(a_24836, a_24837, a_24838, a_24536, _x_25048, x_24440, _x_25052)
-                                                                                                    return _x_25053
-                                                                                                case black():
-                                                                                                    _x_25054 = black()
-                                                                                                    _x_25055 = RBTree_node(None, _x_25054, a_24929, a_24930, a_24931)
-                                                                                                    _x_25056 = red()
-                                                                                                    _x_25057 = RBTree_empty(None)
-                                                                                                    _x_25058 = RBTree_node(None, _x_25054, a_25044, a_25045, a_25046)
-                                                                                                    _x_25059 = RBTree_node(None, _x_25056, _x_25057, a_25035, _x_25058)
-                                                                                                    _x_25060 = _alt_24448(a_24836, a_24837, a_24838, a_24536, _x_25055, x_24440, _x_25059)
-                                                                                                    return _x_25060
-                                                                                case RBTree_node(a_25063, a_25064, a_25065, a_25066):
-                                                                                    match a_25063:
+                                                                            match a_33020:
+                                                                                case RBTree_node(a_33023, a_33024, a_33025, a_33026):
+                                                                                    match a_33023:
                                                                                         case red():
-                                                                                            match a_25036:
-                                                                                                case RBTree_empty():
-                                                                                                    _x_25067 = black()
-                                                                                                    _x_25068 = RBTree_node(None, _x_25067, a_24929, a_24930, a_24931)
-                                                                                                    _x_25069 = red()
-                                                                                                    _x_25070 = RBTree_node(None, _x_25069, a_25064, a_25065, a_25066)
-                                                                                                    _x_25071 = RBTree_empty(None)
-                                                                                                    _x_25072 = RBTree_node(None, _x_25069, _x_25070, a_25035, _x_25071)
-                                                                                                    _x_25073 = _alt_24448(a_24836, a_24837, a_24838, a_24536, _x_25068, x_24440, _x_25072)
-                                                                                                    return _x_25073
-                                                                                                case RBTree_node(a_25074, a_25075, a_25076, a_25077):
-                                                                                                    match a_25074:
-                                                                                                        case red():
-                                                                                                            _x_25078 = black()
-                                                                                                            _x_25079 = RBTree_node(None, _x_25078, a_24929, a_24930, a_24931)
-                                                                                                            _x_25080 = red()
-                                                                                                            _x_25081 = RBTree_node(None, _x_25080, a_25064, a_25065, a_25066)
-                                                                                                            _x_25082 = RBTree_node(None, _x_25080, a_25075, a_25076, a_25077)
-                                                                                                            _x_25083 = RBTree_node(None, _x_25080, _x_25081, a_25035, _x_25082)
-                                                                                                            _x_25084 = _alt_24448(a_24836, a_24837, a_24838, a_24536, _x_25079, x_24440, _x_25083)
-                                                                                                            return _x_25084
-                                                                                                        case black():
-                                                                                                            _x_25085 = black()
-                                                                                                            _x_25086 = RBTree_node(None, _x_25085, a_24929, a_24930, a_24931)
-                                                                                                            _x_25087 = red()
-                                                                                                            _x_25088 = RBTree_node(None, _x_25087, a_25064, a_25065, a_25066)
-                                                                                                            _x_25089 = RBTree_node(None, _x_25085, a_25075, a_25076, a_25077)
-                                                                                                            _x_25090 = RBTree_node(None, _x_25087, _x_25088, a_25035, _x_25089)
-                                                                                                            _x_25091 = _alt_24448(a_24836, a_24837, a_24838, a_24536, _x_25086, x_24440, _x_25090)
-                                                                                                            return _x_25091
-                                                                                        case black():
-                                                                                            match a_25036:
-                                                                                                case RBTree_empty():
-                                                                                                    _x_25094 = black()
-                                                                                                    _x_25095 = RBTree_node(None, _x_25094, a_24929, a_24930, a_24931)
-                                                                                                    _x_25096 = red()
-                                                                                                    _x_25097 = RBTree_node(None, _x_25094, a_25064, a_25065, a_25066)
-                                                                                                    _x_25098 = RBTree_empty(None)
-                                                                                                    _x_25099 = RBTree_node(None, _x_25096, _x_25097, a_25035, _x_25098)
-                                                                                                    _x_25100 = _alt_24448(a_24836, a_24837, a_24838, a_24536, _x_25095, x_24440, _x_25099)
-                                                                                                    return _x_25100
-                                                                                                case RBTree_node(a_25101, a_25102, a_25103, a_25104):
-                                                                                                    match a_25101:
-                                                                                                        case red():
-                                                                                                            _x_25105 = black()
-                                                                                                            _x_25106 = RBTree_node(None, _x_25105, a_24929, a_24930, a_24931)
-                                                                                                            _x_25107 = red()
-                                                                                                            _x_25108 = RBTree_node(None, _x_25105, a_25064, a_25065, a_25066)
-                                                                                                            _x_25109 = RBTree_node(None, _x_25107, a_25102, a_25103, a_25104)
-                                                                                                            _x_25110 = RBTree_node(None, _x_25107, _x_25108, a_25035, _x_25109)
-                                                                                                            _x_25111 = _alt_24448(a_24836, a_24837, a_24838, a_24536, _x_25106, x_24440, _x_25110)
-                                                                                                            return _x_25111
-                                                                                                        case black():
-                                                                                                            _x_25112 = black()
-                                                                                                            _x_25113 = RBTree_node(None, _x_25112, a_24929, a_24930, a_24931)
-                                                                                                            _x_25114 = red()
-                                                                                                            _x_25115 = RBTree_node(None, _x_25112, a_25064, a_25065, a_25066)
-                                                                                                            _x_25116 = RBTree_node(None, _x_25112, a_25102, a_25103, a_25104)
-                                                                                                            _x_25117 = RBTree_node(None, _x_25114, _x_25115, a_25035, _x_25116)
-                                                                                                            _x_25118 = _alt_24448(a_24836, a_24837, a_24838, a_24536, _x_25113, x_24440, _x_25117)
-                                                                                                            return _x_25118
-                                                                        case black():
-                                                                            _x_25123 = black()
-                                                                            _x_25124 = RBTree_node(None, _x_25123, a_24929, a_24930, a_24931)
-                                                                            _x_25125 = RBTree_node(None, _x_25123, a_25034, a_25035, a_25036)
-                                                                            _x_25126 = _alt_24448(a_24836, a_24837, a_24838, a_24536, _x_25124, x_24440, _x_25125)
-                                                                            return _x_25126
-                                        case black():
-                                            match a_24537:
-                                                case RBTree_empty():
-                                                    match x_24441:
-                                                        case RBTree_empty():
-                                                            _x_25131 = black()
-                                                            _x_25132 = red()
-                                                            _x_25133 = RBTree_node(None, _x_25131, a_24836, a_24837, a_24838)
-                                                            _x_25134 = RBTree_empty(None)
-                                                            _x_25135 = RBTree_node(None, _x_25132, _x_25133, a_24536, _x_25134)
-                                                            _x_25136 = _alt_24454(_x_25131, _x_25135, x_24440, _x_25134)
-                                                            return _x_25136
-                                                        case RBTree_node(a_25137, a_25138, a_25139, a_25140):
-                                                            match a_25137:
+                                                                                            _x_33027 = red()
+                                                                                            _x_33028 = RBTree_node(a_33013, a_33014, a_33015, a_33016)
+                                                                                            _x_33029 = RBTree_node(_x_33027, a_32777, a_32778, _x_33028)
+                                                                                            _x_33030 = _alt_32771(_x_33029, x_32761, a_33024, a_33025, a_33026, a_33021, a_33022)
+                                                                                            return _x_33030
+                                                                                        case _:
+                                                                                            def _f_33064(h_33031: Any):
+                                                                                                match a_33022:
+                                                                                                    case RBTree_node(a_33032, a_33033, a_33034, a_33035):
+                                                                                                        match a_33032:
+                                                                                                            case red():
+                                                                                                                _x_33036 = red()
+                                                                                                                _x_33037 = RBTree_node(a_33013, a_33014, a_33015, a_33016)
+                                                                                                                _x_33038 = RBTree_node(_x_33036, a_32777, a_32778, _x_33037)
+                                                                                                                _x_33039 = RBTree_node(a_33023, a_33024, a_33025, a_33026)
+                                                                                                                _x_33040 = _alt_32772(_x_33038, x_32761, _x_33039, a_33021, a_33033, a_33034, a_33035)
+                                                                                                                return _x_33040
+                                                                                                            case _:
+                                                                                                                def _f_33050(h_33041: Any):
+                                                                                                                    _x_33042 = black()
+                                                                                                                    _x_33043 = red()
+                                                                                                                    _x_33044 = RBTree_node(a_33013, a_33014, a_33015, a_33016)
+                                                                                                                    _x_33045 = RBTree_node(_x_33043, a_32777, a_32778, _x_33044)
+                                                                                                                    _x_33046 = RBTree_node(a_33023, a_33024, a_33025, a_33026)
+                                                                                                                    _x_33047 = RBTree_node(a_33032, a_33033, a_33034, a_33035)
+                                                                                                                    _x_33048 = RBTree_node(_x_33043, _x_33046, a_33021, _x_33047)
+                                                                                                                    _x_33049 = _alt_32775(_x_33042, _x_33045, x_32761, _x_33048)
+                                                                                                                    return _x_33049
+                                                                                                                _x_33051 = _f_33050(None)
+                                                                                                                return _x_33051
+                                                                                                    case _:
+                                                                                                        def _f_33061(h_33053: Any):
+                                                                                                            _x_33054 = black()
+                                                                                                            _x_33055 = red()
+                                                                                                            _x_33056 = RBTree_node(a_33013, a_33014, a_33015, a_33016)
+                                                                                                            _x_33057 = RBTree_node(_x_33055, a_32777, a_32778, _x_33056)
+                                                                                                            _x_33058 = RBTree_node(a_33023, a_33024, a_33025, a_33026)
+                                                                                                            _x_33059 = RBTree_node(_x_33055, _x_33058, a_33021, a_33022)
+                                                                                                            _x_33060 = _alt_32775(_x_33054, _x_33057, x_32761, _x_33059)
+                                                                                                            return _x_33060
+                                                                                                        _x_33062 = _f_33061(None)
+                                                                                                        return _x_33062
+                                                                                            _x_33065 = _f_33064(None)
+                                                                                            return _x_33065
+                                                                                case _:
+                                                                                    def _f_33097(h_33067: Any):
+                                                                                        match a_33022:
+                                                                                            case RBTree_node(a_33068, a_33069, a_33070, a_33071):
+                                                                                                match a_33068:
+                                                                                                    case red():
+                                                                                                        _x_33072 = red()
+                                                                                                        _x_33073 = RBTree_node(a_33013, a_33014, a_33015, a_33016)
+                                                                                                        _x_33074 = RBTree_node(_x_33072, a_32777, a_32778, _x_33073)
+                                                                                                        _x_33075 = _alt_32772(_x_33074, x_32761, a_33020, a_33021, a_33069, a_33070, a_33071)
+                                                                                                        return _x_33075
+                                                                                                    case _:
+                                                                                                        def _f_33084(h_33076: Any):
+                                                                                                            _x_33077 = black()
+                                                                                                            _x_33078 = red()
+                                                                                                            _x_33079 = RBTree_node(a_33013, a_33014, a_33015, a_33016)
+                                                                                                            _x_33080 = RBTree_node(_x_33078, a_32777, a_32778, _x_33079)
+                                                                                                            _x_33081 = RBTree_node(a_33068, a_33069, a_33070, a_33071)
+                                                                                                            _x_33082 = RBTree_node(_x_33078, a_33020, a_33021, _x_33081)
+                                                                                                            _x_33083 = _alt_32775(_x_33077, _x_33080, x_32761, _x_33082)
+                                                                                                            return _x_33083
+                                                                                                        _x_33085 = _f_33084(None)
+                                                                                                        return _x_33085
+                                                                                            case _:
+                                                                                                def _f_33094(h_33087: Any):
+                                                                                                    _x_33088 = black()
+                                                                                                    _x_33089 = red()
+                                                                                                    _x_33090 = RBTree_node(a_33013, a_33014, a_33015, a_33016)
+                                                                                                    _x_33091 = RBTree_node(_x_33089, a_32777, a_32778, _x_33090)
+                                                                                                    _x_33092 = RBTree_node(_x_33089, a_33020, a_33021, a_33022)
+                                                                                                    _x_33093 = _alt_32775(_x_33088, _x_33091, x_32761, _x_33092)
+                                                                                                    return _x_33093
+                                                                                                _x_33095 = _f_33094(None)
+                                                                                                return _x_33095
+                                                                                    _x_33098 = _f_33097(None)
+                                                                                    return _x_33098
+                                                                        case _:
+                                                                            def _f_33107(h_33100: Any):
+                                                                                _x_33101 = black()
+                                                                                _x_33102 = red()
+                                                                                _x_33103 = RBTree_node(a_33013, a_33014, a_33015, a_33016)
+                                                                                _x_33104 = RBTree_node(_x_33102, a_32777, a_32778, _x_33103)
+                                                                                _x_33105 = RBTree_node(a_33019, a_33020, a_33021, a_33022)
+                                                                                _x_33106 = _alt_32775(_x_33101, _x_33104, x_32761, _x_33105)
+                                                                                return _x_33106
+                                                                            _x_33108 = _f_33107(None)
+                                                                            return _x_33108
+                                                                case _:
+                                                                    def _f_33116(h_33110: Any):
+                                                                        _x_33111 = black()
+                                                                        _x_33112 = red()
+                                                                        _x_33113 = RBTree_node(a_33013, a_33014, a_33015, a_33016)
+                                                                        _x_33114 = RBTree_node(_x_33112, a_32777, a_32778, _x_33113)
+                                                                        _x_33115 = _alt_32775(_x_33111, _x_33114, x_32761, x_32762)
+                                                                        return _x_33115
+                                                                    _x_33117 = _f_33116(None)
+                                                                    return _x_33117
+                                                        _x_33120 = _f_33119(None)
+                                                        return _x_33120
+                                            case _:
+                                                def _f_33214(h_33122: Any):
+                                                    match x_32762:
+                                                        case RBTree_node(a_33123, a_33124, a_33125, a_33126):
+                                                            match a_33123:
                                                                 case red():
-                                                                    match a_25138:
-                                                                        case RBTree_empty():
-                                                                            match a_25140:
-                                                                                case RBTree_empty():
-                                                                                    _x_25141 = black()
-                                                                                    _x_25142 = red()
-                                                                                    _x_25143 = RBTree_node(None, _x_25141, a_24836, a_24837, a_24838)
-                                                                                    _x_25144 = RBTree_empty(None)
-                                                                                    _x_25145 = RBTree_node(None, _x_25142, _x_25143, a_24536, _x_25144)
-                                                                                    _x_25146 = RBTree_node(None, _x_25142, _x_25144, a_25139, _x_25144)
-                                                                                    _x_25147 = _alt_24454(_x_25141, _x_25145, x_24440, _x_25146)
-                                                                                    return _x_25147
-                                                                                case RBTree_node(a_25148, a_25149, a_25150, a_25151):
-                                                                                    match a_25148:
-                                                                                        case red():
-                                                                                            _x_25152 = red()
-                                                                                            _x_25153 = black()
-                                                                                            _x_25154 = RBTree_node(None, _x_25153, a_24836, a_24837, a_24838)
-                                                                                            _x_25155 = RBTree_empty(None)
-                                                                                            _x_25156 = RBTree_node(None, _x_25152, _x_25154, a_24536, _x_25155)
-                                                                                            _x_25157 = _alt_24451(_x_25156, x_24440, _x_25155, a_25139, a_25149, a_25150, a_25151)
-                                                                                            return _x_25157
-                                                                                        case black():
-                                                                                            _x_25158 = black()
-                                                                                            _x_25159 = red()
-                                                                                            _x_25160 = RBTree_node(None, _x_25158, a_24836, a_24837, a_24838)
-                                                                                            _x_25161 = RBTree_empty(None)
-                                                                                            _x_25162 = RBTree_node(None, _x_25159, _x_25160, a_24536, _x_25161)
-                                                                                            _x_25163 = RBTree_node(None, _x_25158, a_25149, a_25150, a_25151)
-                                                                                            _x_25164 = RBTree_node(None, _x_25159, _x_25161, a_25139, _x_25163)
-                                                                                            _x_25165 = _alt_24454(_x_25158, _x_25162, x_24440, _x_25164)
-                                                                                            return _x_25165
-                                                                        case RBTree_node(a_25168, a_25169, a_25170, a_25171):
-                                                                            match a_25168:
+                                                                    match a_33124:
+                                                                        case RBTree_node(a_33127, a_33128, a_33129, a_33130):
+                                                                            match a_33127:
                                                                                 case red():
-                                                                                    match a_25140:
-                                                                                        case RBTree_empty():
-                                                                                            _x_25172 = red()
-                                                                                            _x_25173 = black()
-                                                                                            _x_25174 = RBTree_node(None, _x_25173, a_24836, a_24837, a_24838)
-                                                                                            _x_25175 = RBTree_empty(None)
-                                                                                            _x_25176 = RBTree_node(None, _x_25172, _x_25174, a_24536, _x_25175)
-                                                                                            _x_25177 = _alt_24450(_x_25176, x_24440, a_25169, a_25170, a_25171, a_25139, _x_25175)
-                                                                                            return _x_25177
-                                                                                        case RBTree_node(a_25178, a_25179, a_25180, a_25181):
-                                                                                            match a_25178:
-                                                                                                case red():
-                                                                                                    _x_25182 = red()
-                                                                                                    _x_25183 = black()
-                                                                                                    _x_25184 = RBTree_node(None, _x_25183, a_24836, a_24837, a_24838)
-                                                                                                    _x_25185 = RBTree_empty(None)
-                                                                                                    _x_25186 = RBTree_node(None, _x_25182, _x_25184, a_24536, _x_25185)
-                                                                                                    _x_25187 = RBTree_node(None, _x_25182, a_25179, a_25180, a_25181)
-                                                                                                    _x_25188 = _alt_24450(_x_25186, x_24440, a_25169, a_25170, a_25171, a_25139, _x_25187)
-                                                                                                    return _x_25188
-                                                                                                case black():
-                                                                                                    _x_25189 = red()
-                                                                                                    _x_25190 = black()
-                                                                                                    _x_25191 = RBTree_node(None, _x_25190, a_24836, a_24837, a_24838)
-                                                                                                    _x_25192 = RBTree_empty(None)
-                                                                                                    _x_25193 = RBTree_node(None, _x_25189, _x_25191, a_24536, _x_25192)
-                                                                                                    _x_25194 = RBTree_node(None, _x_25190, a_25179, a_25180, a_25181)
-                                                                                                    _x_25195 = _alt_24450(_x_25193, x_24440, a_25169, a_25170, a_25171, a_25139, _x_25194)
-                                                                                                    return _x_25195
-                                                                                case black():
-                                                                                    match a_25140:
-                                                                                        case RBTree_empty():
-                                                                                            _x_25198 = black()
-                                                                                            _x_25199 = red()
-                                                                                            _x_25200 = RBTree_node(None, _x_25198, a_24836, a_24837, a_24838)
-                                                                                            _x_25201 = RBTree_empty(None)
-                                                                                            _x_25202 = RBTree_node(None, _x_25199, _x_25200, a_24536, _x_25201)
-                                                                                            _x_25203 = RBTree_node(None, _x_25198, a_25169, a_25170, a_25171)
-                                                                                            _x_25204 = RBTree_node(None, _x_25199, _x_25203, a_25139, _x_25201)
-                                                                                            _x_25205 = _alt_24454(_x_25198, _x_25202, x_24440, _x_25204)
-                                                                                            return _x_25205
-                                                                                        case RBTree_node(a_25206, a_25207, a_25208, a_25209):
-                                                                                            match a_25206:
-                                                                                                case red():
-                                                                                                    _x_25210 = red()
-                                                                                                    _x_25211 = black()
-                                                                                                    _x_25212 = RBTree_node(None, _x_25211, a_24836, a_24837, a_24838)
-                                                                                                    _x_25213 = RBTree_empty(None)
-                                                                                                    _x_25214 = RBTree_node(None, _x_25210, _x_25212, a_24536, _x_25213)
-                                                                                                    _x_25215 = RBTree_node(None, _x_25211, a_25169, a_25170, a_25171)
-                                                                                                    _x_25216 = _alt_24451(_x_25214, x_24440, _x_25215, a_25139, a_25207, a_25208, a_25209)
-                                                                                                    return _x_25216
-                                                                                                case black():
-                                                                                                    _x_25217 = black()
-                                                                                                    _x_25218 = red()
-                                                                                                    _x_25219 = RBTree_node(None, _x_25217, a_24836, a_24837, a_24838)
-                                                                                                    _x_25220 = RBTree_empty(None)
-                                                                                                    _x_25221 = RBTree_node(None, _x_25218, _x_25219, a_24536, _x_25220)
-                                                                                                    _x_25222 = RBTree_node(None, _x_25217, a_25169, a_25170, a_25171)
-                                                                                                    _x_25223 = RBTree_node(None, _x_25217, a_25207, a_25208, a_25209)
-                                                                                                    _x_25224 = RBTree_node(None, _x_25218, _x_25222, a_25139, _x_25223)
-                                                                                                    _x_25225 = _alt_24454(_x_25217, _x_25221, x_24440, _x_25224)
-                                                                                                    return _x_25225
-                                                                case black():
-                                                                    _x_25230 = black()
-                                                                    _x_25231 = red()
-                                                                    _x_25232 = RBTree_node(None, _x_25230, a_24836, a_24837, a_24838)
-                                                                    _x_25233 = RBTree_empty(None)
-                                                                    _x_25234 = RBTree_node(None, _x_25231, _x_25232, a_24536, _x_25233)
-                                                                    _x_25235 = RBTree_node(None, _x_25230, a_25138, a_25139, a_25140)
-                                                                    _x_25236 = _alt_24454(_x_25230, _x_25234, x_24440, _x_25235)
-                                                                    return _x_25236
-                                                case RBTree_node(a_25239, a_25240, a_25241, a_25242):
-                                                    match a_25239:
-                                                        case red():
-                                                            match x_24441:
-                                                                case RBTree_empty():
-                                                                    _x_25243 = black()
-                                                                    _x_25244 = RBTree_node(None, _x_25243, a_24836, a_24837, a_24838)
-                                                                    _x_25245 = RBTree_empty(None)
-                                                                    _x_25246 = _alt_24449(_x_25244, a_24536, a_25240, a_25241, a_25242, x_24440, _x_25245)
-                                                                    return _x_25246
-                                                                case RBTree_node(a_25247, a_25248, a_25249, a_25250):
-                                                                    match a_25247:
+                                                                                    _x_33131 = red()
+                                                                                    _x_33132 = RBTree_node(_x_33131, a_32777, a_32778, a_32779)
+                                                                                    _x_33133 = _alt_32771(_x_33132, x_32761, a_33128, a_33129, a_33130, a_33125, a_33126)
+                                                                                    return _x_33133
+                                                                                case _:
+                                                                                    def _f_33164(h_33134: Any):
+                                                                                        match a_33126:
+                                                                                            case RBTree_node(a_33135, a_33136, a_33137, a_33138):
+                                                                                                match a_33135:
+                                                                                                    case red():
+                                                                                                        _x_33139 = red()
+                                                                                                        _x_33140 = RBTree_node(_x_33139, a_32777, a_32778, a_32779)
+                                                                                                        _x_33141 = RBTree_node(a_33127, a_33128, a_33129, a_33130)
+                                                                                                        _x_33142 = _alt_32772(_x_33140, x_32761, _x_33141, a_33125, a_33136, a_33137, a_33138)
+                                                                                                        return _x_33142
+                                                                                                    case _:
+                                                                                                        def _f_33151(h_33143: Any):
+                                                                                                            _x_33144 = black()
+                                                                                                            _x_33145 = red()
+                                                                                                            _x_33146 = RBTree_node(_x_33145, a_32777, a_32778, a_32779)
+                                                                                                            _x_33147 = RBTree_node(a_33127, a_33128, a_33129, a_33130)
+                                                                                                            _x_33148 = RBTree_node(a_33135, a_33136, a_33137, a_33138)
+                                                                                                            _x_33149 = RBTree_node(_x_33145, _x_33147, a_33125, _x_33148)
+                                                                                                            _x_33150 = _alt_32775(_x_33144, _x_33146, x_32761, _x_33149)
+                                                                                                            return _x_33150
+                                                                                                        _x_33152 = _f_33151(None)
+                                                                                                        return _x_33152
+                                                                                            case _:
+                                                                                                def _f_33161(h_33154: Any):
+                                                                                                    _x_33155 = black()
+                                                                                                    _x_33156 = red()
+                                                                                                    _x_33157 = RBTree_node(_x_33156, a_32777, a_32778, a_32779)
+                                                                                                    _x_33158 = RBTree_node(a_33127, a_33128, a_33129, a_33130)
+                                                                                                    _x_33159 = RBTree_node(_x_33156, _x_33158, a_33125, a_33126)
+                                                                                                    _x_33160 = _alt_32775(_x_33155, _x_33157, x_32761, _x_33159)
+                                                                                                    return _x_33160
+                                                                                                _x_33162 = _f_33161(None)
+                                                                                                return _x_33162
+                                                                                    _x_33165 = _f_33164(None)
+                                                                                    return _x_33165
+                                                                        case _:
+                                                                            def _f_33194(h_33167: Any):
+                                                                                match a_33126:
+                                                                                    case RBTree_node(a_33168, a_33169, a_33170, a_33171):
+                                                                                        match a_33168:
+                                                                                            case red():
+                                                                                                _x_33172 = red()
+                                                                                                _x_33173 = RBTree_node(_x_33172, a_32777, a_32778, a_32779)
+                                                                                                _x_33174 = _alt_32772(_x_33173, x_32761, a_33124, a_33125, a_33169, a_33170, a_33171)
+                                                                                                return _x_33174
+                                                                                            case _:
+                                                                                                def _f_33182(h_33175: Any):
+                                                                                                    _x_33176 = black()
+                                                                                                    _x_33177 = red()
+                                                                                                    _x_33178 = RBTree_node(_x_33177, a_32777, a_32778, a_32779)
+                                                                                                    _x_33179 = RBTree_node(a_33168, a_33169, a_33170, a_33171)
+                                                                                                    _x_33180 = RBTree_node(_x_33177, a_33124, a_33125, _x_33179)
+                                                                                                    _x_33181 = _alt_32775(_x_33176, _x_33178, x_32761, _x_33180)
+                                                                                                    return _x_33181
+                                                                                                _x_33183 = _f_33182(None)
+                                                                                                return _x_33183
+                                                                                    case _:
+                                                                                        def _f_33191(h_33185: Any):
+                                                                                            _x_33186 = black()
+                                                                                            _x_33187 = red()
+                                                                                            _x_33188 = RBTree_node(_x_33187, a_32777, a_32778, a_32779)
+                                                                                            _x_33189 = RBTree_node(_x_33187, a_33124, a_33125, a_33126)
+                                                                                            _x_33190 = _alt_32775(_x_33186, _x_33188, x_32761, _x_33189)
+                                                                                            return _x_33190
+                                                                                        _x_33192 = _f_33191(None)
+                                                                                        return _x_33192
+                                                                            _x_33195 = _f_33194(None)
+                                                                            return _x_33195
+                                                                case _:
+                                                                    def _f_33203(h_33197: Any):
+                                                                        _x_33198 = black()
+                                                                        _x_33199 = red()
+                                                                        _x_33200 = RBTree_node(_x_33199, a_32777, a_32778, a_32779)
+                                                                        _x_33201 = RBTree_node(a_33123, a_33124, a_33125, a_33126)
+                                                                        _x_33202 = _alt_32775(_x_33198, _x_33200, x_32761, _x_33201)
+                                                                        return _x_33202
+                                                                    _x_33204 = _f_33203(None)
+                                                                    return _x_33204
+                                                        case _:
+                                                            def _f_33211(h_33206: Any):
+                                                                _x_33207 = black()
+                                                                _x_33208 = red()
+                                                                _x_33209 = RBTree_node(_x_33208, a_32777, a_32778, a_32779)
+                                                                _x_33210 = _alt_32775(_x_33207, _x_33209, x_32761, x_32762)
+                                                                return _x_33210
+                                                            _x_33212 = _f_33211(None)
+                                                            return _x_33212
+                                                _x_33215 = _f_33214(None)
+                                                return _x_33215
+                                    _x_33218 = _f_33217(None)
+                                    return _x_33218
+                        case _:
+                            def _f_33307(h_33220: Any):
+                                match x_32762:
+                                    case RBTree_node(a_33221, a_33222, a_33223, a_33224):
+                                        match a_33221:
+                                            case red():
+                                                match a_33222:
+                                                    case RBTree_node(a_33225, a_33226, a_33227, a_33228):
+                                                        match a_33225:
+                                                            case red():
+                                                                _x_33229 = RBTree_node(a_32776, a_32777, a_32778, a_32779)
+                                                                _x_33230 = _alt_32771(_x_33229, x_32761, a_33226, a_33227, a_33228, a_33223, a_33224)
+                                                                return _x_33230
+                                                            case _:
+                                                                def _f_33260(h_33231: Any):
+                                                                    match a_33224:
+                                                                        case RBTree_node(a_33232, a_33233, a_33234, a_33235):
+                                                                            match a_33232:
+                                                                                case red():
+                                                                                    _x_33236 = RBTree_node(a_32776, a_32777, a_32778, a_32779)
+                                                                                    _x_33237 = RBTree_node(a_33225, a_33226, a_33227, a_33228)
+                                                                                    _x_33238 = _alt_32772(_x_33236, x_32761, _x_33237, a_33223, a_33233, a_33234, a_33235)
+                                                                                    return _x_33238
+                                                                                case _:
+                                                                                    def _f_33247(h_33239: Any):
+                                                                                        _x_33240 = black()
+                                                                                        _x_33241 = RBTree_node(a_32776, a_32777, a_32778, a_32779)
+                                                                                        _x_33242 = red()
+                                                                                        _x_33243 = RBTree_node(a_33225, a_33226, a_33227, a_33228)
+                                                                                        _x_33244 = RBTree_node(a_33232, a_33233, a_33234, a_33235)
+                                                                                        _x_33245 = RBTree_node(_x_33242, _x_33243, a_33223, _x_33244)
+                                                                                        _x_33246 = _alt_32775(_x_33240, _x_33241, x_32761, _x_33245)
+                                                                                        return _x_33246
+                                                                                    _x_33248 = _f_33247(None)
+                                                                                    return _x_33248
+                                                                        case _:
+                                                                            def _f_33257(h_33250: Any):
+                                                                                _x_33251 = black()
+                                                                                _x_33252 = RBTree_node(a_32776, a_32777, a_32778, a_32779)
+                                                                                _x_33253 = red()
+                                                                                _x_33254 = RBTree_node(a_33225, a_33226, a_33227, a_33228)
+                                                                                _x_33255 = RBTree_node(_x_33253, _x_33254, a_33223, a_33224)
+                                                                                _x_33256 = _alt_32775(_x_33251, _x_33252, x_32761, _x_33255)
+                                                                                return _x_33256
+                                                                            _x_33258 = _f_33257(None)
+                                                                            return _x_33258
+                                                                _x_33261 = _f_33260(None)
+                                                                return _x_33261
+                                                    case _:
+                                                        def _f_33289(h_33263: Any):
+                                                            match a_33224:
+                                                                case RBTree_node(a_33264, a_33265, a_33266, a_33267):
+                                                                    match a_33264:
                                                                         case red():
-                                                                            match a_25248:
-                                                                                case RBTree_empty():
-                                                                                    match a_25250:
-                                                                                        case RBTree_empty():
-                                                                                            _x_25251 = black()
-                                                                                            _x_25252 = RBTree_node(None, _x_25251, a_24836, a_24837, a_24838)
-                                                                                            _x_25253 = red()
-                                                                                            _x_25254 = RBTree_empty(None)
-                                                                                            _x_25255 = RBTree_node(None, _x_25253, _x_25254, a_25249, _x_25254)
-                                                                                            _x_25256 = _alt_24449(_x_25252, a_24536, a_25240, a_25241, a_25242, x_24440, _x_25255)
-                                                                                            return _x_25256
-                                                                                        case RBTree_node(a_25257, a_25258, a_25259, a_25260):
-                                                                                            match a_25257:
-                                                                                                case red():
-                                                                                                    _x_25261 = black()
-                                                                                                    _x_25262 = RBTree_node(None, _x_25261, a_24836, a_24837, a_24838)
-                                                                                                    _x_25263 = red()
-                                                                                                    _x_25264 = RBTree_empty(None)
-                                                                                                    _x_25265 = RBTree_node(None, _x_25263, a_25258, a_25259, a_25260)
-                                                                                                    _x_25266 = RBTree_node(None, _x_25263, _x_25264, a_25249, _x_25265)
-                                                                                                    _x_25267 = _alt_24449(_x_25262, a_24536, a_25240, a_25241, a_25242, x_24440, _x_25266)
-                                                                                                    return _x_25267
-                                                                                                case black():
-                                                                                                    _x_25268 = black()
-                                                                                                    _x_25269 = RBTree_node(None, _x_25268, a_24836, a_24837, a_24838)
-                                                                                                    _x_25270 = red()
-                                                                                                    _x_25271 = RBTree_empty(None)
-                                                                                                    _x_25272 = RBTree_node(None, _x_25268, a_25258, a_25259, a_25260)
-                                                                                                    _x_25273 = RBTree_node(None, _x_25270, _x_25271, a_25249, _x_25272)
-                                                                                                    _x_25274 = _alt_24449(_x_25269, a_24536, a_25240, a_25241, a_25242, x_24440, _x_25273)
-                                                                                                    return _x_25274
-                                                                                case RBTree_node(a_25277, a_25278, a_25279, a_25280):
-                                                                                    match a_25277:
-                                                                                        case red():
-                                                                                            match a_25250:
-                                                                                                case RBTree_empty():
-                                                                                                    _x_25281 = black()
-                                                                                                    _x_25282 = RBTree_node(None, _x_25281, a_24836, a_24837, a_24838)
-                                                                                                    _x_25283 = red()
-                                                                                                    _x_25284 = RBTree_node(None, _x_25283, a_25278, a_25279, a_25280)
-                                                                                                    _x_25285 = RBTree_empty(None)
-                                                                                                    _x_25286 = RBTree_node(None, _x_25283, _x_25284, a_25249, _x_25285)
-                                                                                                    _x_25287 = _alt_24449(_x_25282, a_24536, a_25240, a_25241, a_25242, x_24440, _x_25286)
-                                                                                                    return _x_25287
-                                                                                                case RBTree_node(a_25288, a_25289, a_25290, a_25291):
-                                                                                                    match a_25288:
-                                                                                                        case red():
-                                                                                                            _x_25292 = black()
-                                                                                                            _x_25293 = RBTree_node(None, _x_25292, a_24836, a_24837, a_24838)
-                                                                                                            _x_25294 = red()
-                                                                                                            _x_25295 = RBTree_node(None, _x_25294, a_25278, a_25279, a_25280)
-                                                                                                            _x_25296 = RBTree_node(None, _x_25294, a_25289, a_25290, a_25291)
-                                                                                                            _x_25297 = RBTree_node(None, _x_25294, _x_25295, a_25249, _x_25296)
-                                                                                                            _x_25298 = _alt_24449(_x_25293, a_24536, a_25240, a_25241, a_25242, x_24440, _x_25297)
-                                                                                                            return _x_25298
-                                                                                                        case black():
-                                                                                                            _x_25299 = black()
-                                                                                                            _x_25300 = RBTree_node(None, _x_25299, a_24836, a_24837, a_24838)
-                                                                                                            _x_25301 = red()
-                                                                                                            _x_25302 = RBTree_node(None, _x_25301, a_25278, a_25279, a_25280)
-                                                                                                            _x_25303 = RBTree_node(None, _x_25299, a_25289, a_25290, a_25291)
-                                                                                                            _x_25304 = RBTree_node(None, _x_25301, _x_25302, a_25249, _x_25303)
-                                                                                                            _x_25305 = _alt_24449(_x_25300, a_24536, a_25240, a_25241, a_25242, x_24440, _x_25304)
-                                                                                                            return _x_25305
-                                                                                        case black():
-                                                                                            match a_25250:
-                                                                                                case RBTree_empty():
-                                                                                                    _x_25308 = black()
-                                                                                                    _x_25309 = RBTree_node(None, _x_25308, a_24836, a_24837, a_24838)
-                                                                                                    _x_25310 = red()
-                                                                                                    _x_25311 = RBTree_node(None, _x_25308, a_25278, a_25279, a_25280)
-                                                                                                    _x_25312 = RBTree_empty(None)
-                                                                                                    _x_25313 = RBTree_node(None, _x_25310, _x_25311, a_25249, _x_25312)
-                                                                                                    _x_25314 = _alt_24449(_x_25309, a_24536, a_25240, a_25241, a_25242, x_24440, _x_25313)
-                                                                                                    return _x_25314
-                                                                                                case RBTree_node(a_25315, a_25316, a_25317, a_25318):
-                                                                                                    match a_25315:
-                                                                                                        case red():
-                                                                                                            _x_25319 = black()
-                                                                                                            _x_25320 = RBTree_node(None, _x_25319, a_24836, a_24837, a_24838)
-                                                                                                            _x_25321 = red()
-                                                                                                            _x_25322 = RBTree_node(None, _x_25319, a_25278, a_25279, a_25280)
-                                                                                                            _x_25323 = RBTree_node(None, _x_25321, a_25316, a_25317, a_25318)
-                                                                                                            _x_25324 = RBTree_node(None, _x_25321, _x_25322, a_25249, _x_25323)
-                                                                                                            _x_25325 = _alt_24449(_x_25320, a_24536, a_25240, a_25241, a_25242, x_24440, _x_25324)
-                                                                                                            return _x_25325
-                                                                                                        case black():
-                                                                                                            _x_25326 = black()
-                                                                                                            _x_25327 = RBTree_node(None, _x_25326, a_24836, a_24837, a_24838)
-                                                                                                            _x_25328 = red()
-                                                                                                            _x_25329 = RBTree_node(None, _x_25326, a_25278, a_25279, a_25280)
-                                                                                                            _x_25330 = RBTree_node(None, _x_25326, a_25316, a_25317, a_25318)
-                                                                                                            _x_25331 = RBTree_node(None, _x_25328, _x_25329, a_25249, _x_25330)
-                                                                                                            _x_25332 = _alt_24449(_x_25327, a_24536, a_25240, a_25241, a_25242, x_24440, _x_25331)
-                                                                                                            return _x_25332
-                                                                        case black():
-                                                                            _x_25337 = black()
-                                                                            _x_25338 = RBTree_node(None, _x_25337, a_24836, a_24837, a_24838)
-                                                                            _x_25339 = RBTree_node(None, _x_25337, a_25248, a_25249, a_25250)
-                                                                            _x_25340 = _alt_24449(_x_25338, a_24536, a_25240, a_25241, a_25242, x_24440, _x_25339)
-                                                                            return _x_25340
-                                                        case black():
-                                                            match x_24441:
-                                                                case RBTree_empty():
-                                                                    _x_25343 = black()
-                                                                    _x_25344 = red()
-                                                                    _x_25345 = RBTree_node(None, _x_25343, a_24836, a_24837, a_24838)
-                                                                    _x_25346 = RBTree_node(None, _x_25343, a_25240, a_25241, a_25242)
-                                                                    _x_25347 = RBTree_node(None, _x_25344, _x_25345, a_24536, _x_25346)
-                                                                    _x_25348 = RBTree_empty(None)
-                                                                    _x_25349 = _alt_24454(_x_25343, _x_25347, x_24440, _x_25348)
-                                                                    return _x_25349
-                                                                case RBTree_node(a_25350, a_25351, a_25352, a_25353):
-                                                                    match a_25350:
+                                                                            _x_33268 = RBTree_node(a_32776, a_32777, a_32778, a_32779)
+                                                                            _x_33269 = _alt_32772(_x_33268, x_32761, a_33222, a_33223, a_33265, a_33266, a_33267)
+                                                                            return _x_33269
+                                                                        case _:
+                                                                            def _f_33277(h_33270: Any):
+                                                                                _x_33271 = black()
+                                                                                _x_33272 = RBTree_node(a_32776, a_32777, a_32778, a_32779)
+                                                                                _x_33273 = red()
+                                                                                _x_33274 = RBTree_node(a_33264, a_33265, a_33266, a_33267)
+                                                                                _x_33275 = RBTree_node(_x_33273, a_33222, a_33223, _x_33274)
+                                                                                _x_33276 = _alt_32775(_x_33271, _x_33272, x_32761, _x_33275)
+                                                                                return _x_33276
+                                                                            _x_33278 = _f_33277(None)
+                                                                            return _x_33278
+                                                                case _:
+                                                                    def _f_33286(h_33280: Any):
+                                                                        _x_33281 = black()
+                                                                        _x_33282 = RBTree_node(a_32776, a_32777, a_32778, a_32779)
+                                                                        _x_33283 = red()
+                                                                        _x_33284 = RBTree_node(_x_33283, a_33222, a_33223, a_33224)
+                                                                        _x_33285 = _alt_32775(_x_33281, _x_33282, x_32761, _x_33284)
+                                                                        return _x_33285
+                                                                    _x_33287 = _f_33286(None)
+                                                                    return _x_33287
+                                                        _x_33290 = _f_33289(None)
+                                                        return _x_33290
+                                            case _:
+                                                def _f_33297(h_33292: Any):
+                                                    _x_33293 = black()
+                                                    _x_33294 = RBTree_node(a_32776, a_32777, a_32778, a_32779)
+                                                    _x_33295 = RBTree_node(a_33221, a_33222, a_33223, a_33224)
+                                                    _x_33296 = _alt_32775(_x_33293, _x_33294, x_32761, _x_33295)
+                                                    return _x_33296
+                                                _x_33298 = _f_33297(None)
+                                                return _x_33298
+                                    case _:
+                                        def _f_33304(h_33300: Any):
+                                            _x_33301 = black()
+                                            _x_33302 = RBTree_node(a_32776, a_32777, a_32778, a_32779)
+                                            _x_33303 = _alt_32775(_x_33301, _x_33302, x_32761, x_32762)
+                                            return _x_33303
+                                        _x_33305 = _f_33304(None)
+                                        return _x_33305
+                            _x_33308 = _f_33307(None)
+                            return _x_33308
+                case _:
+                    def _f_33388(h_33310: Any):
+                        match x_32762:
+                            case RBTree_node(a_33311, a_33312, a_33313, a_33314):
+                                match a_33311:
+                                    case red():
+                                        match a_33312:
+                                            case RBTree_node(a_33315, a_33316, a_33317, a_33318):
+                                                match a_33315:
+                                                    case red():
+                                                        _x_33319 = _alt_32771(x_32760, x_32761, a_33316, a_33317, a_33318, a_33313, a_33314)
+                                                        return _x_33319
+                                                    case _:
+                                                        def _f_33346(h_33320: Any):
+                                                            match a_33314:
+                                                                case RBTree_node(a_33321, a_33322, a_33323, a_33324):
+                                                                    match a_33321:
                                                                         case red():
-                                                                            match a_25351:
-                                                                                case RBTree_empty():
-                                                                                    match a_25353:
-                                                                                        case RBTree_empty():
-                                                                                            _x_25354 = black()
-                                                                                            _x_25355 = red()
-                                                                                            _x_25356 = RBTree_node(None, _x_25354, a_24836, a_24837, a_24838)
-                                                                                            _x_25357 = RBTree_node(None, _x_25354, a_25240, a_25241, a_25242)
-                                                                                            _x_25358 = RBTree_node(None, _x_25355, _x_25356, a_24536, _x_25357)
-                                                                                            _x_25359 = RBTree_empty(None)
-                                                                                            _x_25360 = RBTree_node(None, _x_25355, _x_25359, a_25352, _x_25359)
-                                                                                            _x_25361 = _alt_24454(_x_25354, _x_25358, x_24440, _x_25360)
-                                                                                            return _x_25361
-                                                                                        case RBTree_node(a_25362, a_25363, a_25364, a_25365):
-                                                                                            match a_25362:
-                                                                                                case red():
-                                                                                                    _x_25366 = red()
-                                                                                                    _x_25367 = black()
-                                                                                                    _x_25368 = RBTree_node(None, _x_25367, a_24836, a_24837, a_24838)
-                                                                                                    _x_25369 = RBTree_node(None, _x_25367, a_25240, a_25241, a_25242)
-                                                                                                    _x_25370 = RBTree_node(None, _x_25366, _x_25368, a_24536, _x_25369)
-                                                                                                    _x_25371 = RBTree_empty(None)
-                                                                                                    _x_25372 = _alt_24451(_x_25370, x_24440, _x_25371, a_25352, a_25363, a_25364, a_25365)
-                                                                                                    return _x_25372
-                                                                                                case black():
-                                                                                                    _x_25373 = black()
-                                                                                                    _x_25374 = red()
-                                                                                                    _x_25375 = RBTree_node(None, _x_25373, a_24836, a_24837, a_24838)
-                                                                                                    _x_25376 = RBTree_node(None, _x_25373, a_25240, a_25241, a_25242)
-                                                                                                    _x_25377 = RBTree_node(None, _x_25374, _x_25375, a_24536, _x_25376)
-                                                                                                    _x_25378 = RBTree_empty(None)
-                                                                                                    _x_25379 = RBTree_node(None, _x_25373, a_25363, a_25364, a_25365)
-                                                                                                    _x_25380 = RBTree_node(None, _x_25374, _x_25378, a_25352, _x_25379)
-                                                                                                    _x_25381 = _alt_24454(_x_25373, _x_25377, x_24440, _x_25380)
-                                                                                                    return _x_25381
-                                                                                case RBTree_node(a_25384, a_25385, a_25386, a_25387):
-                                                                                    match a_25384:
-                                                                                        case red():
-                                                                                            match a_25353:
-                                                                                                case RBTree_empty():
-                                                                                                    _x_25388 = red()
-                                                                                                    _x_25389 = black()
-                                                                                                    _x_25390 = RBTree_node(None, _x_25389, a_24836, a_24837, a_24838)
-                                                                                                    _x_25391 = RBTree_node(None, _x_25389, a_25240, a_25241, a_25242)
-                                                                                                    _x_25392 = RBTree_node(None, _x_25388, _x_25390, a_24536, _x_25391)
-                                                                                                    _x_25393 = RBTree_empty(None)
-                                                                                                    _x_25394 = _alt_24450(_x_25392, x_24440, a_25385, a_25386, a_25387, a_25352, _x_25393)
-                                                                                                    return _x_25394
-                                                                                                case RBTree_node(a_25395, a_25396, a_25397, a_25398):
-                                                                                                    match a_25395:
-                                                                                                        case red():
-                                                                                                            _x_25399 = red()
-                                                                                                            _x_25400 = black()
-                                                                                                            _x_25401 = RBTree_node(None, _x_25400, a_24836, a_24837, a_24838)
-                                                                                                            _x_25402 = RBTree_node(None, _x_25400, a_25240, a_25241, a_25242)
-                                                                                                            _x_25403 = RBTree_node(None, _x_25399, _x_25401, a_24536, _x_25402)
-                                                                                                            _x_25404 = RBTree_node(None, _x_25399, a_25396, a_25397, a_25398)
-                                                                                                            _x_25405 = _alt_24450(_x_25403, x_24440, a_25385, a_25386, a_25387, a_25352, _x_25404)
-                                                                                                            return _x_25405
-                                                                                                        case black():
-                                                                                                            _x_25406 = red()
-                                                                                                            _x_25407 = black()
-                                                                                                            _x_25408 = RBTree_node(None, _x_25407, a_24836, a_24837, a_24838)
-                                                                                                            _x_25409 = RBTree_node(None, _x_25407, a_25240, a_25241, a_25242)
-                                                                                                            _x_25410 = RBTree_node(None, _x_25406, _x_25408, a_24536, _x_25409)
-                                                                                                            _x_25411 = RBTree_node(None, _x_25407, a_25396, a_25397, a_25398)
-                                                                                                            _x_25412 = _alt_24450(_x_25410, x_24440, a_25385, a_25386, a_25387, a_25352, _x_25411)
-                                                                                                            return _x_25412
-                                                                                        case black():
-                                                                                            match a_25353:
-                                                                                                case RBTree_empty():
-                                                                                                    _x_25415 = black()
-                                                                                                    _x_25416 = red()
-                                                                                                    _x_25417 = RBTree_node(None, _x_25415, a_24836, a_24837, a_24838)
-                                                                                                    _x_25418 = RBTree_node(None, _x_25415, a_25240, a_25241, a_25242)
-                                                                                                    _x_25419 = RBTree_node(None, _x_25416, _x_25417, a_24536, _x_25418)
-                                                                                                    _x_25420 = RBTree_node(None, _x_25415, a_25385, a_25386, a_25387)
-                                                                                                    _x_25421 = RBTree_empty(None)
-                                                                                                    _x_25422 = RBTree_node(None, _x_25416, _x_25420, a_25352, _x_25421)
-                                                                                                    _x_25423 = _alt_24454(_x_25415, _x_25419, x_24440, _x_25422)
-                                                                                                    return _x_25423
-                                                                                                case RBTree_node(a_25424, a_25425, a_25426, a_25427):
-                                                                                                    match a_25424:
-                                                                                                        case red():
-                                                                                                            _x_25428 = red()
-                                                                                                            _x_25429 = black()
-                                                                                                            _x_25430 = RBTree_node(None, _x_25429, a_24836, a_24837, a_24838)
-                                                                                                            _x_25431 = RBTree_node(None, _x_25429, a_25240, a_25241, a_25242)
-                                                                                                            _x_25432 = RBTree_node(None, _x_25428, _x_25430, a_24536, _x_25431)
-                                                                                                            _x_25433 = RBTree_node(None, _x_25429, a_25385, a_25386, a_25387)
-                                                                                                            _x_25434 = _alt_24451(_x_25432, x_24440, _x_25433, a_25352, a_25425, a_25426, a_25427)
-                                                                                                            return _x_25434
-                                                                                                        case black():
-                                                                                                            _x_25435 = black()
-                                                                                                            _x_25436 = red()
-                                                                                                            _x_25437 = RBTree_node(None, _x_25435, a_24836, a_24837, a_24838)
-                                                                                                            _x_25438 = RBTree_node(None, _x_25435, a_25240, a_25241, a_25242)
-                                                                                                            _x_25439 = RBTree_node(None, _x_25436, _x_25437, a_24536, _x_25438)
-                                                                                                            _x_25440 = RBTree_node(None, _x_25435, a_25385, a_25386, a_25387)
-                                                                                                            _x_25441 = RBTree_node(None, _x_25435, a_25425, a_25426, a_25427)
-                                                                                                            _x_25442 = RBTree_node(None, _x_25436, _x_25440, a_25352, _x_25441)
-                                                                                                            _x_25443 = _alt_24454(_x_25435, _x_25439, x_24440, _x_25442)
-                                                                                                            return _x_25443
-                                                                        case black():
-                                                                            _x_25448 = black()
-                                                                            _x_25449 = red()
-                                                                            _x_25450 = RBTree_node(None, _x_25448, a_24836, a_24837, a_24838)
-                                                                            _x_25451 = RBTree_node(None, _x_25448, a_25240, a_25241, a_25242)
-                                                                            _x_25452 = RBTree_node(None, _x_25449, _x_25450, a_24536, _x_25451)
-                                                                            _x_25453 = RBTree_node(None, _x_25448, a_25351, a_25352, a_25353)
-                                                                            _x_25454 = _alt_24454(_x_25448, _x_25452, x_24440, _x_25453)
-                                                                            return _x_25454
-                        case black():
-                            match x_24441:
-                                case RBTree_empty():
-                                    _x_25461 = black()
-                                    _x_25462 = RBTree_node(None, _x_25461, a_24535, a_24536, a_24537)
-                                    _x_25463 = RBTree_empty(None)
-                                    _x_25464 = _alt_24454(_x_25461, _x_25462, x_24440, _x_25463)
-                                    return _x_25464
-                                case RBTree_node(a_25465, a_25466, a_25467, a_25468):
-                                    match a_25465:
-                                        case red():
-                                            match a_25466:
-                                                case RBTree_empty():
-                                                    match a_25468:
-                                                        case RBTree_empty():
-                                                            _x_25469 = black()
-                                                            _x_25470 = RBTree_node(None, _x_25469, a_24535, a_24536, a_24537)
-                                                            _x_25471 = red()
-                                                            _x_25472 = RBTree_empty(None)
-                                                            _x_25473 = RBTree_node(None, _x_25471, _x_25472, a_25467, _x_25472)
-                                                            _x_25474 = _alt_24454(_x_25469, _x_25470, x_24440, _x_25473)
-                                                            return _x_25474
-                                                        case RBTree_node(a_25475, a_25476, a_25477, a_25478):
-                                                            match a_25475:
+                                                                            _x_33325 = RBTree_node(a_33315, a_33316, a_33317, a_33318)
+                                                                            _x_33326 = _alt_32772(x_32760, x_32761, _x_33325, a_33313, a_33322, a_33323, a_33324)
+                                                                            return _x_33326
+                                                                        case _:
+                                                                            def _f_33334(h_33327: Any):
+                                                                                _x_33328 = black()
+                                                                                _x_33329 = red()
+                                                                                _x_33330 = RBTree_node(a_33315, a_33316, a_33317, a_33318)
+                                                                                _x_33331 = RBTree_node(a_33321, a_33322, a_33323, a_33324)
+                                                                                _x_33332 = RBTree_node(_x_33329, _x_33330, a_33313, _x_33331)
+                                                                                _x_33333 = _alt_32775(_x_33328, x_32760, x_32761, _x_33332)
+                                                                                return _x_33333
+                                                                            _x_33335 = _f_33334(None)
+                                                                            return _x_33335
+                                                                case _:
+                                                                    def _f_33343(h_33337: Any):
+                                                                        _x_33338 = black()
+                                                                        _x_33339 = red()
+                                                                        _x_33340 = RBTree_node(a_33315, a_33316, a_33317, a_33318)
+                                                                        _x_33341 = RBTree_node(_x_33339, _x_33340, a_33313, a_33314)
+                                                                        _x_33342 = _alt_32775(_x_33338, x_32760, x_32761, _x_33341)
+                                                                        return _x_33342
+                                                                    _x_33344 = _f_33343(None)
+                                                                    return _x_33344
+                                                        _x_33347 = _f_33346(None)
+                                                        return _x_33347
+                                            case _:
+                                                def _f_33372(h_33349: Any):
+                                                    match a_33314:
+                                                        case RBTree_node(a_33350, a_33351, a_33352, a_33353):
+                                                            match a_33350:
                                                                 case red():
-                                                                    _x_25479 = black()
-                                                                    _x_25480 = RBTree_node(None, _x_25479, a_24535, a_24536, a_24537)
-                                                                    _x_25481 = RBTree_empty(None)
-                                                                    _x_25482 = _alt_24451(_x_25480, x_24440, _x_25481, a_25467, a_25476, a_25477, a_25478)
-                                                                    return _x_25482
-                                                                case black():
-                                                                    _x_25483 = black()
-                                                                    _x_25484 = RBTree_node(None, _x_25483, a_24535, a_24536, a_24537)
-                                                                    _x_25485 = red()
-                                                                    _x_25486 = RBTree_empty(None)
-                                                                    _x_25487 = RBTree_node(None, _x_25483, a_25476, a_25477, a_25478)
-                                                                    _x_25488 = RBTree_node(None, _x_25485, _x_25486, a_25467, _x_25487)
-                                                                    _x_25489 = _alt_24454(_x_25483, _x_25484, x_24440, _x_25488)
-                                                                    return _x_25489
-                                                case RBTree_node(a_25492, a_25493, a_25494, a_25495):
-                                                    match a_25492:
-                                                        case red():
-                                                            match a_25468:
-                                                                case RBTree_empty():
-                                                                    _x_25496 = black()
-                                                                    _x_25497 = RBTree_node(None, _x_25496, a_24535, a_24536, a_24537)
-                                                                    _x_25498 = RBTree_empty(None)
-                                                                    _x_25499 = _alt_24450(_x_25497, x_24440, a_25493, a_25494, a_25495, a_25467, _x_25498)
-                                                                    return _x_25499
-                                                                case RBTree_node(a_25500, a_25501, a_25502, a_25503):
-                                                                    match a_25500:
-                                                                        case red():
-                                                                            _x_25504 = black()
-                                                                            _x_25505 = RBTree_node(None, _x_25504, a_24535, a_24536, a_24537)
-                                                                            _x_25506 = red()
-                                                                            _x_25507 = RBTree_node(None, _x_25506, a_25501, a_25502, a_25503)
-                                                                            _x_25508 = _alt_24450(_x_25505, x_24440, a_25493, a_25494, a_25495, a_25467, _x_25507)
-                                                                            return _x_25508
-                                                                        case black():
-                                                                            _x_25509 = black()
-                                                                            _x_25510 = RBTree_node(None, _x_25509, a_24535, a_24536, a_24537)
-                                                                            _x_25511 = RBTree_node(None, _x_25509, a_25501, a_25502, a_25503)
-                                                                            _x_25512 = _alt_24450(_x_25510, x_24440, a_25493, a_25494, a_25495, a_25467, _x_25511)
-                                                                            return _x_25512
-                                                        case black():
-                                                            match a_25468:
-                                                                case RBTree_empty():
-                                                                    _x_25515 = black()
-                                                                    _x_25516 = RBTree_node(None, _x_25515, a_24535, a_24536, a_24537)
-                                                                    _x_25517 = red()
-                                                                    _x_25518 = RBTree_node(None, _x_25515, a_25493, a_25494, a_25495)
-                                                                    _x_25519 = RBTree_empty(None)
-                                                                    _x_25520 = RBTree_node(None, _x_25517, _x_25518, a_25467, _x_25519)
-                                                                    _x_25521 = _alt_24454(_x_25515, _x_25516, x_24440, _x_25520)
-                                                                    return _x_25521
-                                                                case RBTree_node(a_25522, a_25523, a_25524, a_25525):
-                                                                    match a_25522:
-                                                                        case red():
-                                                                            _x_25526 = black()
-                                                                            _x_25527 = RBTree_node(None, _x_25526, a_24535, a_24536, a_24537)
-                                                                            _x_25528 = RBTree_node(None, _x_25526, a_25493, a_25494, a_25495)
-                                                                            _x_25529 = _alt_24451(_x_25527, x_24440, _x_25528, a_25467, a_25523, a_25524, a_25525)
-                                                                            return _x_25529
-                                                                        case black():
-                                                                            _x_25530 = black()
-                                                                            _x_25531 = RBTree_node(None, _x_25530, a_24535, a_24536, a_24537)
-                                                                            _x_25532 = red()
-                                                                            _x_25533 = RBTree_node(None, _x_25530, a_25493, a_25494, a_25495)
-                                                                            _x_25534 = RBTree_node(None, _x_25530, a_25523, a_25524, a_25525)
-                                                                            _x_25535 = RBTree_node(None, _x_25532, _x_25533, a_25467, _x_25534)
-                                                                            _x_25536 = _alt_24454(_x_25530, _x_25531, x_24440, _x_25535)
-                                                                            return _x_25536
-                                        case black():
-                                            _x_25541 = black()
-                                            _x_25542 = RBTree_node(None, _x_25541, a_24535, a_24536, a_24537)
-                                            _x_25543 = RBTree_node(None, _x_25541, a_25466, a_25467, a_25468)
-                                            _x_25544 = _alt_24454(_x_25541, _x_25542, x_24440, _x_25543)
-                                            return _x_25544
+                                                                    _x_33354 = _alt_32772(x_32760, x_32761, a_33312, a_33313, a_33351, a_33352, a_33353)
+                                                                    return _x_33354
+                                                                case _:
+                                                                    def _f_33361(h_33355: Any):
+                                                                        _x_33356 = black()
+                                                                        _x_33357 = red()
+                                                                        _x_33358 = RBTree_node(a_33350, a_33351, a_33352, a_33353)
+                                                                        _x_33359 = RBTree_node(_x_33357, a_33312, a_33313, _x_33358)
+                                                                        _x_33360 = _alt_32775(_x_33356, x_32760, x_32761, _x_33359)
+                                                                        return _x_33360
+                                                                    _x_33362 = _f_33361(None)
+                                                                    return _x_33362
+                                                        case _:
+                                                            def _f_33369(h_33364: Any):
+                                                                _x_33365 = black()
+                                                                _x_33366 = red()
+                                                                _x_33367 = RBTree_node(_x_33366, a_33312, a_33313, a_33314)
+                                                                _x_33368 = _alt_32775(_x_33365, x_32760, x_32761, _x_33367)
+                                                                return _x_33368
+                                                            _x_33370 = _f_33369(None)
+                                                            return _x_33370
+                                                _x_33373 = _f_33372(None)
+                                                return _x_33373
+                                    case _:
+                                        def _f_33379(h_33375: Any):
+                                            _x_33376 = black()
+                                            _x_33377 = RBTree_node(a_33311, a_33312, a_33313, a_33314)
+                                            _x_33378 = _alt_32775(_x_33376, x_32760, x_32761, _x_33377)
+                                            return _x_33378
+                                        _x_33380 = _f_33379(None)
+                                        return _x_33380
+                            case _:
+                                def _f_33385(h_33382: Any):
+                                    _x_33383 = black()
+                                    _x_33384 = _alt_32775(_x_33383, x_32760, x_32761, x_32762)
+                                    return _x_33384
+                                _x_33386 = _f_33385(None)
+                                return _x_33386
+                    _x_33389 = _f_33388(None)
+                    return _x_33389
+        case _:
+            _x_33394 = (lambda h_33391: _alt_32775(x_32759, x_32760, x_32761, x_32762))(None)
+            return _x_33394
 
 # Lean: Corpus.Production.RBTree.insertAux
-def insert_aux(__1755: Any, inst_25551: Any, x_1756: Any, x_25552: Any) -> Any:
-    def _f_25556():
-        _x_25553 = red()
-        _x_25554 = RBTree_empty(None)
-        _x_25555 = RBTree_node(None, _x_25553, _x_25554, x_1756, _x_25554)
-        return _x_25555
-    _alt_25557 = _f_25556
-    def _f_25578(c_1758: Color, l_1759: Any, y_1760: Any, r_1761: Any):
-        def _f_25560():
-            _x_25558 = insert_aux(None, inst_25551, x_1756, l_1759)
-            _x_25559 = balance(None, c_1758, _x_25558, y_1760, r_1761)
-            return _x_25559
-        _alt_25561 = _f_25560
-        def _f_25563():
-            _x_25562 = RBTree_node(None, c_1758, l_1759, y_1760, r_1761)
-            return _x_25562
-        _alt_25564 = _f_25563
-        def _f_25567():
-            _x_25565 = insert_aux(None, inst_25551, x_1756, r_1761)
-            _x_25566 = balance(None, c_1758, l_1759, y_1760, _x_25565)
-            return _x_25566
-        _alt_25568 = _f_25567
-        _x_25569 = inst_25551.ord_0
-        _x_25570 = _x_25569(x_1756, y_1760)
-        match _x_25570:
+def insert_aux(__1678: Any, inst_33397: Any, x_1679: Any, x_33398: Any) -> Any:
+    def _f_33402():
+        _x_33399 = red()
+        _x_33400 = RBTree_empty()
+        _x_33401 = RBTree_node(_x_33399, _x_33400, x_1679, _x_33400)
+        return _x_33401
+    _alt_33403 = _f_33402
+    def _f_33424(c_1681: Color, l_1682: Any, y_1683: Any, r_1684: Any):
+        def _f_33406():
+            _x_33404 = insert_aux(None, inst_33397, x_1679, l_1682)
+            _x_33405 = balance(None, c_1681, _x_33404, y_1683, r_1684)
+            return _x_33405
+        _alt_33407 = _f_33406
+        def _f_33409():
+            _x_33408 = RBTree_node(c_1681, l_1682, y_1683, r_1684)
+            return _x_33408
+        _alt_33410 = _f_33409
+        def _f_33413():
+            _x_33411 = insert_aux(None, inst_33397, x_1679, r_1684)
+            _x_33412 = balance(None, c_1681, l_1682, y_1683, _x_33411)
+            return _x_33412
+        _alt_33414 = _f_33413
+        _x_33415 = inst_33397.field_0
+        _x_33416 = _x_33415(x_1679, y_1683)
+        match _x_33416:
             case lt():
-                _x_25572 = _alt_25561()
-                return _x_25572
+                _x_33418 = _alt_33407()
+                return _x_33418
             case eq():
-                _x_25574 = _alt_25564()
-                return _x_25574
+                _x_33420 = _alt_33410()
+                return _x_33420
             case gt():
-                _x_25576 = _alt_25568()
-                return _x_25576
-    _alt_25579 = _f_25578
-    match x_25552:
+                _x_33422 = _alt_33414()
+                return _x_33422
+    _alt_33425 = _f_33424
+    match x_33398:
         case RBTree_empty():
-            _x_25581 = _alt_25557()
-            return _x_25581
-        case RBTree_node(a_25582, a_25583, a_25584, a_25585):
-            _x_25586 = _alt_25579(a_25582, a_25583, a_25584, a_25585)
-            return _x_25586
+            _x_33427 = _alt_33403()
+            return _x_33427
+        case RBTree_node(a_33428, a_33429, a_33430, a_33431):
+            _x_33432 = _alt_33425(a_33428, a_33429, a_33430, a_33431)
+            return _x_33432
 
 # Lean: Corpus.Production.RBTree.makeBlack
-def make_black(__1765: Any, x_25589: Any) -> Any:
-    def _f_25593(a_25590: Color, l_1766: Any, x_1767: Any, r_1768: Any):
-        _x_25591 = black()
-        _x_25592 = RBTree_node(None, _x_25591, l_1766, x_1767, r_1768)
-        return _x_25592
-    _alt_25594 = _f_25593
-    def _f_25595(t_1769: Any):
-        return t_1769
-    _alt_25596 = _f_25595
-    match x_25589:
-        case RBTree_empty():
-            _x_25597 = RBTree_empty(None)
-            _x_25598 = _alt_25596(_x_25597)
-            return _x_25598
-        case RBTree_node(a_25599, a_25600, a_25601, a_25602):
-            _x_25603 = _alt_25594(a_25599, a_25600, a_25601, a_25602)
-            return _x_25603
+def make_black(__1688: Any, x_33435: Any) -> Any:
+    def _f_33439(a_33436: Color, l_1689: Any, x_1690: Any, r_1691: Any):
+        _x_33437 = black()
+        _x_33438 = RBTree_node(_x_33437, l_1689, x_1690, r_1691)
+        return _x_33438
+    _alt_33440 = _f_33439
+    _alt_33442 = (lambda t_1692: t_1692)
+    match x_33435:
+        case RBTree_node(a_33443, a_33444, a_33445, a_33446):
+            _x_33447 = _alt_33440(a_33443, a_33444, a_33445, a_33446)
+            return _x_33447
+        case _:
+            _x_33451 = (lambda h_33448: _alt_33442(x_33435))(None)
+            return _x_33451
 
 # Lean: Corpus.Production.RBTree.insert
-def rbtree_insert(__1770: Any, inst_25606: Any, x_1771: Any, t_1772: Any) -> Any:
-    _x_25607 = insert_aux(None, inst_25606, x_1771, t_1772)
-    _x_25608 = make_black(None, _x_25607)
-    return _x_25608
+def rbtree_insert(__1693: Any, inst_33454: Any, x_1694: Any, t_1695: Any) -> Any:
+    _x_33455 = insert_aux(None, inst_33454, x_1694, t_1695)
+    _x_33456 = make_black(None, _x_33455)
+    return _x_33456
 
 # Lean: Corpus.Production.RBTree.toList
-def to_list(__1773: Any, x_25610: Any) -> list[Any]:
-    def _f_25612():
-        _x_25611 = []
-        return _x_25611
-    _alt_25613 = _f_25612
-    def _f_25624(a_25614: Color, l_1775: Any, x_1776: Any, r_1777: Any):
-        _x_25618 = list(l_1775)
-        _x_25619 = []
-        _x_25620 = [x_1776] + _x_25619
-        _x_25621 = _x_25618 + _x_25620
-        _x_25622 = list(r_1777)
-        _x_25623 = _x_25621 + _x_25622
-        return _x_25623
-    _alt_25625 = _f_25624
-    match x_25610:
+def to_list(__1696: Any, x_33458: Any) -> list[Any]:
+    def _f_33460():
+        _x_33459 = []
+        return _x_33459
+    _alt_33461 = _f_33460
+    def _f_33472(a_33462: Color, l_1698: Any, x_1699: Any, r_1700: Any):
+        _x_33466 = list(l_1698)
+        _x_33467 = []
+        _x_33468 = [x_1699] + _x_33467
+        _x_33469 = _x_33466 + _x_33468
+        _x_33470 = list(r_1700)
+        _x_33471 = _x_33469 + _x_33470
+        return _x_33471
+    _alt_33473 = _f_33472
+    match x_33458:
         case RBTree_empty():
-            _x_25627 = _alt_25613()
-            return _x_25627
-        case RBTree_node(a_25628, a_25629, a_25630, a_25631):
-            _x_25632 = _alt_25625(a_25628, a_25629, a_25630, a_25631)
-            return _x_25632
+            _x_33475 = _alt_33461()
+            return _x_33475
+        case RBTree_node(a_33476, a_33477, a_33478, a_33479):
+            _x_33480 = _alt_33473(a_33476, a_33477, a_33478, a_33479)
+            return _x_33480
 
 # Lean: Corpus.Production.RBTree.fromList
-def from_list(__1778: Any, inst_25635: Any, xs_1779: list[Any]) -> Any:
-    def _f_25637(t_1780: Any, x_1781: Any):
-        _x_25636 = rbtree_insert(None, inst_25635, x_1781, t_1780)
-        return _x_25636
-    _x_25638 = RBTree_empty(None)
-    _x_25639 = functools.reduce(_f_25637, xs_1779, _x_25638)
-    return _x_25639
+def from_list(__1701: Any, inst_33483: Any, xs_1702: list[Any]) -> Any:
+    def _f_33485(t_1703: Any, x_1704: Any):
+        _x_33484 = rbtree_insert(None, inst_33483, x_1704, t_1703)
+        return _x_33484
+    _x_33486 = RBTree_empty()
+    _x_33487 = functools.reduce(_f_33485, xs_1702, _x_33486)
+    return _x_33487
 
 # Lean: Corpus.Production.RBTree.size
-def rbtree_size(__1782: Any, x_25641: Any) -> int:
-    def _f_25645():
-        _x_25642 = 0
+def rbtree_size(__1705: Any, x_33489: Any) -> int:
+    def _f_33493():
+        _x_33490 = 0
         return 0
-    _alt_25646 = _f_25645
-    def _f_25659(a_25647: Color, l_1784: Any, a_25648: Any, r_1785: Any):
-        _x_25652 = 1
-        _x_25655 = rbtree_size(None, l_1784)
-        _x_25656 = 1 + _x_25655
-        _x_25657 = rbtree_size(None, r_1785)
-        _x_25658 = _x_25656 + _x_25657
-        return _x_25658
-    _alt_25660 = _f_25659
-    match x_25641:
+    _alt_33494 = _f_33493
+    def _f_33507(a_33495: Color, l_1707: Any, a_33496: Any, r_1708: Any):
+        _x_33500 = 1
+        _x_33503 = rbtree_size(None, l_1707)
+        _x_33504 = 1 + _x_33503
+        _x_33505 = rbtree_size(None, r_1708)
+        _x_33506 = _x_33504 + _x_33505
+        return _x_33506
+    _alt_33508 = _f_33507
+    match x_33489:
         case RBTree_empty():
-            _x_25662 = _alt_25646()
-            return _x_25662
-        case RBTree_node(a_25663, a_25664, a_25665, a_25666):
-            _x_25667 = _alt_25660(a_25663, a_25664, a_25665, a_25666)
-            return _x_25667
+            _x_33510 = _alt_33494()
+            return _x_33510
+        case RBTree_node(a_33511, a_33512, a_33513, a_33514):
+            _x_33515 = _alt_33508(a_33511, a_33512, a_33513, a_33514)
+            return _x_33515
 
 # Lean: Corpus.Production.RBTree.height
-def height(__1786: Any, x_25670: Any) -> int:
-    def _f_25674():
-        _x_25671 = 0
+def height(__1709: Any, x_33518: Any) -> int:
+    def _f_33522():
+        _x_33519 = 0
         return 0
-    _alt_25675 = _f_25674
-    def _f_25690(a_25676: Color, l_1788: Any, a_25677: Any, r_1789: Any):
-        _x_25681 = 1
-        _x_25685 = max
-        _x_25686 = height(None, l_1788)
-        _x_25687 = height(None, r_1789)
-        _x_25688 = _x_25685(_x_25686, _x_25687)
-        _x_25689 = 1 + _x_25688
-        return _x_25689
-    _alt_25691 = _f_25690
-    match x_25670:
+    _alt_33523 = _f_33522
+    def _f_33538(a_33524: Color, l_1711: Any, a_33525: Any, r_1712: Any):
+        _x_33529 = 1
+        _x_33533 = max
+        _x_33534 = height(None, l_1711)
+        _x_33535 = height(None, r_1712)
+        _x_33536 = _x_33533(_x_33534, _x_33535)
+        _x_33537 = 1 + _x_33536
+        return _x_33537
+    _alt_33539 = _f_33538
+    match x_33518:
         case RBTree_empty():
-            _x_25693 = _alt_25675()
-            return _x_25693
-        case RBTree_node(a_25694, a_25695, a_25696, a_25697):
-            _x_25698 = _alt_25691(a_25694, a_25695, a_25696, a_25697)
-            return _x_25698
+            _x_33541 = _alt_33523()
+            return _x_33541
+        case RBTree_node(a_33542, a_33543, a_33544, a_33545):
+            _x_33546 = _alt_33539(a_33542, a_33543, a_33544, a_33545)
+            return _x_33546
 
 # Lean: Corpus.Production.RBTree.blackHeight
-def black_height(__1790: Any, x_25701: Any) -> int:
-    def _f_25705():
-        _x_25702 = 1
+def black_height(__1713: Any, x_33549: Any) -> int:
+    def _f_33553():
+        _x_33550 = 1
         return 1
-    _alt_25706 = _f_25705
-    def _f_25730(c_1792: Color, l_1793: Any, a_25707: Any, a_25708: Any):
-        _x_25714 = black()
-        _x_25715 = c_1792 == _x_25714
-        _x_25716 = True
-        def _jp_25729(_y_25726: int):
-            _x_25727 = black_height(None, l_1793)
-            _x_25728 = _y_25726 + _x_25727
-            return _x_25728
-        if _x_25715:
-            _x_25723 = 1
-            return _jp_25729(1)
+    _alt_33554 = _f_33553
+    def _f_33578(c_1715: Color, l_1716: Any, a_33555: Any, a_33556: Any):
+        _x_33562 = black()
+        _x_33563 = c_1715 == _x_33562
+        _x_33564 = True
+        _x_33565 = _x_33563 == True
+        def _jp_33577(_y_33574: int):
+            _x_33575 = black_height(None, l_1716)
+            _x_33576 = _y_33574 + _x_33575
+            return _x_33576
+        if _x_33565:
+            _x_33571 = 1
+            return _jp_33577(1)
         else:
-            _x_25719 = 0
-            return _jp_25729(0)
-    _alt_25731 = _f_25730
-    match x_25701:
+            _x_33567 = 0
+            return _jp_33577(0)
+    _alt_33579 = _f_33578
+    match x_33549:
         case RBTree_empty():
-            _x_25733 = _alt_25706()
-            return _x_25733
-        case RBTree_node(a_25734, a_25735, a_25736, a_25737):
-            _x_25738 = _alt_25731(a_25734, a_25735, a_25736, a_25737)
-            return _x_25738
+            _x_33581 = _alt_33554()
+            return _x_33581
+        case RBTree_node(a_33582, a_33583, a_33584, a_33585):
+            _x_33586 = _alt_33579(a_33582, a_33583, a_33584, a_33585)
+            return _x_33586
 
 # Lean: Corpus.Production.UnionFind.empty
 def production_union_find_empty() -> UnionFind:
-    _x_25741 = []
-    _x_25742 = list(_x_25741)
-    _x_25743 = UnionFind_mk(_x_25742)
-    return _x_25743
+    _x_33589 = []
+    _x_33590 = list(_x_33589)
+    _x_33591 = UnionFind_mk(_x_33590)
+    return _x_33591
 
 # Lean: Corpus.Production.UnionFind.size
-def production_union_find_size(uf_1794: UnionFind) -> int:
-    _x_25744 = uf_1794.union_find_0
-    _x_25745 = len(_x_25744)
-    return _x_25745
+def production_union_find_size(uf_1717: UnionFind) -> int:
+    _x_33592 = uf_1717.field_0
+    _x_33593 = len(_x_33592)
+    return _x_33593
 
 # Lean: Corpus.Production.UnionFind.push
-def production_union_find_push(uf_1795: UnionFind) -> UnionFind:
-    _x_25747 = uf_1795.union_find_0
-    _x_25748 = len(_x_25747)
-    _x_25749 = 0
-    _x_25752 = UFNode_mk(_x_25748, 0)
-    _x_25753 = array_push(None, _x_25747, _x_25752)
-    _x_25754 = UnionFind_mk(_x_25753)
-    return _x_25754
+def production_union_find_push(uf_1718: UnionFind) -> UnionFind:
+    _x_33595 = uf_1718.field_0
+    _x_33596 = len(_x_33595)
+    _x_33597 = 0
+    _x_33600 = UFNode_mk(_x_33596, 0)
+    _x_33601 = array_push(None, _x_33595, _x_33600)
+    _x_33602 = UnionFind_mk(_x_33601)
+    return _x_33602
 
 # Lean: Corpus.Production.UnionFind.findWithPath
-def find_with_path(nodes_1796: list[UFNode], x_1797: int) -> int:
-    _x_25756 = len(nodes_1796)
-    _x_25757 = x_1797 < _x_25756
-    if _x_25757:
-        _x_25759 = (lambda xs, i: 0 <= i < len(xs))
-        _x_25760 = _x_25759(nodes_1796, x_1797, None)
-        _x_25761 = _x_25760.ufnode_0
-        _x_25764 = _x_25761 == x_1797
-        _x_25765 = True
-        if _x_25764:
-            return x_1797
+def find_with_path(nodes_1719: list[UFNode], x_1720: int) -> int:
+    while True:
+        _x_33604 = len(nodes_1719)
+        _x_33605 = x_1720 < _x_33604
+        if _x_33605:
+            _x_33607 = (lambda xs, i: 0 <= i < len(xs))
+            _x_33608 = _x_33607(nodes_1719, x_1720, None)
+            _x_33609 = _x_33608.field_0
+            _x_33613 = _x_33609 == x_1720
+            _x_33614 = True
+            _x_33615 = _x_33613 == True
+            if _x_33615:
+                return x_1720
+            else:
+                nodes_1719, x_1720 = nodes_1719, _x_33609
+                continue
         else:
-            _x_25768 = find_with_path(nodes_1796, _x_25761)
-            return _x_25768
-    else:
-        return x_1797
+            return x_1720
 
 # Lean: Corpus.Production.UnionFind.findRoot
-def find_root(uf_1799: UnionFind, x_1800: int) -> int:
-    _x_25773 = uf_1799.union_find_0
-    _x_25774 = find_with_path(_x_25773, x_1800)
-    return _x_25774
+def find_root(uf_1722: UnionFind, x_1723: int) -> int:
+    _x_33622 = uf_1722.field_0
+    _x_33623 = find_with_path(_x_33622, x_1723)
+    return _x_33623
 
 # Lean: Corpus.Production.UnionFind.connected
-def connected(uf_1801: UnionFind, x_1802: int, y_1803: int) -> bool:
-    _x_25778 = find_root(uf_1801, x_1802)
-    _x_25779 = find_root(uf_1801, y_1803)
-    _x_25780 = _x_25778 == _x_25779
-    return _x_25780
+def connected(uf_1724: UnionFind, x_1725: int, y_1726: int) -> bool:
+    _x_33628 = find_root(uf_1724, x_1725)
+    _x_33629 = find_root(uf_1724, y_1726)
+    _x_33630 = _x_33628 == _x_33629
+    return _x_33630
 
 # Lean: Corpus.Production.UnionFind.union
-def union(uf_1804: UnionFind, x_1805: int, y_1806: int) -> UnionFind:
-    _x_25782 = find_root(uf_1804, x_1805)
-    _x_25783 = find_root(uf_1804, y_1806)
-    _x_25786 = _x_25782 == _x_25783
-    _x_25787 = True
-    if _x_25786:
-        return uf_1804
+def union(uf_1727: UnionFind, x_1728: int, y_1729: int) -> UnionFind:
+    _x_33632 = find_root(uf_1727, x_1728)
+    _x_33633 = find_root(uf_1727, y_1729)
+    _x_33637 = _x_33632 == _x_33633
+    _x_33638 = True
+    _x_33639 = _x_33637 == True
+    if _x_33639:
+        return uf_1727
     else:
-        _x_25790 = uf_1804.union_find_0
-        _x_25791 = len(_x_25790)
-        _x_25792 = _x_25782 < _x_25791
-        if _x_25792:
-            _x_25793 = _x_25783 < _x_25791
-            if _x_25793:
-                _x_25795 = (lambda xs, i: 0 <= i < len(xs))
-                _x_25796 = _x_25795(_x_25790, _x_25782, None)
-                _x_25797 = _x_25796.ufnode_1
-                _x_25798 = _x_25795(_x_25790, _x_25783, None)
-                _x_25799 = _x_25798.ufnode_1
-                _x_25800 = _x_25797 < _x_25799
-                if _x_25800:
-                    _x_25822 = UFNode_mk(_x_25783, _x_25797)
-                    _x_25823 = set_(None, _x_25790, _x_25782, _x_25822)
-                    _x_25824 = UnionFind_mk(_x_25823)
-                    return _x_25824
+        _x_33641 = uf_1727.field_0
+        _x_33642 = len(_x_33641)
+        _x_33643 = _x_33632 < _x_33642
+        if _x_33643:
+            _x_33644 = _x_33633 < _x_33642
+            if _x_33644:
+                _x_33646 = (lambda xs, i: 0 <= i < len(xs))
+                _x_33647 = _x_33646(_x_33641, _x_33632, None)
+                _x_33648 = _x_33647.field_1
+                _x_33649 = _x_33646(_x_33641, _x_33633, None)
+                _x_33650 = _x_33649.field_1
+                _x_33651 = _x_33648 < _x_33650
+                if _x_33651:
+                    _x_33673 = UFNode_mk(_x_33633, _x_33648)
+                    _x_33674 = set_(None, _x_33641, _x_33632, _x_33673)
+                    _x_33675 = UnionFind_mk(_x_33674)
+                    return _x_33675
                 else:
-                    _x_25802 = _x_25799 < _x_25797
-                    if _x_25802:
-                        _x_25817 = UFNode_mk(_x_25782, _x_25799)
-                        _x_25818 = set_(None, _x_25790, _x_25783, _x_25817)
-                        _x_25819 = UnionFind_mk(_x_25818)
-                        return _x_25819
+                    _x_33653 = _x_33650 < _x_33648
+                    if _x_33653:
+                        _x_33668 = UFNode_mk(_x_33632, _x_33650)
+                        _x_33669 = set_(None, _x_33641, _x_33633, _x_33668)
+                        _x_33670 = UnionFind_mk(_x_33669)
+                        return _x_33670
                     else:
-                        _x_25804 = UFNode_mk(_x_25782, _x_25799)
-                        _x_25805 = set_(None, _x_25790, _x_25783, _x_25804)
-                        _x_25809 = 1
-                        _x_25812 = _x_25797 + 1
-                        _x_25813 = UFNode_mk(_x_25782, _x_25812)
-                        _x_25814 = set_(None, _x_25805, _x_25782, _x_25813)
-                        _x_25815 = UnionFind_mk(_x_25814)
-                        return _x_25815
+                        _x_33655 = UFNode_mk(_x_33632, _x_33650)
+                        _x_33656 = set_(None, _x_33641, _x_33633, _x_33655)
+                        _x_33660 = 1
+                        _x_33663 = _x_33648 + 1
+                        _x_33664 = UFNode_mk(_x_33632, _x_33663)
+                        _x_33665 = set_(None, _x_33656, _x_33632, _x_33664)
+                        _x_33666 = UnionFind_mk(_x_33665)
+                        return _x_33666
             else:
-                return uf_1804
+                return uf_1727
         else:
-            return uf_1804
+            return uf_1727
 
 # Lean: Corpus.Production.UnionFind.numComponents
-def num_components(uf_1807: UnionFind) -> int:
-    def _f_25843(i_1808: int):
-        _x_25831 = uf_1807.union_find_0
-        _x_25832 = len(_x_25831)
-        _x_25833 = i_1808 < _x_25832
-        if _x_25833:
-            _x_25838 = (lambda xs, i: 0 <= i < len(xs))
-            _x_25839 = _x_25838(_x_25831, i_1808, None)
-            _x_25840 = _x_25839.ufnode_0
-            _x_25841 = _x_25840 == i_1808
-            return _x_25841
+def num_components(uf_1730: UnionFind) -> int:
+    def _f_33695(i_1731: int):
+        _x_33682 = uf_1730.field_0
+        _x_33683 = len(_x_33682)
+        _x_33684 = i_1731 < _x_33683
+        if _x_33684:
+            _x_33690 = (lambda xs, i: 0 <= i < len(xs))
+            _x_33691 = _x_33690(_x_33682, i_1731, None)
+            _x_33692 = _x_33691.field_0
+            _x_33693 = _x_33692 == i_1731
+            return _x_33693
         else:
-            _x_25834 = False
+            _x_33685 = False
             return False
-    _x_25844 = uf_1807.union_find_0
-    _x_25845 = len(_x_25844)
-    _x_25846 = list(range(_x_25845))
-    _x_25847 = [x for x in _x_25846 if _f_25843(x)]
-    _x_25848 = len(_x_25847)
-    return _x_25848
+    _x_33696 = uf_1730.field_0
+    _x_33697 = len(_x_33696)
+    _x_33698 = list(range(_x_33697))
+    _x_33699 = [x for x in _x_33698 if _f_33695(x)]
+    _x_33700 = len(_x_33699)
+    return _x_33700
 
 # Lean: Corpus.Production.UnionFind.ofSize
-def of_size(n_1810: int) -> UnionFind:
-    _x_25850 = 0
-    _x_25853 = []
-    _x_25854 = list(_x_25853)
-    _x_25855 = of_size_build(n_1810, 0, _x_25854)
-    _x_25856 = UnionFind_mk(_x_25855)
-    return _x_25856
+def of_size(n_1733: int) -> UnionFind:
+    _x_33702 = 0
+    _x_33705 = []
+    _x_33706 = list(_x_33705)
+    _x_33707 = of_size_build(n_1733, 0, _x_33706)
+    _x_33708 = UnionFind_mk(_x_33707)
+    return _x_33708
 
 # Lean: Corpus.Production.lomutoPartition
-def lomuto_partition(arr_1811: list[int], lo_1812: int, hi_1813: int) -> tuple[list[int], int]:
-    _x_25858 = hi_1813 <= lo_1812
-    if _x_25858:
-        _x_25870 = (arr_1811, lo_1812)
-        return _x_25870
+def lomuto_partition(arr_1734: list[int], lo_1735: int, hi_1736: int) -> tuple[list[int], int]:
+    _x_33710 = hi_1736 <= lo_1735
+    if _x_33710:
+        _x_33718 = (arr_1734, lo_1735)
+        return _x_33718
     else:
-        def _f_25863(xs_1814: list[int], i_1815: int):
-            _x_25861 = len(xs_1814)
-            _x_25862 = i_1815 < _x_25861
-            return _x_25862
-        _x_25865 = _x_25864.get_elem__2
-        _x_25867 = _x_25865(_x_25866, arr_1811, hi_1813)
-        _x_25868 = lomuto_partition_go(hi_1813, _x_25867, arr_1811, lo_1812, lo_1812)
-        return _x_25868
+        _x_33713 = _x_33712.field_2
+        _x_33715 = _x_33713(_x_33714, arr_1734, hi_1736)
+        _x_33716 = lomuto_partition_go(hi_1736, _x_33715, arr_1734, lo_1735, lo_1735)
+        return _x_33716
 
 # Lean: Corpus.Production.quicksortAux
-def quicksort_aux(arr_1817: list[int], lo_1818: int, hi_1819: int) -> list[int]:
-    _x_25873 = hi_1819 <= lo_1818
-    if _x_25873:
-        return arr_1817
+def quicksort_aux(arr_1738: list[int], lo_1739: int, hi_1740: int) -> list[int]:
+    _x_33721 = hi_1740 <= lo_1739
+    if _x_33721:
+        return arr_1738
     else:
-        def _f_25903(arr__1820: list[int], p_1821: int):
-            _x_25875 = 0
-            _x_25878 = 0 < p_1821
-            def _jp_25902(_y_25889: list[int]):
-                _x_25893 = 1
-                _x_25896 = p_1821 + 1
-                _x_25897 = _x_25896 < hi_1819
-                if _x_25897:
-                    _x_25900 = quicksort_aux(_y_25889, _x_25896, hi_1819)
-                    return _x_25900
+        def _f_33751(arr__1741: list[int], p_1742: int):
+            _x_33723 = 0
+            _x_33726 = 0 < p_1742
+            def _jp_33750(_y_33737: list[int]):
+                _x_33741 = 1
+                _x_33744 = p_1742 + 1
+                _x_33745 = _x_33744 < hi_1740
+                if _x_33745:
+                    _x_33748 = quicksort_aux(_y_33737, _x_33744, hi_1740)
+                    return _x_33748
                 else:
-                    return _y_25889
-            if _x_25878:
-                _x_25884 = 1
-                _x_25887 = p_1821 - 1
-                _x_25888 = quicksort_aux(arr__1820, lo_1818, _x_25887)
-                return _jp_25902(_x_25888)
+                    return _y_33737
+            if _x_33726:
+                _x_33732 = 1
+                _x_33735 = p_1742 - 1
+                _x_33736 = quicksort_aux(arr__1741, lo_1739, _x_33735)
+                return _jp_33750(_x_33736)
             else:
-                return _jp_25902(arr__1820)
-        _alt_25904 = _f_25903
-        _x_25905 = lomuto_partition(arr_1817, lo_1818, hi_1819)
-        match _x_25905:
-            case (fst_25906, snd_25907):
-                _x_25908 = _alt_25904(fst_25906, snd_25907)
-                return _x_25908
+                return _jp_33750(arr__1741)
+        _alt_33752 = _f_33751
+        _x_33753 = lomuto_partition(arr_1738, lo_1739, hi_1740)
+        match _x_33753:
+            case (fst_33754, snd_33755):
+                _x_33756 = _alt_33752(fst_33754, snd_33755)
+                return _x_33756
 
 # Lean: Corpus.Production.quicksort
-def quicksort(arr_1822: list[int]) -> list[int]:
-    _x_25913 = len(arr_1822)
-    _x_25914 = 1
-    _x_25917 = _x_25913 <= 1
-    if _x_25917:
-        return arr_1822
+def quicksort(arr_1743: list[int]) -> list[int]:
+    _x_33761 = len(arr_1743)
+    _x_33762 = 1
+    _x_33765 = _x_33761 <= 1
+    if _x_33765:
+        return arr_1743
     else:
-        _x_25919 = 0
-        _x_25925 = _x_25913 - 1
-        _x_25926 = quicksort_aux(arr_1822, 0, _x_25925)
-        return _x_25926
+        _x_33767 = 0
+        _x_33773 = _x_33761 - 1
+        _x_33774 = quicksort_aux(arr_1743, 0, _x_33773)
+        return _x_33774
 
 # Lean: Corpus.Production.naiveStringMatch
 def naive_string_match(text: str, pattern: str) -> int | None:
-    _x_25930 = list(text)
-    _x_25931 = list(pattern)
-    _x_25932 = len(_x_25930)
-    _x_25933 = len(_x_25931)
-    _x_25936 = 0
-    _x_25939 = _x_25933 == 0
-    _x_25940 = True
-    if _x_25939:
-        _x_25950 = 0
-        return _x_25950
+    _x_33778 = list(text)
+    _x_33779 = list(pattern)
+    _x_33780 = len(_x_33778)
+    _x_33781 = len(_x_33779)
+    _x_33785 = 0
+    _x_33788 = _x_33781 == 0
+    _x_33789 = True
+    _x_33790 = _x_33788 == True
+    if _x_33790:
+        _x_33799 = 0
+        return _x_33799
     else:
-        _x_25943 = _x_25932 < _x_25933
-        if _x_25943:
-            _x_25947 = None
-            return _x_25947
+        _x_33792 = _x_33780 < _x_33781
+        if _x_33792:
+            _x_33796 = None
+            return _x_33796
         else:
-            _x_25945 = search(_x_25930, _x_25931, _x_25932, _x_25933, 0)
-            return _x_25945
+            _x_33794 = search(_x_33778, _x_33779, _x_33780, _x_33781, 0)
+            return _x_33794
 
 # Lean: Corpus.Production.naiveStringMatchAll
-def naive_string_match_all(text_1827: str, pattern_1828: str) -> list[int]:
-    _x_25953 = list(text_1827)
-    _x_25954 = list(pattern_1828)
-    _x_25955 = len(_x_25953)
-    _x_25956 = len(_x_25954)
-    _x_25959 = 0
-    _x_25962 = _x_25956 == 0
-    _x_25963 = True
-    if _x_25962:
-        _x_25977 = 1
-        _x_25980 = _x_25955 + 1
-        _x_25981 = list(range(_x_25980))
-        return _x_25981
+def naive_string_match_all(text_1748: str, pattern_1749: str) -> list[int]:
+    _x_33802 = list(text_1748)
+    _x_33803 = list(pattern_1749)
+    _x_33804 = len(_x_33802)
+    _x_33805 = len(_x_33803)
+    _x_33809 = 0
+    _x_33812 = _x_33805 == 0
+    _x_33813 = True
+    _x_33814 = _x_33812 == True
+    if _x_33814:
+        _x_33827 = 1
+        _x_33830 = _x_33804 + 1
+        _x_33831 = list(range(_x_33830))
+        return _x_33831
     else:
-        _x_25966 = _x_25955 < _x_25956
-        if _x_25966:
-            _x_25971 = []
-            return _x_25971
+        _x_33816 = _x_33804 < _x_33805
+        if _x_33816:
+            _x_33821 = []
+            return _x_33821
         else:
-            _x_25968 = []
-            _x_25969 = search(_x_25953, _x_25954, _x_25955, _x_25956, 0, _x_25968)
-            return _x_25969
+            _x_33818 = []
+            _x_33819 = search(_x_33802, _x_33803, _x_33804, _x_33805, 0, _x_33818)
+            return _x_33819
 
 # Lean: Corpus.Production.computeZArray
-def compute_zarray(s_1833: list[str]) -> list[int]:
-    _x_25984 = len(s_1833)
-    _x_25987 = 0
-    _x_25990 = _x_25984 == 0
-    _x_25991 = True
-    if _x_25990:
-        _x_26001 = []
-        _x_26002 = list(_x_26001)
-        return _x_26002
+def compute_zarray(s_1754: list[str]) -> list[int]:
+    _x_33834 = len(s_1754)
+    _x_33838 = 0
+    _x_33841 = _x_33834 == 0
+    _x_33842 = True
+    _x_33843 = _x_33841 == True
+    if _x_33843:
+        _x_33852 = []
+        _x_33853 = list(_x_33852)
+        return _x_33853
     else:
-        _x_25994 = mk_array(None, _x_25984, 0)
-        _x_25995 = set_(None, _x_25994, 0, _x_25984)
-        _x_25996 = 1
-        _x_25999 = compute(s_1833, _x_25984, _x_25995, 1, 0, 0)
-        return _x_25999
+        _x_33845 = array_replicate(None, _x_33834, 0)
+        _x_33846 = set_(None, _x_33845, 0, _x_33834)
+        _x_33847 = 1
+        _x_33850 = compute(s_1754, _x_33834, _x_33846, 1, 0, 0)
+        return _x_33850
 
 # Lean: Corpus.Production.lcsLength
-def lcs_length(xs_1837: list[int], ys_1838: list[int]) -> int:
-    _x_26005 = len(xs_1837)
-    _x_26006 = len(ys_1838)
-    _x_26013 = 1
-    _x_26016 = _x_26005 + 1
-    _x_26017 = _x_26006 + 1
-    _x_26018 = _x_26016 * _x_26017
-    _x_26019 = 0
-    _x_26022 = mk_array(None, _x_26018, 0)
-    _x_26023 = fill(xs_1837, ys_1838, _x_26005, _x_26006, 0, 0, _x_26022)
-    def _f_26027(xs_1843: list[int], i_1844: int):
-        _x_26025 = len(xs_1843)
-        _x_26026 = i_1844 < _x_26025
-        return _x_26026
-    _x_26029 = _x_26028.get_elem__2
-    _x_26031 = _x_26005 * _x_26017
-    _x_26032 = _x_26031 + _x_26006
-    _x_26033 = _x_26029(_x_26030, _x_26023, _x_26032)
-    return _x_26033
+def lcs_length(xs_1758: list[int], ys_1759: list[int]) -> int:
+    _x_33856 = len(xs_1758)
+    _x_33857 = len(ys_1759)
+    _x_33864 = 1
+    _x_33867 = _x_33856 + 1
+    _x_33868 = _x_33857 + 1
+    _x_33869 = _x_33867 * _x_33868
+    _x_33870 = 0
+    _x_33873 = array_replicate(None, _x_33869, 0)
+    _x_33874 = fill(xs_1758, ys_1759, _x_33856, _x_33857, 0, 0, _x_33873)
+    _x_33876 = _x_33875.field_2
+    _x_33878 = _x_33856 * _x_33868
+    _x_33879 = _x_33878 + _x_33857
+    _x_33880 = _x_33876(_x_33877, _x_33874, _x_33879)
+    return _x_33880
 
 # Lean: Corpus.Production.lcs
-def lcs(xs_1845: list[int], ys_1846: list[int]) -> list[int]:
-    _x_26035 = len(xs_1845)
-    _x_26036 = len(ys_1846)
-    _x_26043 = 1
-    _x_26046 = _x_26035 + 1
-    _x_26047 = _x_26036 + 1
-    _x_26048 = _x_26046 * _x_26047
-    _x_26049 = 0
-    _x_26052 = mk_array(None, _x_26048, 0)
-    _x_26053 = fill(xs_1845, ys_1846, _x_26035, _x_26036, 0, 0, _x_26052)
-    _x_26054 = []
-    _x_26055 = backtrack(xs_1845, ys_1846, _x_26036, _x_26053, _x_26035, _x_26036, _x_26054)
-    return _x_26055
+def lcs(xs_1764: list[int], ys_1765: list[int]) -> list[int]:
+    _x_33882 = len(xs_1764)
+    _x_33883 = len(ys_1765)
+    _x_33890 = 1
+    _x_33893 = _x_33882 + 1
+    _x_33894 = _x_33883 + 1
+    _x_33895 = _x_33893 * _x_33894
+    _x_33896 = 0
+    _x_33899 = array_replicate(None, _x_33895, 0)
+    _x_33900 = fill(xs_1764, ys_1765, _x_33882, _x_33883, 0, 0, _x_33899)
+    _x_33901 = []
+    _x_33902 = backtrack(xs_1764, ys_1765, _x_33883, _x_33900, _x_33882, _x_33883, _x_33901)
+    return _x_33902
 
 # Lean: Corpus.Production.editDistance
-def edit_distance(xs_1851: list[int], ys_1852: list[int]) -> int:
-    _x_26057 = len(xs_1851)
-    _x_26058 = len(ys_1852)
-    _x_26065 = 1
-    _x_26068 = _x_26057 + 1
-    _x_26069 = _x_26058 + 1
-    _x_26070 = _x_26068 * _x_26069
-    _x_26071 = 0
-    _x_26074 = mk_array(None, _x_26070, 0)
-    _x_26075 = fill(xs_1851, ys_1852, _x_26057, _x_26058, 0, 0, _x_26074)
-    def _f_26079(xs_1856: list[int], i_1857: int):
-        _x_26077 = len(xs_1856)
-        _x_26078 = i_1857 < _x_26077
-        return _x_26078
-    _x_26081 = _x_26080.get_elem__2
-    _x_26083 = _x_26057 * _x_26069
-    _x_26084 = _x_26083 + _x_26058
-    _x_26085 = _x_26081(_x_26082, _x_26075, _x_26084)
-    return _x_26085
+def edit_distance(xs_1770: list[int], ys_1771: list[int]) -> int:
+    _x_33904 = len(xs_1770)
+    _x_33905 = len(ys_1771)
+    _x_33912 = 1
+    _x_33915 = _x_33904 + 1
+    _x_33916 = _x_33905 + 1
+    _x_33917 = _x_33915 * _x_33916
+    _x_33918 = 0
+    _x_33921 = array_replicate(None, _x_33917, 0)
+    _x_33922 = fill(xs_1770, ys_1771, _x_33904, _x_33905, 0, 0, _x_33921)
+    _x_33924 = _x_33923.field_2
+    _x_33926 = _x_33904 * _x_33916
+    _x_33927 = _x_33926 + _x_33905
+    _x_33928 = _x_33924(_x_33925, _x_33922, _x_33927)
+    return _x_33928
 
 # Lean: Corpus.Production.intervalScheduling
 def interval_scheduling(intervals: list[tuple[int, int]]) -> list[tuple[int, int]]:
-    _x_26087 = list(intervals)
-    def _f_26092(a_1858: tuple[int, int], b_1859: tuple[int, int]):
-        _x_26088 = a_1858[1]
-        _x_26089 = b_1859[1]
-        _x_26090 = _x_26088 < _x_26089
-        return _x_26090
-    _x_26093 = 0
-    _x_26099 = len(_x_26087)
-    _x_26100 = 1
-    _x_26103 = _x_26099 - 1
-    _x_26104 = sorted(0, key=functools.cmp_to_key(lambda a, b: -1 if _x_26103(a, b) else 1))
-    _x_26105 = list(_x_26104)
-    _x_26106 = []
-    _x_26107 = select(_x_26105, 0, _x_26106)
-    return _x_26107
+    _x_33930 = list(intervals)
+    def _f_33935(a_1775: tuple[int, int], b_1776: tuple[int, int]):
+        _x_33931 = a_1775[1]
+        _x_33932 = b_1776[1]
+        _x_33933 = _x_33931 < _x_33932
+        return _x_33933
+    _x_33936 = 0
+    _x_33942 = len(_x_33930)
+    _x_33943 = 1
+    _x_33946 = _x_33942 - 1
+    _x_33947 = sorted(0, key=functools.cmp_to_key(lambda a, b: -1 if _x_33946(a, b) else 1))
+    _x_33948 = list(_x_33947)
+    _x_33949 = []
+    _x_33950 = select(_x_33948, 0, _x_33949)
+    return _x_33950
 
 # Lean: Corpus.Production.knapsack01
-def knapsack01(capacity_1861: int, weights_1862: list[int], values_1863: list[int]) -> int:
-    _x_26109 = len(weights_1862)
-    _x_26116 = 1
-    _x_26119 = _x_26109 + 1
-    _x_26120 = capacity_1861 + 1
-    _x_26121 = _x_26119 * _x_26120
-    _x_26122 = 0
-    _x_26125 = mk_array(None, _x_26121, 0)
-    _x_26126 = fill(capacity_1861, weights_1862, values_1863, _x_26109, 0, 0, _x_26125)
-    def _f_26130(xs_1867: list[int], i_1868: int):
-        _x_26128 = len(xs_1867)
-        _x_26129 = i_1868 < _x_26128
-        return _x_26129
-    _x_26132 = _x_26131.get_elem__2
-    _x_26134 = _x_26109 * _x_26120
-    _x_26135 = _x_26134 + capacity_1861
-    _x_26136 = _x_26132(_x_26133, _x_26126, _x_26135)
-    return _x_26136
+def knapsack01(capacity_1778: int, weights_1779: list[int], values_1780: list[int]) -> int:
+    _x_33952 = len(weights_1779)
+    _x_33959 = 1
+    _x_33962 = _x_33952 + 1
+    _x_33963 = capacity_1778 + 1
+    _x_33964 = _x_33962 * _x_33963
+    _x_33965 = 0
+    _x_33968 = array_replicate(None, _x_33964, 0)
+    _x_33969 = fill(capacity_1778, weights_1779, values_1780, _x_33952, 0, 0, _x_33968)
+    _x_33971 = _x_33970.field_2
+    _x_33973 = _x_33952 * _x_33963
+    _x_33974 = _x_33973 + capacity_1778
+    _x_33975 = _x_33971(_x_33972, _x_33969, _x_33974)
+    return _x_33975
 
 # Lean: Corpus.Production.coinChange
-def coin_change(coins_1869: list[int], amount_1870: int) -> int | None:
-    _x_26141 = 1
-    _x_26144 = amount_1870 + 1
-    _x_26145 = mk_array(None, _x_26144, _x_26144)
-    _x_26146 = 0
-    _x_26149 = set_(None, _x_26145, 0, 0)
-    _x_26150 = fill(coins_1869, amount_1870, _x_26144, 1, _x_26149)
-    def _f_26154(xs_1875: list[int], i_1876: int):
-        _x_26152 = len(xs_1875)
-        _x_26153 = i_1876 < _x_26152
-        return _x_26153
-    _x_26156 = _x_26155.get_elem__2
-    _x_26158 = _x_26156(_x_26157, _x_26150, amount_1870)
-    _x_26159 = _x_26144 <= _x_26158
-    if _x_26159:
-        _x_26163 = None
-        return _x_26163
+def coin_change(coins_1784: list[int], amount_1785: int) -> int | None:
+    _x_33980 = 1
+    _x_33983 = amount_1785 + 1
+    _x_33984 = amount_1785 + 1
+    _x_33985 = array_replicate(None, _x_33984, _x_33983)
+    _x_33986 = 0
+    _x_33989 = set_(None, _x_33985, 0, 0)
+    _x_33990 = fill(coins_1784, amount_1785, _x_33983, 1, _x_33989)
+    _x_33992 = _x_33991.field_2
+    _x_33994 = _x_33992(_x_33993, _x_33990, amount_1785)
+    _x_33995 = _x_33983 <= _x_33994
+    if _x_33995:
+        _x_33999 = None
+        return _x_33999
     else:
-        _x_26161 = _x_26158
-        return _x_26161
+        _x_33997 = _x_33994
+        return _x_33997
 
 # Lean: Corpus.Production.matrixChainOrder
-def matrix_chain_order(dims_1877: list[int]) -> int:
-    _x_26169 = len(dims_1877)
-    _x_26170 = 1
-    _x_26173 = _x_26169 - 1
-    _x_26174 = _x_26173 <= 1
-    if _x_26174:
-        _x_26198 = 0
+def matrix_chain_order(dims_1790: list[int]) -> int:
+    _x_34005 = len(dims_1790)
+    _x_34006 = 1
+    _x_34009 = _x_34005 - 1
+    _x_34010 = _x_34009 <= 1
+    if _x_34010:
+        _x_34030 = 0
         return 0
     else:
-        _x_26176 = 1000000000
-        _x_26182 = _x_26173 * _x_26173
-        _x_26183 = mk_array(None, _x_26182, 1000000000)
-        _x_26184 = 0
-        _x_26187 = fill(dims_1877, _x_26173, 1000000000, 1, 0, _x_26183)
-        def _f_26191(xs_1882: list[int], i_1883: int):
-            _x_26189 = len(xs_1882)
-            _x_26190 = i_1883 < _x_26189
-            return _x_26190
-        _x_26193 = _x_26192.get_elem__2
-        _x_26195 = _x_26173 - 1
-        _x_26196 = _x_26193(_x_26194, _x_26187, _x_26195)
-        return _x_26196
+        _x_34012 = 1000000000
+        _x_34018 = _x_34009 * _x_34009
+        _x_34019 = array_replicate(None, _x_34018, 1000000000)
+        _x_34020 = 0
+        _x_34023 = fill(dims_1790, _x_34009, 1000000000, 1, 0, _x_34019)
+        _x_34025 = _x_34024.field_2
+        _x_34027 = _x_34009 - 1
+        _x_34028 = _x_34025(_x_34026, _x_34023, _x_34027)
+        return _x_34028
 
 # Lean: Corpus.Production.lisLength
-def lis_length(xs_1884: list[int]) -> int:
-    _x_26203 = len(xs_1884)
-    _x_26206 = 0
-    _x_26209 = _x_26203 == 0
-    _x_26210 = True
-    if _x_26209:
+def lis_length(xs_1795: list[int]) -> int:
+    _x_34035 = len(xs_1795)
+    _x_34039 = 0
+    _x_34042 = _x_34035 == 0
+    _x_34043 = True
+    _x_34044 = _x_34042 == True
+    if _x_34044:
         return 0
     else:
-        _x_26213 = 1
-        _x_26216 = mk_array(None, _x_26203, 1)
-        _x_26217 = fill(xs_1884, _x_26203, 0, _x_26216)
-        _x_26219 = max
-        _x_26220 = len(_x_26217)
-        _x_26221 = array_foldl(None, None, _x_26219, 0, _x_26217, 0, _x_26220)
-        return _x_26221
+        _x_34046 = 1
+        _x_34049 = array_replicate(None, _x_34035, 1)
+        _x_34050 = fill(xs_1795, _x_34035, 0, _x_34049)
+        _x_34052 = max
+        _x_34053 = len(_x_34050)
+        _x_34054 = array_foldl(None, None, _x_34052, 0, _x_34050, 0, _x_34053)
+        return _x_34054
 
 # Lean: Corpus.Production.lis
-def lis(xs_1888: list[int]) -> list[int]:
-    _x_26225 = len(xs_1888)
-    _x_26228 = 0
-    _x_26231 = _x_26225 == 0
-    _x_26232 = True
-    if _x_26231:
-        _x_26282 = []
-        return _x_26282
+def lis(xs_1799: list[int]) -> list[int]:
+    _x_34059 = len(xs_1799)
+    _x_34063 = 0
+    _x_34066 = _x_34059 == 0
+    _x_34067 = True
+    _x_34068 = _x_34066 == True
+    if _x_34068:
+        _x_34113 = []
+        return _x_34113
     else:
-        _x_26235 = 1
-        _x_26238 = mk_array(None, _x_26225, 1)
-        _x_26239 = mk_array(None, _x_26225, _x_26225)
-        def _f_26274(dp__1892: list[int], parent__1893: list[int]):
-            def _f_26243(fst_26240: int, max_idx: int):
-                _x_26241 = []
-                _x_26242 = backtrack(xs_1888, _x_26225, parent__1893, max_idx, _x_26241)
-                return _x_26242
-            _alt_26244 = _f_26243
-            def _f_26266(x_26245: tuple[int, int], i_1894: int):
-                def _f_26260(max_val_1895: int, max_i: int):
-                    def _f_26249(xs_1896: list[int], i_1897: int):
-                        _x_26247 = len(xs_1896)
-                        _x_26248 = i_1897 < _x_26247
-                        return _x_26248
-                    _x_26251 = _x_26250.get_elem__2
-                    _x_26253 = _x_26251(_x_26252, dp__1892, i_1894)
-                    _x_26254 = max_val_1895 < _x_26253
-                    if _x_26254:
-                        _x_26258 = (_x_26253, i_1894)
-                        return _x_26258
+        _x_34070 = 1
+        _x_34073 = array_replicate(None, _x_34059, 1)
+        _x_34074 = array_replicate(None, _x_34059, _x_34059)
+        def _f_34105(dp__1803: list[int], parent__1804: list[int]):
+            def _f_34078(fst_34075: int, max_idx: int):
+                _x_34076 = []
+                _x_34077 = backtrack(xs_1799, _x_34059, parent__1804, max_idx, _x_34076)
+                return _x_34077
+            _alt_34079 = _f_34078
+            def _f_34097(x_34080: tuple[int, int], i_1805: int):
+                def _f_34091(max_val_1806: int, max_i: int):
+                    _x_34082 = _x_34081.field_2
+                    _x_34084 = _x_34082(_x_34083, dp__1803, i_1805)
+                    _x_34085 = max_val_1806 < _x_34084
+                    if _x_34085:
+                        _x_34089 = (_x_34084, i_1805)
+                        return _x_34089
                     else:
-                        _x_26256 = (max_val_1895, max_i)
-                        return _x_26256
-                _alt_26261 = _f_26260
-                match x_26245:
-                    case (fst_26262, snd_26263):
-                        _x_26264 = _alt_26261(fst_26262, snd_26263)
-                        return _x_26264
-            _x_26267 = (0, 0)
-            _x_26268 = list(range(_x_26225))
-            _x_26269 = functools.reduce(_f_26266, _x_26268, _x_26267)
-            match _x_26269:
-                case (fst_26270, snd_26271):
-                    _x_26272 = _alt_26244(fst_26270, snd_26271)
-                    return _x_26272
-        _alt_26275 = _f_26274
-        _x_26276 = fill(xs_1888, _x_26225, 0, _x_26238, _x_26239)
-        match _x_26276:
-            case (fst_26277, snd_26278):
-                _x_26279 = _alt_26275(fst_26277, snd_26278)
-                return _x_26279
+                        _x_34087 = (max_val_1806, max_i)
+                        return _x_34087
+                _alt_34092 = _f_34091
+                match x_34080:
+                    case (fst_34093, snd_34094):
+                        _x_34095 = _alt_34092(fst_34093, snd_34094)
+                        return _x_34095
+            _x_34098 = (0, 0)
+            _x_34099 = list(range(_x_34059))
+            _x_34100 = functools.reduce(_f_34097, _x_34099, _x_34098)
+            match _x_34100:
+                case (fst_34101, snd_34102):
+                    _x_34103 = _alt_34079(fst_34101, snd_34102)
+                    return _x_34103
+        _alt_34106 = _f_34105
+        _x_34107 = fill(xs_1799, _x_34059, 0, _x_34073, _x_34074)
+        match _x_34107:
+            case (fst_34108, snd_34109):
+                _x_34110 = _alt_34106(fst_34108, snd_34109)
+                return _x_34110
 
 # Lean: Corpus.Production.maxSubarraySum
-def max_subarray_sum(xs_1898: list[int]) -> int:
-    def _f_26288():
-        _x_26285 = 0
+def max_subarray_sum(xs_1807: list[int]) -> int:
+    def _f_34119():
+        _x_34116 = 0
         return 0
-    _alt_26289 = _f_26288
-    def _f_26291(x_1900: int, rest_1901: list[int]):
-        _x_26290 = kadane(rest_1901, x_1900, x_1900)
-        return _x_26290
-    _alt_26292 = _f_26291
-    if len(xs_1898) == 0:
-        _x_26294 = _alt_26289()
-        return _x_26294
+    _alt_34120 = _f_34119
+    def _f_34122(x_1809: int, rest_1810: list[int]):
+        _x_34121 = kadane(rest_1810, x_1809, x_1809)
+        return _x_34121
+    _alt_34123 = _f_34122
+    if len(xs_1807) == 0:
+        _x_34125 = _alt_34120()
+        return _x_34125
     else:
-        head_26295 = xs_1898[0]
-        tail_26296 = xs_1898[1:]
-        _x_26297 = _alt_26292(head_26295, tail_26296)
-        return _x_26297
+        head_34126 = xs_1807[0]
+        tail_34127 = xs_1807[1:]
+        _x_34128 = _alt_34123(head_34126, tail_34127)
+        return _x_34128
 
 # Lean: Corpus.Production.countInversions
-def count_inversions(xs_1902: list[int]) -> int:
-    _x_26300 = merge_count(xs_1902)
-    _x_26301 = _x_26300[1]
-    return _x_26301
+def count_inversions(xs_1811: list[int]) -> int:
+    _x_34131 = merge_count(xs_1811)
+    _x_34132 = _x_34131[1]
+    return _x_34132
 
 

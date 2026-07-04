@@ -14,7 +14,7 @@ partial def bubbleSort (xs : List Nat) : List Nat :=
       let rec inner (j : Nat) (arr : Array Nat) : Array Nat :=
         if j >= n - i - 1 then arr
         else
-          let arr := if arr[j]! > arr[j + 1]! then arr.swap! j (j + 1) else arr
+          let arr := if arr[j]! > arr[j + 1]! then arr.swapIfInBounds j (j + 1) else arr
           inner (j + 1) arr
       outer (i + 1) (inner 0 arr)
   (outer 0 arr).toList
@@ -30,7 +30,7 @@ partial def selectionSort (xs : List Nat) : List Nat :=
         if j >= n then minIdx
         else findMin (j + 1) (if arr[j]! < arr[minIdx]! then j else minIdx)
       let minIdx := findMin i i
-      go (i + 1) (arr.swap! i minIdx)
+      go (i + 1) (arr.swapIfInBounds i minIdx)
   (go 0 arr).toList
 
 -- Insertion sort
@@ -44,7 +44,7 @@ def insertionSort (xs : List Nat) : List Nat :=
 -- Counting sort (for small range of values)
 partial def countingSort (xs : List Nat) (maxVal : Nat) : List Nat :=
   let counts := xs.foldl (fun arr x =>
-    arr.set! x (arr.getD x 0 + 1)) (Array.mkArray (maxVal + 1) 0)
+    arr.set! x (arr.getD x 0 + 1)) (Array.replicate (maxVal + 1) 0)
   let rec expand (i : Nat) (acc : List Nat) : List Nat :=
     if i > maxVal then acc
     else expand (i + 1) (acc ++ List.replicate (counts.getD i 0) i)
@@ -58,7 +58,7 @@ partial def radixSort (xs : List Nat) : List Nat :=
     else
       let buckets := xs.foldl (fun arr x =>
         let digit := (x / exp) % 10
-        arr.modify digit (x :: ·)) (Array.mkArray 10 [])
+        arr.modify digit (x :: ·)) (Array.replicate 10 [])
       let sorted := buckets.foldl (fun acc bucket => acc ++ bucket.reverse) []
       go (exp * 10) sorted
   go 1 xs
@@ -70,7 +70,7 @@ partial def gnomeSort (xs : List Nat) : List Nat :=
   let rec go (pos : Nat) (arr : Array Nat) : Array Nat :=
     if pos >= n then arr
     else if pos == 0 || arr[pos]! >= arr[pos - 1]! then go (pos + 1) arr
-    else go (pos - 1) (arr.swap! pos (pos - 1))
+    else go (pos - 1) (arr.swapIfInBounds pos (pos - 1))
   (go 0 arr).toList
 
 -- Is sorted check
@@ -98,13 +98,13 @@ def findMax (xs : List Nat) : Option Nat :=
 -- Find kth smallest (quickselect idea, simplified)
 def kthSmallest (xs : List Nat) (k : Nat) : Option Nat :=
   let sorted := insertionSort xs
-  sorted.get? k
+  sorted[k]?
 
 -- Find kth largest
 def kthLargest (xs : List Nat) (k : Nat) : Option Nat :=
   let sorted := insertionSort xs
   if k >= sorted.length then none
-  else sorted.get? (sorted.length - 1 - k)
+  else sorted[sorted.length - 1 - k]?
 
 -- Median
 def median (xs : List Nat) : Option Nat :=
@@ -112,7 +112,7 @@ def median (xs : List Nat) : Option Nat :=
   else
     let sorted := insertionSort xs
     let n := sorted.length
-    sorted.get? (n / 2)
+    sorted[n / 2]?
 
 -- Mode (most frequent element)
 def mode (xs : List Nat) : Option Nat :=

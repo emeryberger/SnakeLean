@@ -92,7 +92,7 @@ partial def permutations {α : Type} [BEq α] (xs : List α) : List (List α) :=
   | [] => [[]]
   | [x] => [[x]]
   | _ =>
-    xs.bind fun x =>
+    xs.flatMap fun x =>
       (permutations (xs.filter (· != x))).map (x :: ·)
 
 -- Generate all combinations of size k
@@ -182,14 +182,14 @@ partial def nextPermutation (perm : List Nat) : Option (List Nat) :=
       if j == i + 1 then j
       else if arr[j - 1]! > arr[i]! then j - 1 else findJ (j - 1)
     let j := findJ n
-    let arr := arr.swap! i j
+    let arr := arr.swapIfInBounds i j
     let arr := reverseFrom arr (i + 1)
     some arr.toList
 where
   reverseFrom (arr : Array Nat) (start : Nat) : Array Nat :=
     let rec go (arr : Array Nat) (l r : Nat) : Array Nat :=
       if l >= r then arr
-      else go (arr.swap! l r) (l + 1) (r - 1)
+      else go (arr.swapIfInBounds l r) (l + 1) (r - 1)
     go arr start (arr.size - 1)
 
 -- Previous permutation
@@ -207,14 +207,14 @@ partial def prevPermutation (perm : List Nat) : Option (List Nat) :=
       if j == i + 1 then j
       else if arr[j - 1]! < arr[i]! then j - 1 else findJ (j - 1)
     let j := findJ n
-    let arr := arr.swap! i j
+    let arr := arr.swapIfInBounds i j
     let arr := reverseFrom arr (i + 1)
     some arr.toList
 where
   reverseFrom (arr : Array Nat) (start : Nat) : Array Nat :=
     let rec go (arr : Array Nat) (l r : Nat) : Array Nat :=
       if l >= r then arr
-      else go (arr.swap! l r) (l + 1) (r - 1)
+      else go (arr.swapIfInBounds l r) (l + 1) (r - 1)
     go arr start (arr.size - 1)
 
 -- Generate compositions of n (ordered partitions)
