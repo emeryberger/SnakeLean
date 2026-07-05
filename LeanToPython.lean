@@ -1728,13 +1728,30 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
         emitArg args[args.size - 1]!
         emit "\n"
         return
-    -- Char.isDigit
+    -- Char predicates in method-call form (`c.isDigit`, `c.isUpper`, …) lower to
+    -- `.const Char.isX` here, NOT the stdlibFnToPython lambda entries (which only
+    -- fire when used as bare function values); without these they fell through to
+    -- undefined `is_upper(...)`/`is_alpha(...)` etc.  All match Python's `str`
+    -- predicates on the ASCII range.
     if declName == ``Char.isDigit then
       if args.size >= 1 then
         emitIndent
         emit s!"{varName} = "
         emitArg args[args.size - 1]!
         emit ".isdigit()\n"
+        return
+    if let some meth :=
+        (if declName == ``Char.isUpper then some "isupper"
+         else if declName == ``Char.isLower then some "islower"
+         else if declName == ``Char.isAlpha then some "isalpha"
+         else if declName == ``Char.isAlphanum then some "isalnum"
+         else if declName == ``Char.isWhitespace then some "isspace"
+         else none) then
+      if args.size >= 1 then
+        emitIndent
+        emit s!"{varName} = "
+        emitArg args[args.size - 1]!
+        emit s!".{meth}()\n"
         return
     -- Char.toNat
     if declName == ``Char.toNat then
@@ -1751,6 +1768,48 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
         emit s!"{varName} = chr("
         emitArg args[args.size - 1]!
         emit ")\n"
+        return
+    -- Char.toUpper / Char.toLower — method-call form `c.toUpper` lowers to a
+    -- `.const Char.toUpper` here (NOT the stdlibFnToPython lambda entry, which
+    -- only fires when used as a bare function value), so it needs its own case;
+    -- otherwise it fell through to an undefined `to_upper(...)`.  Lean upcases
+    -- only ASCII letters, matching Python `str.upper()` on the ASCII range.
+    if declName == ``Char.toUpper then
+      if args.size >= 1 then
+        emitIndent
+        emit s!"{varName} = "
+        emitArg args[args.size - 1]!
+        emit ".upper()\n"
+        return
+    if declName == ``Char.toLower then
+      if args.size >= 1 then
+        emitIndent
+        emit s!"{varName} = "
+        emitArg args[args.size - 1]!
+        emit ".lower()\n"
+        return
+    -- String.push s c -> s + c  (Lean String.push is functional: returns a new
+    -- string).  args: [s, c].  (`stdlibFnToPython?` marks it `none`/"handled
+    -- specially" but never had a handler — it fell through to `string_push`.)
+    if declName == ``String.push then
+      if args.size >= 2 then
+        emitIndent
+        emit s!"{varName} = "
+        emitArg args[args.size - 2]!
+        emit " + "
+        emitArg args[args.size - 1]!
+        emit "\n"
+        return
+    -- Array.push a x -> a + [x]  (Lean Array.push is functional/persistent, so
+    -- emit a non-mutating concat rather than list.append).  args: [type, a, x].
+    if declName == ``Array.push then
+      if args.size >= 2 then
+        emitIndent
+        emit s!"{varName} = "
+        emitArg args[args.size - 2]!
+        emit " + ["
+        emitArg args[args.size - 1]!
+        emit "]\n"
         return
     -- Ordering constructors - always emit as int values
     let nameStr := declName.toString (escape := false)
@@ -1778,13 +1837,22 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
         emitIndent
         emit s!"{varName} = chr\n"
         return
-      if declName == ``Char.isDigit then
+      -- Char method-style predicates/converters passed as bare function values
+      -- (e.g. `s.toList.map Char.toUpper`): emit the matching Python lambda.
+      -- Without these entries such refs fell through to an undefined snake-cased
+      -- name (`to_upper`, `is_upper`, …).
+      if let some lam :=
+          (if declName == ``Char.isDigit then some "(lambda c: c.isdigit())"
+           else if declName == ``Char.isAlpha then some "(lambda c: c.isalpha())"
+           else if declName == ``Char.isUpper then some "(lambda c: c.isupper())"
+           else if declName == ``Char.isLower then some "(lambda c: c.islower())"
+           else if declName == ``Char.isAlphanum then some "(lambda c: c.isalnum())"
+           else if declName == ``Char.isWhitespace then some "(lambda c: c.isspace())"
+           else if declName == ``Char.toUpper then some "(lambda c: c.upper())"
+           else if declName == ``Char.toLower then some "(lambda c: c.lower())"
+           else none) then
         emitIndent
-        emit s!"{varName} = (lambda c: c.isdigit())\n"
-        return
-      if declName == ``Char.isAlpha then
-        emitIndent
-        emit s!"{varName} = (lambda c: c.isalpha())\n"
+        emit s!"{varName} = {lam}\n"
         return
       if declName == ``Nat.xor then
         emitIndent
@@ -2820,9 +2888,10 @@ def knownHandlerTags : List String := [
   "const.Char.isAlpha", "const.Char.isDigit", "const.Char.isAlphanum",
   "const.Char.isLower", "const.Char.isUpper", "const.Char.isWhitespace",
   "const.Char.toUpper", "const.Char.toLower", "const.Char.toNat", "const.Char.ofNat",
+  "const.String.push",
   -- Array (the qsort family — F13 lived here)
   "const.Array.size", "const.Array.toList", "const.Array.qsort",
-  "const.List.toArray",
+  "const.Array.push", "const.List.toArray",
   -- List combinators / utilities
   -- Note: Lean 4.31 lowers `List.map`/`filter`/`take`/`length` to their
   -- tail-recursive counterparts (`*TR`) in LCNF, so those are the spellings that
@@ -2843,7 +2912,7 @@ def knownHandlerTags : List String := [
   "const.Prod.mk", "const.Bool.true", "const.Bool.false", "const.getElem?",
   "const.bne", "const.xor",
   -- Structural (proj / cases / whole-decl) handlers
-  "proj.GetElem?", "proj.GetElem.valid", "proj.Max", "proj.Min",
+  "proj.GetElem?", "proj.GetElem.valid", "proj.GetElem!", "proj.Max", "proj.Min",
   "proj.Prod", "proj.field",
   "cases.Bool", "cases.Nat", "cases.Decidable", "cases.Option", "cases.List",
   "struct.inductive", "struct.tailLoop"

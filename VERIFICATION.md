@@ -215,7 +215,31 @@ surfaced five more, two of them silent wrong values.
   args are present, with a fallback to the old `size-2`/`size-1` shape for older
   Lean versions that don't materialize the optParams.
 
+### F14. Char/String/Array method calls fell through to undefined Python names
+
+- **Found by:** Phase-1 String/Char/Array fuzzing (grammar + `--corpus`)
+  · **Kind:** runtime (`NameError`/`TypeError: name 'to_upper' is not defined`)
+- **Root cause:** method-call forms `c.toUpper`, `c.isUpper`, `s.push c`,
+  `a.push x` lower to `.const Char.toUpper` / `String.push` / `Array.push` in
+  LCNF, but only *some* Char spellings had emission handlers (isDigit) and the
+  `stdlibFnToPython?` lambda entries fire only when the op is used as a bare
+  function *value*, not called. Uncovered ops fell through to `toPyFnName`, which
+  snake-cases the Lean name → a call to an undefined `to_upper`/`is_upper`/
+  `string_push`/`array_push`. Exactly the class of bug the self-coverage metric
+  predicts (these handlers showed "never fired" pre-Phase-1).
+- **Fix:** dedicated handlers for `Char.toUpper`/`toLower` (→ `.upper()`/
+  `.lower()`), `Char.isUpper`/`isLower`/`isAlpha`/`isAlphanum`/`isWhitespace`
+  (→ `.isupper()`/… ), `String.push s c` (→ `s + c`), and `Array.push a x`
+  (→ `a + [x]`, matching Lean's persistent/functional Array), plus the
+  bare-function-value forms. All verified equal to Lean on the ASCII range
+  (Lean's Char predicates are ASCII-only, matching Python's `str` predicates
+  there; a documented Unicode-widening target could surface a real divergence).
+
 ### F15. `xs[i]!` panic-indexing referenced elided instances (crash)
+
+Fixed on `main` before this Phase-1 branch (see PR #16); listed here for the
+ledger. This is what the `Corpus.Production` `_x_266` failures actually were —
+NOT a batched-emission name collision, as first suspected.
 
 - **Found by:** Phase-1 Array fuzzing (`Corpus.Production.quicksort` via
   `lomutoPartition`'s `arr[hi]!`); reproduces on plain `List` too (`xs[i]!`)
@@ -225,20 +249,31 @@ surfaced five more, two of them silent wrong values.
   instance, then called with the `Inhabited` instance as a leading argument. Both
   instances are *elided* (the transpiler never emits typeclass instances), but the
   projection emitted `_x_N.field_2` and the call passed `_x_M` — referencing the
-  unbound instance names. (Initially misread as a batched-emission name collision;
-  it's actually this instance-projection gap, independent of batching.) The
-  `.proj` handler covered `GetElem?` idx 0/1 (`getElem?`/valid) but not idx 2
-  (`getElem!`), and `emitArg`/`renderArg` had no case for an instance-valued arg.
+  unbound instance names. The `.proj` handler covered `GetElem?` idx 0/1
+  (`getElem?`/valid) but not idx 2 (`getElem!`), and `emitArg`/`renderArg` had no
+  case for an instance-valued arg.
 - **Fix:** (a) handle `.proj` idx 2 on a `GetElem` instance as
   `(lambda _inst, xs, i: xs[i])` — absorbing the leading `Inhabited` arg and
   indexing directly (Lean panics on OOB, Python raises `IndexError` — both errors,
   so the differential oracle stays consistent); (b) `emitArg`/`renderArg` now emit
   `None` for a var known to be a typeclass instance, so any elided instance
   threaded as an argument is a harmless placeholder the callee ignores.
-- **Related (still open):** `List.get!`/`Array.get!` (the *named* method, not
-  `[i]!`) inlines Lean's panic machinery into garbage; no corpus function uses it.
-  `Array.swapIfInBounds` and other Array builtins remain unmapped (see the
-  Phase-1 known-open note).
+
+### Known-open (Phase-1 follow-up, not yet fixed)
+
+Phase-1 String/Char/Array fuzzing surfaced further gaps, tracked via
+`corpus_frags._KNOWN_OPEN_NS` (their namespaces are excluded from harvesting so
+the sweep stays a clean regression signal):
+- **Missing Lean String/List builtins** used pervasively by `Corpus.Strings.*`
+  — `String.startsWith`→`starts_with`, `.dropWhile`→`drop_while`,
+  `.replicate`→`replicate_tr`, `.dropLast`→`drop_last_tr` — fall through to
+  undefined names.
+- **Missing Array builtins** used by `Corpus.Production.*` — chiefly
+  `Array.swapIfInBounds`→`swap_if_in_bounds` — likewise fall through. (The
+  `_x_266` failures in this namespace were F15, now fixed; `swapIfInBounds` is
+  the remaining blocker.)
+- **`List.get!`/`Array.get!`** (the *named* method, not `[i]!`) inlines Lean's
+  panic machinery into garbage; no corpus function currently uses it.
 
 ## Bugs found by the round-trip differential harness
 
@@ -325,9 +360,9 @@ After every fix the full matrix is re-run green:
 
 ## Summary
 
-18 transpiler bugs found and fixed across this work — 4 by the round-trip
-differential harness (R1–R4), 11 by the grammar-based fuzzer (F1–F11), 2 by
-fragment-reuse fuzzing over the real corpus (F12–F13), plus the upgrade-era set
+19 transpiler bugs found and fixed across this work — 4 by the round-trip
+differential harness (R1–R4), 11 by the grammar-based fuzzer (F1–F11), 3 by
+fragment-reuse + Phase-1 type expansion (F12–F14), plus the upgrade-era set
 — of which **six were silent wrong-value / total-operation bugs** (truncated
 `Nat` subtraction, Euclidean `Int` division and modulo, two `OfNat` literal
 collisions, and `Nat`/`Int` division-by-zero) that no crash-based check catches
