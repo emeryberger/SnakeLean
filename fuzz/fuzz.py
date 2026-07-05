@@ -87,6 +87,61 @@ class Failure(Exception):
         self.detail = detail
 
 
+def parse_handlers(py_src):
+    """Extract transpiler self-coverage tags from the `# HANDLERS_FIRED` /
+    `# HANDLERS_KNOWN` comment lines the transpiler appends to its Python output.
+    Returns (fired, known) as sets of tag strings (empty if absent — e.g. an
+    older transpiler build without the instrumentation)."""
+    fired, known = set(), set()
+    for line in py_src.splitlines():
+        if line.startswith("# HANDLERS_FIRED\t"):
+            fired |= set(line.split("\t")[1:])
+        elif line.startswith("# HANDLERS_KNOWN\t"):
+            known |= set(line.split("\t")[1:])
+    return fired, known
+
+
+# Per-process handler tags from the most recent Lean run — mirrors the
+# `gen.emit_lean_file.last_gen` pattern so pool workers can return them without
+# threading src through every call site.  Set by `_record_handlers`.
+_LAST_HANDLERS = (frozenset(), frozenset())
+
+
+def _record_handlers(lean_stdout):
+    """Parse the transpiler's `### PYTHON` output from a Lean run and stash its
+    handler tags in `_LAST_HANDLERS` for the calling worker to return."""
+    global _LAST_HANDLERS
+    fired, known = parse_handlers(lean_stdout)
+    _LAST_HANDLERS = (frozenset(fired), frozenset(known))
+
+
+def report_self_coverage(fired, known):
+    """Print the transpiler self-coverage block: which special-cased handlers the
+    sweep exercised, which never fired (untested → bug-prone), and any core-
+    namespace fallthroughs (a handler a Lean API change may have silently broken).
+    Mirrors the grammar-production-coverage report."""
+    if not known:
+        return  # transpiler build without instrumentation; nothing to report
+    hit = fired & known
+    print(f"\nTranspiler self-coverage: {len(hit)}/{len(known)} handlers fired "
+          f"({100 * len(hit) // max(len(known), 1)}%)")
+    missed = sorted(known - hit)
+    if missed:
+        print(f"  never fired ({len(missed)}): {', '.join(missed)}")
+    # Fallthroughs on CORE namespaces = a special handler likely broken by a Lean
+    # change (the construct stopped matching and hit the generic call path, which
+    # emits an undefined Python name).  User-function fallthroughs are expected
+    # and ignored.
+    core = ("List.", "Nat.", "Int.", "String.", "Char.", "Array.", "Option.",
+            "Prod.", "Bool.", "Decidable.")
+    broken = sorted(t[len("fallthrough."):] for t in fired
+                    if t.startswith("fallthrough.")
+                    and any(t[len("fallthrough."):].startswith(c) for c in core))
+    if broken:
+        print(f"  ⚠ CORE-NAMESPACE FALLTHROUGHS ({len(broken)}) — a special "
+              f"handler may be broken by a Lean API change: {', '.join(broken)}")
+
+
 def _check_py_oracle(py_src, oracle_block):
     """Exec the transpiled `py_src` and diff every ORACLE row in `oracle_block`
     against it.  Raise Failure on any disagreement, syntax error, or runtime
@@ -232,6 +287,7 @@ def run_batch(seeds, ndefs, ninputs, emi=0.0, tmp_path=None):
                 os.unlink(path)
             except OSError:
                 pass
+    _record_handlers(out)  # per-block HANDLERS comments union across the batch
     sections = _split_batch_output(out)
     results = {}
     for seed in seeds:
@@ -273,6 +329,7 @@ def run_seed(seed, ndefs, ninputs, tmp_path=None, coverage=None, emi=0.0):
     # `lake env lean` prints elaboration errors to stdout (interleaved with the
     # `#eval` output) as well as stderr, so scan both.  A Lean error means the
     # GENERATOR produced ill-typed code (not a transpiler bug); skip such seeds.
+    _record_handlers(out)
     errs = real_errors(err) + real_errors(out)
     if errs:
         raise Failure("lean-error", "\n".join(errs[:3]))
@@ -288,14 +345,15 @@ def _gen_cov(g):
 
 def check_seed(args):
     """Pool worker: check one seed. Returns a picklable result tuple
-    (seed, status, detail, offered, hit, koffered, khit).  `status` is
-    'ok' | 'lean-error' | a transpiler-bug kind."""
+    (seed, status, detail, offered, hit, koffered, khit, fired, known).  `status`
+    is 'ok' | 'lean-error' | a transpiler-bug kind."""
     seed, ndefs, ninputs, emi = args
     try:
         run_seed(seed, ndefs, ninputs, emi=emi)
-        return (seed, "ok", "", *_gen_cov(gen.emit_lean_file.last_gen))
+        return (seed, "ok", "", *_gen_cov(gen.emit_lean_file.last_gen), *_LAST_HANDLERS)
     except Failure as f:
-        return (seed, f.kind, f.detail, *_gen_cov(gen.emit_lean_file.last_gen))
+        return (seed, f.kind, f.detail, *_gen_cov(gen.emit_lean_file.last_gen),
+                *_LAST_HANDLERS)
 
 
 def check_batch(args):
@@ -308,6 +366,7 @@ def check_batch(args):
     (seed, status, detail, offered, hit) tuples, matching `check_seed`."""
     seeds, ndefs, ninputs, emi = args
     results, cov = run_batch(seeds, ndefs, ninputs, emi=emi)
+    fired, known = _LAST_HANDLERS  # batch-global handler tags (same file)
     out = []
     for seed in seeds:
         status, detail = results[seed]
@@ -319,7 +378,7 @@ def check_batch(args):
                 status, detail = "ok", ""
             except Failure as f:
                 status, detail = f.kind, f.detail
-        out.append((seed, status, detail, offered, hit, koffered, khit))
+        out.append((seed, status, detail, offered, hit, koffered, khit, fired, known))
     return out
 
 
@@ -338,6 +397,7 @@ def run_corpus_seed(seed, nfuncs, ninputs, funcs=None):
             os.unlink(path)
         except OSError:
             pass
+    _record_handlers(out)
     errs = real_errors(err) + real_errors(out)
     if errs:
         raise Failure("lean-error", "\n".join(errs[:3]))
@@ -346,17 +406,17 @@ def run_corpus_seed(seed, nfuncs, ninputs, funcs=None):
 
 
 def check_corpus_seed(args):
-    """Pool worker for corpus mode.  Returns (seed, status, detail, chosen_names)
-    where `chosen_names` is the set of corpus functions this seed exercised (for
-    corpus-coverage reporting)."""
+    """Pool worker for corpus mode.  Returns (seed, status, detail, chosen_names,
+    fired, known) — `chosen_names` is the corpus functions this seed exercised;
+    (fired, known) are the transpiler self-coverage tags for this seed."""
     seed, nfuncs, ninputs = args
     try:
         chosen = run_corpus_seed(seed, nfuncs, ninputs)
-        return (seed, "ok", "", frozenset(chosen))
+        return (seed, "ok", "", frozenset(chosen), *_LAST_HANDLERS)
     except Failure as f:
         # Re-derive the chosen names for reporting even on failure.
         _src, chosen = corpus_frags.emit_corpus_file(seed, nfuncs, ninputs)
-        return (seed, f.kind, f.detail, frozenset(chosen))
+        return (seed, f.kind, f.detail, frozenset(chosen), *_LAST_HANDLERS)
 
 
 def minimize(seed, ndefs, ninputs, emi=0.0):
@@ -696,12 +756,15 @@ def run_corpus_mode(args):
     checked = lean_errors = done = 0
     bugs = []
     exercised = set()
+    fired_all, known_all = set(), set()
     with ProcessPoolExecutor(max_workers=args.jobs) as ex:
         futures = [ex.submit(check_corpus_seed, (s, args.defs, args.inputs))
                    for s in seeds]
         for fut in as_completed(futures):
-            seed, status, detail, chosen = fut.result()
+            seed, status, detail, chosen, fired, known = fut.result()
             exercised |= chosen
+            fired_all |= fired
+            known_all |= known
             done += 1
             if status == "ok":
                 checked += 1
@@ -729,6 +792,7 @@ def run_corpus_mode(args):
     missed = sorted(q for (q, _, _) in all_funcs if q not in exercised)
     if missed:
         print(f"  never selected: {', '.join(missed)}")
+    report_self_coverage(fired_all, known_all)
 
 
 def main():
@@ -783,18 +847,21 @@ def main():
     bugs = []  # (seed, kind, detail)
     offered, hit = set(), set()
     koffered, khit = set(), set()  # k-path (context-sensitive) coverage
+    fired_all, known_all = set(), set()  # transpiler self-coverage
 
     # Check seeds in parallel.  Each worker elaborates one Lean file (the
     # bottleneck); with `--batch B` that file packs B seeds so Lean's ~1s startup
     # is amortized across B*defs functions.  We drain results as they complete,
     # aggregate coverage, collect any bugs, then report the LOWEST-seed bug so the
     # run's verdict is deterministic regardless of completion order.
-    def handle(seed, status, detail, off, ht, koff, kht):
+    def handle(seed, status, detail, off, ht, koff, kht, fired, known):
         nonlocal checked, lean_errors, done
         offered.update(off)
         hit.update(ht)
         koffered.update(koff)
         khit.update(kht)
+        fired_all.update(fired)
+        known_all.update(known)
         done += 1
         if status == "ok":
             checked += 1
@@ -848,6 +915,7 @@ def main():
         print(f"\nk-path coverage (≤{gen.Gen.KMAX} nested productions): "
               f"{len(khit)}/{len(koffered)} offered paths "
               f"({100 * len(khit) // max(len(koffered), 1)}%)")
+    report_self_coverage(fired_all, known_all)
 
 
 if __name__ == "__main__":
