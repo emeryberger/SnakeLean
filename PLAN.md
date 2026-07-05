@@ -43,17 +43,21 @@ Root causes, in priority order:
    JSON with no Lean spawn. Stale/missing/corrupt cache falls back to a live spawn.
    `harvest()` also runs once in the parent and the (picklable) function list is
    passed to workers. Eliminates the ~150 concurrent bootstrap Lean spawns.
-3. **`lean_run` per-call timeout is 60 s** (added in Phase 3 after UnionFind
-   hangs). Fine for safety, but a batched file that hits one slow `#eval` burns
-   60 s. With batching, keep the timeout but consider a smaller per-eval budget.
-   (STILL OPEN — a single slow oracle row now stalls a whole batch's Lean run
-   until the timeout; the per-seed re-run then re-incurs it. Consider a
-   `set_option` eval-time bound or splitting suspect batches before re-running.)
+3. ✅ **Batch timeout scaled with size** (`_batch_timeout`). The fixed per-seed
+   60 s killed a healthy 25-seed batch mid-print (each corpus seed is ~3 s of
+   transpile+eval, so a batch is ~75 s of legitimate work). Now
+   `LEAN_TIMEOUT_S + PER_SEED_TIMEOUT_S*(N-1)` (60 + 10*(N-1)); a genuine hang in
+   one block still bounds the whole run. This also exposed a latent robustness
+   bug (BOTH batch modes): a process killed mid-print leaves a truncated final
+   ORACLE row, and `_check_py_oracle`'s `line.split("\t")` raised a bare
+   `ValueError` that escaped `Failure` handling and killed the whole pool — now
+   raised as `Failure("truncated")` so the seed is re-run alone.
 
-Verify efficiency the same way as `--batch` was: identical verdict + coverage,
-per-seed determinism preserved, and measure wall-clock speedup on cloudnew.
-Next: run the 3000-seed `--corpus --batch 25` sweep on cloudnew that previously
-didn't finish, and confirm it now does.
+**VERIFIED AT SCALE (2026-07-05, cloudnew, 180 jobs):** the 3000-seed
+`--corpus --batch 25 --defs 14 --inputs 6` sweep that previously DID NOT FINISH
+now completes: **3000/3000 checked, 0 transpiler bugs, 139/139 corpus functions
+exercised, 65/118 handlers fired.** Per-seed blocks byte-identical to standalone;
+batched vs unbatched give identical verdict+coverage.
 
 ## New bug-finding directions (after efficiency; ~ by expected yield)
 1. **Invariant-respecting user-value generation.** Phase 3 excluded `UnionFind`
