@@ -94,10 +94,15 @@ throughput AND code-shape diversity, and adds coverage feedback.
    + `fuzz.py --pycov`). The transpiler is in Lean so Python coverage can't
    measure IT; the target is coverage of the *transpiled code* during oracle
    execution — a bug in a branch no oracle input reaches is invisible to
-   differential testing. Implementation note: SlipCover / `sys.monitoring`
-   (PEP 669) only instrument imported FILES and need Python 3.12, but the
-   transpiled code is `exec`'d from a string and cloudnew runs 3.11 — so we use
-   portable `sys.settrace` line events scoped to the `<transpiled>` filename.
+   differential testing. Coverage backend (`pycov.Harness`): **SlipCover** when
+   importable — it instruments the compiled code OBJECT directly
+   (`Slipcover.instrument(compile(...))`), so it works fine on the `exec`'d
+   transpiled string with no imported file (an earlier note here claiming
+   otherwise was WRONG), counts executable lines at the bytecode level (bare
+   `else:` correctly excluded), and on Python 3.12+ (with `slipcover.branch.
+   preinstrument`) records real **branch** coverage. Falls back to portable
+   `sys.settrace` line events when SlipCover is absent. cloudnew now runs
+   python3.12 + slipcover (installed 2026-07-05) to get branch coverage.
    `--pycov` runs a corpus sweep, unions hit body-lines per function across all
    seeds/inputs, and flags functions with unexercised lines. KEY FINDING:
    `yahtzee_score` sits at 7% (16/209 lines) — random 5-element lists almost
@@ -112,12 +117,17 @@ throughput AND code-shape diversity, and adds coverage feedback.
    new body lines, mutating covering inputs (typed mutators + structure-aware
    bootstrap: all-equal / consecutive / full-house lists, boundary ints) →
    emit a Lean oracle over the discovered covering inputs and diff, so any
-   mis-transpiled branch the search reaches is still caught. RESULT: 100% body
-   coverage on ALL 78 functions (yahtzee_score 96%→100% with ~6 inputs vs 400
-   random), 0 divergences — the transpiler is correct on the newly-reached
-   branches. Deterministic (seed 0). Also fixed a pycov measurement bug: bare
-   `else:`/`try:`/`finally:` header lines never fire a `line` trace event, so
-   counting them made 100% unreachable — now excluded from the denominator.
+   mis-transpiled branch the search reaches is still caught. When SlipCover branch
+   coverage is available (3.12+) the search targets uncovered *branch edges*, not
+   just lines — a stronger signal. RESULT: 100% LINE coverage on all 78 functions
+   (yahtzee_score 96%→100% with ~6 inputs vs 400 random); 100% BRANCH coverage on
+   all 37 functions that have branches; 0 divergences — the transpiler is correct
+   on every newly-reached branch. Deterministic (seed 0). Two measurement fixes:
+   (a) settrace fallback drops bare `else:`/`try:`/`finally:` headers (never fire
+   a line event); (b) branch mode excludes provably-unreachable `match … → EXIT`
+   fall-through edges — the transpiler emits `match` only on irrefutable tuple
+   patterns, so SlipCover's conservative match-failure edge is dead code that
+   would otherwise peg such functions below 100% forever.
 
 ## Scaled validation on cloudnew (192 cores, python3.11) — this session
 All work synced to cloudnew via patch off origin/main and run on 90–180 cores:

@@ -606,16 +606,18 @@ def pycov_search_fn(args):
     py_fn = _name_map(py_src).get(qual)
     if not py_fn:
         return (qual, 0, 0, "no-fn", f"{qual} not in transpiled output")
-    ns = {}
     try:
-        exec(compile(py_src, "<transpiled>", "exec"), ns)
+        # Branch mode when available (SlipCover on 3.12+): the search then targets
+        # uncovered branch edges, a stronger adequacy signal than lines.
+        harness = pycov.Harness(py_src, branch=True)
     except Exception as e:  # noqa: BLE001
         return (qual, 0, 0, "exec", f"{type(e).__name__}: {e}")
-    body = pycov.body_lines(py_src, py_fn)
+    body = harness.body_units(py_fn)
     if not body:
         return (qual, 0, 0, "ok", "")
     # (2) search inputs in pure Python (no Lean).
-    covering, hit = input_search.search(ns[py_fn], ptypes, body, seed=0, budget=budget)
+    covering, hit = input_search.search(harness, harness.ns[py_fn], ptypes, body,
+                                        seed=0, budget=budget)
     # (3) validate the covering inputs through the Lean oracle.
     status, detail = "ok", ""
     if covering:
@@ -646,8 +648,10 @@ def run_pycov_search_mode(args):
     per-function adequacy and any divergence a newly-reached branch exposes."""
     all_funcs = corpus_frags.harvest()
     budget = max(args.inputs * 50, 200)
+    unit = "branches" if pycov.have_branch_coverage() else "lines"
     print(f"Coverage-guided input search: {len(all_funcs)} corpus functions, "
-          f"budget {budget} candidate inputs each.")
+          f"budget {budget} candidate inputs each; coverage unit = {unit} "
+          f"(backend: {'slipcover' if pycov.have_slipcover() else 'settrace'}).")
     bugs, rows, done = [], [], 0
     with ProcessPoolExecutor(max_workers=args.jobs) as ex:
         futures = [ex.submit(pycov_search_fn, (q, pt, r, budget))
@@ -666,7 +670,7 @@ def run_pycov_search_mode(args):
     total_hit = sum(h for (_, _, h, _) in rows)
     total_body = sum(b for (_, _, _, b) in rows)
     full = sum(1 for (frac, _, _, _) in rows if frac >= 1.0)
-    print(f"\nGuided input adequacy: {total_hit}/{total_body} body lines "
+    print(f"\nGuided input adequacy: {total_hit}/{total_body} {unit} "
           f"({100 * total_hit // max(total_body, 1)}%); "
           f"{full}/{len(rows)} functions fully covered.")
     under = sorted(r for r in rows if r[0] < 1.0)

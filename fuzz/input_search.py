@@ -20,7 +20,6 @@ to *choose* inputs.  Correctness is always decided by the Lean oracle downstream
 import random
 
 import gen
-import pycov
 
 # Type-directed mutators.  Each takes (rng, value) and returns a nearby value of
 # the same Lean type.  Kept deliberately diverse (boundaries, duplicates, sign
@@ -136,9 +135,11 @@ def _mutate(rng, ptypes, args):
     return out
 
 
-def search(fn, ptypes, body, seed=0, budget=400):
-    """Greybox-search inputs for transpiled `fn` (a callable) with parameter Lean
-    types `ptypes` and executable body-line set `body`.
+def search(harness, fn, ptypes, body, seed=0, budget=400):
+    """Greybox-search inputs for transpiled function `fn` (a callable from
+    `harness.ns`) with parameter Lean types `ptypes` and executable body-line set
+    `body`.  `harness` is a `pycov.Harness` (its `trace_call` gives per-call
+    coverage from whichever backend is active).
 
     Returns (covering_inputs, hit_lines): `covering_inputs` is a small list of
     argument lists that together cover `hit_lines` — each was kept because it hit
@@ -156,7 +157,7 @@ def search(fn, ptypes, body, seed=0, budget=400):
 
     def consider(args):
         nonlocal covered
-        hit = pycov.trace_call(fn, args) & body
+        hit = harness.trace_call(fn, args) & body
         new = hit - covered
         if new:
             covered |= new
