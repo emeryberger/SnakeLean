@@ -211,11 +211,20 @@ The design draws on the grammar-fuzzing literature:
   AFL-style greybox loop searches inputs that maximize coverage of each
   transpiled body (running purely in Python — fast, no Lean), then hands the
   discovered covering inputs back to the Lean oracle for differential validation.
-  With SlipCover branch coverage it targets uncovered *branch edges*. Reaches
-  100% line coverage on all 78 harvested corpus functions and 100% branch coverage
-  on the 37 with branches (e.g. `yahtzee_score`, unreachable by random 5-die
-  lists, hits every scoring branch with ~6 targeted inputs), turning an adequacy
-  gap into a validated test set.
+  The coverage *unit* escalates with what the interpreter supports: **execution
+  k-line subpaths** via `sys.monitoring` (PEP 669, 3.12+) — steering toward
+  uncovered branch *combinations*, the strongest signal — then SlipCover *branch
+  edges*, then plain lines. Reaches 100% line/branch coverage on the harvested
+  corpus (e.g. `yahtzee_score`, unreachable by random 5-die lists, hits every
+  scoring branch with ~6 targeted inputs) and, in path mode, discovers thousands
+  of distinct branch-combination subpaths — each validated against the oracle,
+  turning an adequacy gap into a validated test set.
+
+  *Why `sys.monitoring`, not a SlipCover fork:* path coverage needs the per-call
+  *ordered* line sequence, but SlipCover's callback returns `sys.monitoring.
+  DISABLE` (each probe fires at most once ever, so order is unrecoverable). A
+  `sys.monitoring` LINE callback that does *not* disable sees every event in
+  order — the right tool, no fork.
 
 Techniques we considered but have **not** adopted — the
 `Float`-vs-exact-`Fraction` question and formal-verification / e-graph

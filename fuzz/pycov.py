@@ -113,6 +113,63 @@ class LineTracer:
         return False
 
 
+# Execution-PATH coverage needs the ORDERED sequence of executed lines per call,
+# which SlipCover can't give (its callback returns `sys.monitoring.DISABLE`, so a
+# line fires at most once ever).  We instead use `sys.monitoring` (PEP 669, 3.12+)
+# with a LINE callback that does NOT disable, recording every line event in
+# order.  From that sequence we derive bounded k-line subpaths (windows of k
+# consecutive executed lines) as the coverage unit — an execution-order analogue
+# of the grammar k-path metric (gen.Gen.KMAX).
+_HAVE_MONITORING = (sys.version_info[:2] >= (3, 12)
+                    and hasattr(sys, "monitoring"))
+# Tool id 3 is a free slot (0=debugger, 1=coverage/SlipCover, 2=profiler).
+_MON_TOOL_ID = 3
+# Bound on subpath length — matches gen.Gen.KMAX so the two k-path metrics align.
+PATH_K = 2
+
+
+class PathTracer:
+    """Records the ordered line sequence executed under `<transpiled>` via
+    `sys.monitoring`, and exposes the set of k-line subpaths hit.  Each subpath is
+    a tuple of `PATH_K` consecutive executed line numbers within one call.  Only
+    available on Python 3.12+ (`_HAVE_MONITORING`)."""
+
+    def __init__(self, filename="<transpiled>", k=PATH_K):
+        self.filename = filename
+        self.k = k
+        self._seq = []          # ordered lines of the current call
+        self.subpaths = set()   # accumulated k-line subpaths across calls
+
+    def _on_line(self, code, lineno):
+        if code.co_filename == self.filename:
+            self._seq.append(lineno)
+        # deliberately return None (not DISABLE) so every line event fires
+
+    def begin_call(self):
+        self._seq = []
+
+    def end_call(self):
+        seq = self._seq
+        for i in range(len(seq) - self.k + 1):
+            self.subpaths.add(tuple(seq[i:i + self.k]))
+
+    def __enter__(self):
+        mon = sys.monitoring
+        if mon.get_tool(_MON_TOOL_ID) is None:
+            mon.use_tool_id(_MON_TOOL_ID, "pathcov")
+        self._prev_cb = mon.register_callback(
+            _MON_TOOL_ID, mon.events.LINE, self._on_line)
+        mon.set_events(_MON_TOOL_ID, mon.events.LINE)
+        return self
+
+    def __exit__(self, *exc):
+        mon = sys.monitoring
+        mon.set_events(_MON_TOOL_ID, 0)
+        mon.register_callback(_MON_TOOL_ID, mon.events.LINE, self._prev_cb)
+        mon.free_tool_id(_MON_TOOL_ID)
+        return False
+
+
 # SlipCover records real branch coverage only via an AST pre-pass, and its
 # branch encoding is 3.12+ only (older Python uses a weaker scheme that yields no
 # branch data on an exec'd code object).  So branch mode = SlipCover on 3.12+.
@@ -124,26 +181,39 @@ def have_branch_coverage():
     return _HAVE_BRANCH
 
 
+def have_path_coverage():
+    """Whether execution-path (k-line-subpath) coverage is available
+    (`sys.monitoring`, Python 3.12+)."""
+    return _HAVE_MONITORING
+
+
 class Harness:
     """A compiled, coverage-instrumented copy of the transpiled module.  `ns` is
     the exec'd namespace (look up transpiled functions there); `trace_call` runs
-    one call and returns the coverage units it hit.  Backed by SlipCover when
-    available (bytecode-accurate lines, correct on bare `else:`), else by
-    `sys.settrace`.
+    one call and returns the coverage units it hit.
 
-    When `branch=True` and branch coverage is available (SlipCover on 3.12+), the
-    unit of coverage is a *branch* `(from_line, to_line)` rather than a line — a
-    stronger adequacy signal, since it distinguishes taking vs. not-taking each
-    conditional edge.  Otherwise it degrades to line coverage transparently."""
+    Coverage unit, by mode (each a stronger adequacy signal than the last):
+    - `paths=True` (`sys.monitoring`, 3.12+): k-line SUBPATHS — tuples of
+      consecutive executed lines — steering the search toward uncovered branch
+      *combinations*, not just individual edges.
+    - `branch=True` (SlipCover, 3.12+): branch edges `(from_line, to_line)`.
+    - otherwise: executed lines (SlipCover if present, else `sys.settrace`).
+    A requested mode silently degrades if unavailable on this interpreter."""
 
     FILENAME = "<transpiled>"
 
-    def __init__(self, py_src, branch=False):
+    def __init__(self, py_src, branch=False, paths=False):
         self.py_src = py_src
         self.ns = {}
         self._sci = None
-        self.branch = branch and _HAVE_BRANCH
-        if _HAVE_SLIPCOVER:
+        self.paths = paths and _HAVE_MONITORING
+        # Path mode observes the plain code object via sys.monitoring — no
+        # SlipCover instrumentation needed (and mixing the two tool ids is
+        # avoided).  Branch/line modes use SlipCover when available.
+        self.branch = branch and _HAVE_BRANCH and not self.paths
+        if self.paths:
+            exec(compile(py_src, self.FILENAME, "exec"), self.ns)
+        elif _HAVE_SLIPCOVER:
             self._sci = _slipcover.Slipcover(branch=self.branch)
             tree = _ast.parse(py_src)
             if self.branch:
@@ -164,9 +234,19 @@ class Harness:
 
     def trace_call(self, fn, args):
         """Run `fn(*args)` and return the frozenset of coverage units it hit
-        (branches in branch mode, else lines).  Swallows exceptions — a crashing
-        input still covered the units it reached before raising, which is what a
-        coverage-guided search wants to keep."""
+        (k-line subpaths in path mode, branches in branch mode, else lines).
+        Swallows exceptions — a crashing input still covered the units it reached
+        before raising, which is what a coverage-guided search wants to keep."""
+        if self.paths:
+            tracer = PathTracer(self.FILENAME)
+            with tracer:
+                tracer.begin_call()
+                try:
+                    fn(*args)
+                except Exception:  # noqa: BLE001
+                    pass
+                tracer.end_call()
+            return frozenset(tracer.subpaths)
         if self._sci is not None:
             before = self._slipcover_units()
             try:
@@ -207,6 +287,11 @@ class Harness:
         b):` destructuring a Prod), which can never fail, so SlipCover's
         conservative match-failure edge is dead code the search could never
         cover.  Counting it would peg such functions below 100% forever."""
+        # Path mode: the k-line-subpath universe is combinatorial and only
+        # discovered by running (like the grammar k-path metric), so there is no
+        # up-front denominator — return empty to signal an OPEN-ENDED search.
+        if self.paths:
+            return set()
         spans = function_spans(self.py_src)
         if fn not in spans:
             return set()

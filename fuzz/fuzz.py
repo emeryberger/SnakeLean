@@ -667,13 +667,17 @@ def pycov_search_fn(args):
     if not py_fn:
         return (qual, 0, 0, "no-fn", f"{qual} not in transpiled output")
     try:
-        # Branch mode when available (SlipCover on 3.12+): the search then targets
-        # uncovered branch edges, a stronger adequacy signal than lines.
-        harness = pycov.Harness(py_src, branch=True)
+        # Prefer PATH mode (sys.monitoring, 3.12+): the search targets uncovered
+        # k-line subpaths — branch *combinations* — the strongest adequacy signal.
+        # Falls back to branch mode (SlipCover) then line mode automatically.
+        want_paths = pycov.have_path_coverage()
+        harness = pycov.Harness(py_src, branch=True, paths=want_paths)
     except Exception as e:  # noqa: BLE001
         return (qual, 0, 0, "exec", f"{type(e).__name__}: {e}")
     body = harness.body_units(py_fn)
-    if not body:
+    # Path mode is OPEN-ENDED (`body` empty by design): still search.  In the
+    # non-path modes an empty `body` genuinely means nothing to cover — skip.
+    if not body and not harness.paths:
         return (qual, 0, 0, "ok", "")
     # (2) search inputs in pure Python (no Lean).
     covering, hit = input_search.search(harness, harness.ns[py_fn], ptypes, body,
@@ -708,18 +712,23 @@ def run_pycov_search_mode(args):
     per-function adequacy and any divergence a newly-reached branch exposes."""
     all_funcs = corpus_frags.harvest()
     budget = max(args.inputs * 50, 200)
-    unit = "branches" if pycov.have_branch_coverage() else "lines"
+    paths_mode = pycov.have_path_coverage()
+    unit = ("k-line paths" if paths_mode
+            else "branches" if pycov.have_branch_coverage() else "lines")
+    backend = ("sys.monitoring" if paths_mode
+               else "slipcover" if pycov.have_slipcover() else "settrace")
     print(f"Coverage-guided input search: {len(all_funcs)} corpus functions, "
           f"budget {budget} candidate inputs each; coverage unit = {unit} "
-          f"(backend: {'slipcover' if pycov.have_slipcover() else 'settrace'}).")
+          f"(backend: {backend}).")
     bugs, rows, done = [], [], 0
     with ProcessPoolExecutor(max_workers=args.jobs) as ex:
         futures = [ex.submit(pycov_search_fn, (q, pt, r, budget))
                    for (q, pt, r) in all_funcs]
         for fut in as_completed(futures):
             qual, hit, body, status, detail = fut.result()
-            if body:
-                rows.append((hit / body, qual, hit, body))
+            # `body` is 0 in path mode (open-ended universe); `hit` is the count
+            # of distinct units discovered.
+            rows.append((qual, hit, body))
             if status not in ("ok", "transpile-error", "no-fn", "lean-error"):
                 bugs.append((qual, status, detail))
             done += 1
@@ -727,18 +736,27 @@ def run_pycov_search_mode(args):
                 print(f"  ... {done}/{len(all_funcs)} functions "
                       f"({len(bugs)} divergence(s) so far)")
 
-    total_hit = sum(h for (_, _, h, _) in rows)
-    total_body = sum(b for (_, _, _, b) in rows)
-    full = sum(1 for (frac, _, _, _) in rows if frac >= 1.0)
-    print(f"\nGuided input adequacy: {total_hit}/{total_body} {unit} "
-          f"({100 * total_hit // max(total_body, 1)}%); "
-          f"{full}/{len(rows)} functions fully covered.")
-    under = sorted(r for r in rows if r[0] < 1.0)
-    if under:
-        print(f"\n{len(under)} function(s) still under full coverage "
-              f"(genuinely rare/undriveable branches):")
-        for (frac, qual, h, b) in under[:20]:
-            print(f"  {qual:45} {h}/{b} ({int(100 * frac)}%)")
+    total_hit = sum(h for (_, h, _) in rows)
+    if paths_mode:
+        # Open-ended: no denominator; report discovered-subpath totals.  The
+        # validation of every covering input against the Lean oracle is the real
+        # signal — a search that reaches a mis-transpiled branch combination is
+        # caught below.
+        print(f"\nGuided path search: {total_hit} distinct k-line subpaths "
+              f"discovered across {len(rows)} functions and validated against "
+              f"the oracle.")
+    else:
+        total_body = sum(b for (_, _, b) in rows)
+        full = sum(1 for (_, h, b) in rows if b and h >= b)
+        print(f"\nGuided input adequacy: {total_hit}/{total_body} {unit} "
+              f"({100 * total_hit // max(total_body, 1)}%); "
+              f"{full}/{len(rows)} functions fully covered.")
+        under = sorted((h / b, q, h, b) for (q, h, b) in rows if b and h < b)
+        if under:
+            print(f"\n{len(under)} function(s) still under full coverage "
+                  f"(genuinely rare/undriveable branches):")
+            for (frac, qual, h, b) in under[:20]:
+                print(f"  {qual:45} {h}/{b} ({int(100 * frac)}%)")
     if bugs:
         print(f"\n*** {len(bugs)} DIVERGENCE(S) on searched inputs ***")
         for (qual, status, detail) in sorted(bugs):
