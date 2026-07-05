@@ -1,165 +1,133 @@
-# Fuzzing-at-scale plan (working doc)
+# LeanToPython fuzzing — forward plan (handoff for a fresh context)
 
-Goal: run "thousands and thousands" more fuzz tests *productively* on the
-Lean→Python transpiler. Volume alone has diminishing returns (we already hit
-61/61 grammar-production coverage at 3000 seeds), so the plan increases
-throughput AND code-shape diversity, and adds coverage feedback.
+Goal: keep finding transpiler bugs at **massive scale**, and first make the
+harness **efficient enough** that a multi-thousand-seed corpus sweep actually
+finishes on cloudnew's 192 cores.
 
-## Key measurements (motivate the plan)
-- Per-seed cost is ~1s and is **~entirely Lean process startup + olean import**,
-  NOT transpilation. => Batching many functions per Lean spawn is the biggest win.
-- 120 functions in one file (~1.4s) costs *less* than 8 functions in a file
-  (~2.0s). Startup dominates.
-- Ill-typed generated seeds ~2.5%. CORRECTION (measured): a type error does NOT
-  merely drop one def's rows within a shared `#eval` — it aborts the WHOLE
-  `#eval` via the `sorry` axiom (zero output for every seed in that block). So
-  batching is safe ONLY if each seed gets its OWN `#eval` block: then a bad seed
-  drops just its own block's rows and its siblings still print. `emit_batch_file`
-  now emits one seed-tagged block per seed (verified: seeds 12/13/14 with 13
-  ill-typed → 24/0/24 rows). A batched seed with no output section is "suspect"
-  and re-run alone to tell ill-typed (skip) from a real bug.
-- Big `#eval do` blocks overflow the elaborator recursion limit =>
-  `set_option maxRecDepth 100000` in the batched file's PRELUDE.
+## Status (all merged to `main`)
+The full bug-hunting roadmap is DONE. **23 transpiler bugs fixed** (F1–F18,
+R1–R4, upgrade-era), each with a regression test in `RegressionFixes.lean` /
+`VERIFICATION.md`. Shipped, in order, as PRs off `main`:
+- Grammar fuzzer + EMI + coverage-guided gen + `--batch` (grammar mode).
+- `--corpus` fragment reuse; `--pycov` input-adequacy; `--pycov-search`
+  coverage-guided input search; grammar **k-path** coverage.
+- **Self-coverage metric** (`# HANDLERS_FIRED` comments; `fuzz.py` reports which
+  of ~118 transpiler handlers fired — untested ones are where bugs hide).
+- **Phase 1** String/Char/Array (F14); **F15** `xs[i]!` getElem!; **F16** missing
+  builtins (dropWhile/replicate/isPrefixOf/swapIfInBounds/startsWith/…); **F17**
+  helper-scoping `_uniq_NNN`; **F18** cross-function name collision (found only at
+  3000-seed scale). **Phase 2** List Int/Bool/nested. **Phase 4** execution-path
+  coverage via `sys.monitoring` (NOT a SlipCover fork — its callback returns
+  DISABLE so per-call order is unrecoverable). **Phase 3** custom inductive types
+  (enums/structs; harvest 129→139; 0 bugs — inductive emission was sound).
 
-## Branch / PR hygiene (IMPORTANT — recurring failure)
-- Stacked PRs (base = another feature branch) have stranded work FOUR times
-  (#6, #9). #9 auto-closed as "merged" when its base merged, but its 6 commits
-  (fuzzer + transpiler fixes F1–F11) never reached main; re-landed via #11.
-- RULE: branch every new PR directly off `main`; merge in order. Current work is
-  on branch `fuzz-scale` off main (which now has the fuzzer via #11).
+Every harvestable corpus function (139) transpiles and agrees with the oracle,
+alone and batched. `corpus_frags._KNOWN_OPEN_NS` is empty.
 
-## Tasks (in priority order)
-1. [DONE] **Batching** — `--batch B` packs B seeds' functions into one Lean
-   spawn. `gen.emit_batch_file(seeds, ndefs, ninputs, emi)` emits one seed-tagged
-   `#eval` block per seed (`s{seed}_` name prefixes; `### PYTHON {seed}` /
-   `### ORACLE {seed}` banners) so output splits back per seed and one ill-typed
-   seed can't poison the batch (see corrected measurement above); returns
-   (src, {seed:(all_prods,covered)}). `set_option maxRecDepth 100000` in PRELUDE.
-   Wired into fuzz.py: `check_batch` worker runs a chunk in one spawn, then
-   re-runs any suspect/failing seed ALONE via `run_seed` — which classifies
-   ill-typed seeds (`lean-error`, skipped) and, for a real bug, yields the
-   isolated seed that `report_bug`/`minimize` shrink. Verified: batch vs non-
-   batch give identical verdict + 61/61 coverage + per-seed coverage bit-for-bit
-   (determinism/shrinking preserved). Speedup (local mac, 12 cores): 60 seeds
-   jobs=1 72s→17s (4.3x); 200 seeds jobs=6 128s→23.5s (5.4x, CPU util 122%→333%
-   as serial Lean-startup stalls shrink). Batching stacks with `--jobs`.
-2. [DONE] **Fragment-reuse grammars** (LangFuzz-style, Lean-specific):
-   `fuzz/corpus_frags.py` harvests every top-level `Corpus/*.lean` def whose
-   params+ret are all in the fuzzer's value universe (78 functions) and fuzzes
-   them on random inputs via `fuzz.py --corpus` (`emitPythonForNames` auto-pulls
-   transitive deps, so a 1-line fragment drags in its `let rec` helpers). Reports
-   distinct-function coverage; corpus-specific minimizer shrinks #funcs then
-   #inputs. IMMEDIATELY found TWO real soundness bugs the grammar structurally
-   cannot reach (grammar always guards divisors + never sorts):
-     - **F12 Nat/Int div/mod by zero**: Lean division is TOTAL (n/0=0, n%0=n for
-       Nat and Int, incl. Euclidean variants); transpiler emitted bare Python
-       `//`/`%` which raise ZeroDivisionError. Fixed centrally via `guardZeroDiv`
-       at all 4 emission sites + the Euclidean `emitArithBinary` forms.
-     - **F13 Array.qsort mis-indexing**: recent Lean materializes qsort's two
-       trailing optParams (`low:=0`, `high:=as.size-1`), so LCNF args are
-       `[…,as,lt,low,high]`; handler grabbed the last two → `sorted(0, key=high)`
-       (`TypeError: 'int' not iterable`). Fixed to index as/lt from size-4/size-3
-       with a 2-arg fallback for older Lean.
-   Validated on cloudnew: 3000 corpus seeds clean, 78/78 functions exercised;
-   all 216 pre-fix failures were exactly these two bugs (0 survive both fixes).
-3. [DONE] **k-path (context-sensitive) coverage** [5 README]: `Gen` now keeps a
-   context stack (`ctx`) and records every 2..KMAX-length chain of nested
-   productions (`all_kpaths`/`kpaths`, KMAX=3), e.g. `bool.gt → nat.match`,
-   `bool.ge → nat.add → nat.lit`. `fuzz.py` aggregates and reports it. KEY
-   FINDING: single-production coverage saturates at ~98–100% while k-path
-   coverage sits at ~39% of offered paths — the metric surfaces the untested
-   *combinations* that flat coverage hides (the LangFuzz/Havrikov point).
-   `choose` also applies a secondary "prefer a fresh k-path" steer, but its
-   effect is ~neutral (39.0% vs 38.7% A/B over 40 seeds): each file is
-   independently seeded for reproducibility, so per-file steering can't
-   coordinate across the sweep, and the small depth budget forces most in-file
-   paths anyway. The measurement, not the steer, is the deliverable. Determinism
-   preserved (identical k-path totals single vs batch mode).
-4. [DONE] **Stronger reduction**: `struct_shrink` (fuzz.py) reduces the failing
-   Lean TERM (HDD/C-Reduce style, Misherghi&Su ICSE'06 / Regehr PLDI'12), run
-   after the count-based `minimize` isolates a single def. It enumerates
-   balanced-paren subterms (longest first) and replaces each with a small set of
-   type-agnostic leaves (`0`, `[]`, `true`, `(none : Option Nat)`, a param name),
-   keeping a rewrite iff the file still elaborates AND still reproduces the same
-   bug class — greedy fixpoint over rounds. Soundness is automatic: Lean
-   re-type-checks each candidate (ill-typed rewrites → `lean-error`, rejected)
-   and the oracle recomputes the expected value, so a kept rewrite genuinely
-   still diverges. Enabler in gen.py: `single_def_body(seed, ninputs)` returns
-   `(orig_body, rebuild, params)` with the oracle rows FROZEN once (they consume
-   the rng), so `rebuild(body)` only swaps body text; `rebuild(orig_body)` is
-   byte-identical to `emit_lean_file(seed,1,ninputs)`. Verified: a 373-char
-   nested term shrank to 13 chars (`(0 + (0 / 0))`) still triggering the bug
-   under test. `report_bug` now saves the structurally-minimized reproducer.
-5. [DONE] **Input-adequacy coverage of the TRANSPILED Python** (`fuzz/pycov.py`
-   + `fuzz.py --pycov`). The transpiler is in Lean so Python coverage can't
-   measure IT; the target is coverage of the *transpiled code* during oracle
-   execution — a bug in a branch no oracle input reaches is invisible to
-   differential testing. Coverage backend (`pycov.Harness`): **SlipCover** when
-   importable — it instruments the compiled code OBJECT directly
-   (`Slipcover.instrument(compile(...))`), so it works fine on the `exec`'d
-   transpiled string with no imported file (an earlier note here claiming
-   otherwise was WRONG), counts executable lines at the bytecode level (bare
-   `else:` correctly excluded), and on Python 3.12+ (with `slipcover.branch.
-   preinstrument`) records real **branch** coverage. Falls back to portable
-   `sys.settrace` line events when SlipCover is absent. cloudnew now runs
-   python3.12 + slipcover (installed 2026-07-05) to get branch coverage.
-   `--pycov` runs a corpus sweep, unions hit body-lines per function across all
-   seeds/inputs, and flags functions with unexercised lines. KEY FINDING:
-   `yahtzee_score` sits at 7% (16/209 lines) — random 5-element lists almost
-   never form a Yahtzee/straight/full-house, so its scoring branches are barely
-   tested; many number-theory `go` helpers sit at 60–85%. This is the exact
-   adequacy gap the task anticipated: a transpiler bug in one of those unreached
-   branches would pass every differential test.
-5b. [DONE] **Coverage-guided input search** (task-5 follow-up): `fuzz/input_search.py`
-   + `fuzz.py --pycov-search`. Rather than hand-seed inputs per function (doesn't
-   scale to 78), an AFL-style greybox loop runs entirely on the *transpiled
-   Python* (fast, in-process, Lean-free): transpile once → search inputs that hit
-   new body lines, mutating covering inputs (typed mutators + structure-aware
-   bootstrap: all-equal / consecutive / full-house lists, boundary ints) →
-   emit a Lean oracle over the discovered covering inputs and diff, so any
-   mis-transpiled branch the search reaches is still caught. When SlipCover branch
-   coverage is available (3.12+) the search targets uncovered *branch edges*, not
-   just lines — a stronger signal. RESULT: 100% LINE coverage on all 78 functions
-   (yahtzee_score 96%→100% with ~6 inputs vs 400 random); 100% BRANCH coverage on
-   all 37 functions that have branches; 0 divergences — the transpiler is correct
-   on every newly-reached branch. Deterministic (seed 0). Two measurement fixes:
-   (a) settrace fallback drops bare `else:`/`try:`/`finally:` headers (never fire
-   a line event); (b) branch mode excludes provably-unreachable `match … → EXIT`
-   fall-through edges — the transpiler emits `match` only on irrefutable tuple
-   patterns, so SlipCover's conservative match-failure edge is dead code that
-   would otherwise peg such functions below 100% forever.
+## THE efficiency problem to fix FIRST (blocks massive scale)
+A 3000-seed `--corpus` sweep at 14 fns/file **did not finish** on 150 cores.
+Root causes, in priority order:
 
-## Scaled validation on cloudnew (192 cores, python3.11) — this session
-All work synced to cloudnew via patch off origin/main and run on 90–180 cores:
-- Grammar (5000 seeds, --batch 25, --emi 0.3): 0 bugs, 61/61 production coverage,
-  k-path coverage 89% (vs 39% at 40 seeds — the metric climbs with volume).
-- Corpus fragment (3000 seeds): 0 bugs, 78/78 functions (both F12/F13 fixes hold).
-- Input-adequacy (--pycov, 1000 seeds): 98% of transpiled body lines exercised
-  (26342/26862 across 105 fns); yahtzee_score 7%→86% as inputs accumulate; 63
-  fns still have gaps (targets for per-fn input biasing).
+1. **`--corpus` does not batch.** Grammar mode has `--batch B` (packs B seeds per
+   Lean spawn — 5x win, since Lean startup + `import Corpus` olean load dominates,
+   NOT transpilation). `--corpus` spawns **one Lean process per seed**, each
+   re-importing `Corpus` (~5–8 s each). This is the single biggest lever.
+   → Add batching to `emit_corpus_file` / `run_corpus_mode`: pack many seeds'
+     function-selections into ONE Lean file, each seed in its OWN `#eval` block
+     (per the grammar-mode lesson: a shared `#eval` aborts entirely on one
+     ill-typed def via the `sorry` axiom; per-seed blocks isolate). Reuse the
+     `### PYTHON {seed}` / `### ORACLE {seed}` banner + `_split_batch_output`
+     machinery from `gen.emit_batch_file`. Expect a similar ~5x.
+2. **`TypeInfo.lean` re-runs per worker.** `corpus_frags.harvest()` (called in
+   every pool worker) shells out to `lean fuzz/TypeInfo.lean` (a full Lean spawn)
+   via `_load_type_info()`. With 150 workers that's 150 concurrent Lean spawns
+   just to load type info. → Run it ONCE in the parent, cache to a JSON file
+   (e.g. `fuzz/.typeinfo.json`, regenerated only when `Corpus/*.lean` is newer),
+   and have workers read the cache. Same for `harvest()` — compute once, pass the
+   function list to workers (it's picklable) instead of re-harvesting per worker.
+3. **`lean_run` per-call timeout is 60 s** (added in Phase 3 after UnionFind
+   hangs). Fine for safety, but a batched file that hits one slow `#eval` burns
+   60 s. With batching, keep the timeout but consider a smaller per-eval budget.
 
-## Done this session (already merged or in-flight)
-- Round-trip harness (Option A sampled 112/112 + Option B exhaustive 3807/3807).
-- Grammar fuzzer + coverage-guided generation + grammar expansion (Int, Option).
-- EMI + guided stochastic mutation (`--emi`, default 0.3).
-- Parallelism (`--jobs`, ProcessPoolExecutor; bare `lean` + captured LEAN_PATH,
-  not `lake env lean`, to avoid serializing). ~1570% CPU on cloudnew.
-- 16 transpiler bugs fixed (R1–R4, F1–F11 + upgrade-era); 5 silent wrong-value
-  bugs (Nat.sub monus, Euclidean Int div & mod, two OfNat literal collisions).
-- 3000-seed parallel EMI campaign on cloudnew (192 cores): clean, 61/61.
-- Docs: README (4-layer correctness + fuzzer section + refs), VERIFICATION.md
-  (full bug ledger), RELATED_WORK.md (not-adopted techniques), roundtrip/README.
-  All references now carry a DOI or URL.
+Verify efficiency the same way as `--batch` was: identical verdict + coverage,
+per-seed determinism preserved, and measure wall-clock speedup on cloudnew.
 
-## Environment notes
-- cloudnew: 192 cores, Linux, elan+lean installed; repo cloned at
-  ~/git/LeanToPython (branch was fuzz-and-bugdoc). Run fuzzer with `python3.11`
-  there (transpiled Python needs 3.10+ for PEP 604 unions; cloudnew default is
-  3.9). Big runs: `python3.11 fuzz/fuzz.py --seeds N --jobs 180 --emi P`.
-- Local mac: python3.12, 12 cores.
-- `lake env printenv LEAN_PATH` once, then bare `lean` for speed/parallelism.
-- Shell cwd sometimes resets between commands — use absolute paths.
+## New bug-finding directions (after efficiency; ~ by expected yield)
+1. **Invariant-respecting user-value generation.** Phase 3 excluded `UnionFind`
+   (`_UNSAFE_TO_CONSTRUCT`) because a random parent array cycles → `find` loops.
+   Generate values that RESPECT the invariant (e.g. `UnionFind.ofSize n` then a
+   sequence of `union` ops) instead of raw `.mk`. Unlocks path-compression code —
+   a classic source of compiler/transpiler bugs. Same idea for any struct with a
+   well-formedness precondition.
+2. **Recursive user types with depth bounds** (`Expr`, `Trie`, `JsonValue`,
+   `RBTree`). Currently excluded (`_is_constructible` bails on recursion). Add a
+   depth-bounded generator. `RBTree.balance` and the parser `Expr` evaluator are
+   exactly the tricky recursive-`match` code transpilers mishandle.
+3. **Float support** (Geometry: Point2D/3D, distance/normalize). Needs a
+   tolerance-based oracle comparison (exact `==` will spuriously fail on
+   float rounding). Decide an ULP/relative-tolerance policy first.
+4. **Grammar-side custom-type generation** — have `gen.py` *invent* small
+   inductives + functions over them, not just harvest corpus ones. Reaches
+   shapes the corpus doesn't contain.
+5. **Mathlib corpus** (see README "Future Work"): a far larger fragment source.
+   Heavy: toolchain bump, noncomputable defs, universe polymorphism, long import
+   graph. High potential yield.
+6. **Massive campaigns as regression + discovery**: once efficient, run
+   5k–20k-seed grammar (`--batch 25 --emi 0.3`) and corpus sweeps on cloudnew
+   routinely; the self-coverage `never fired` list + `--pycov`/`--pycov-search`
+   gaps are the map of what's still untested.
 
-## Faithfulness caveat to keep stating
-Differential testing vs an oracle finds bugs; it does not prove absence. It is
-exhaustive only within stated input bounds.
+## Efficiency facts (measured; keep in mind)
+- Per-seed cost is ~entirely Lean **startup + olean import**, not transpilation.
+  120 fns in one file (~1.4s) < 8 fns in a file (~2.0s). Batching is the win.
+- Ill-typed generated seeds ~2.5%. A type error aborts the WHOLE `#eval` (sorry
+  axiom) → one `#eval` block PER SEED so a bad seed drops only its own rows; a
+  seed with no output section is re-run alone to classify (skip vs real bug).
+- `set_option maxRecDepth 100000` in the file PRELUDE (big `#eval do` blocks
+  overflow the elaborator default).
+- Use bare `lean` with a once-captured `LEAN_PATH` (not `lake env lean`, which
+  serializes on lake startup and kills parallelism).
+- `--jobs` = ProcessPoolExecutor; each worker spawns one `lean`.
+
+## Branch / PR hygiene (RULE — this bit us 4× early on)
+Branch every PR directly off `main`; never stack on another feature branch (a
+stacked PR auto-closes as "merged" when its base merges, stranding its commits).
+Merge in order; a later same-file branch just needs a trivial rebase. Ship each
+bug/feature as its own PR, CI green before merge.
+
+## cloudnew (run massive sweeps HERE, not local mac)
+- 192 cores, Linux; repo at `~/git/LeanToPython`; elan+lean installed.
+- **Use `python3.12`** (installed 2026-07-05 via `sudo dnf install python3.12
+  python3.12-pip`, passwordless sudo). 3.12 enables `sys.monitoring` path
+  coverage AND SlipCover branch coverage; `slipcover` installed for it via
+  `python3.12 -m pip install --user slipcover`. (Transpiled Python needs 3.10+
+  for PEP 604 unions; the mac has 3.12 too.)
+- Sync uncommitted work: `git diff origin/main > /tmp/p.patch`, scp, then on
+  cloudnew `git reset --hard origin/main && git clean -fd fuzz/ && git apply`.
+  Then `lake build && lake build Corpus`. Export
+  `FUZZ_LEAN_PATH="$(lake env printenv LEAN_PATH)"` before Python runs.
+- Big runs in background (`nohup … &`) and poll the log — a foreground ssh call
+  will exceed a 2-min tool timeout. Watch for orphaned `lean` procs after a kill
+  (`pkill -9 -f "bin/lean /tmp/fuzz"`).
+- Shell cwd can reset between commands — use absolute paths.
+
+## Key files
+- `LeanToPython.lean` — transpiler. Handler tables ~390–590; `emitLetValue`
+  ~1140 (the big `.const` dispatch); `.proj`/`emitCases` for structural handlers;
+  `emitPythonForDecls` ~3055 (global name de-dup pre-pass, `### HANDLERS` dump);
+  `knownHandlerTags` (self-coverage universe — add a tag when adding a handler).
+- `fuzz/gen.py` — grammar generator; `LEAN_TYPES`, `ALL_PRODUCTIONS`, per-type
+  `gen_*`, `rand_value`/`lean_lit`/`serializer_call`/PRELUDE serializers.
+- `fuzz/corpus_frags.py` — fragment reuse + Phase-3 custom-type registry
+  (`TypeInfo.lean` loader, `_is_constructible`, `_UNSAFE_TO_CONSTRUCT`,
+  `_emit_user_serializers`). **Batching lives to be added here.**
+- `fuzz/fuzz.py` — CLI/modes (`--batch`, `--corpus`, `--pycov`, `--pycov-search`),
+  `lean_run` (has the timeout), pool workers, self-coverage report.
+- `fuzz/pycov.py` — coverage backends (SlipCover / settrace / sys.monitoring
+  paths); `Harness`. `fuzz/input_search.py` — greybox search (base types only).
+- `fuzz/TypeInfo.lean` — Lean-side type dump. `roundtrip/run_oracle.py` —
+  `normalize`/`materialize` for dataclass round-trip.
+
+## Faithfulness caveat (keep stating)
+Differential testing vs the Lean oracle finds bugs; it does not prove absence.
+It is exhaustive only within stated input bounds.
