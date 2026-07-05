@@ -120,6 +120,14 @@ def _resolve_type(ty, ns_prefixes=()):
     return _SHORT_TO_QUAL.get(ty, ty)
 
 
+# Types with internal INVARIANTS that arbitrary field-filling would violate,
+# causing their functions to loop forever (e.g. UnionFind's parent array must be
+# acyclic — a random `List Nat` can form a cycle, so `find` never terminates).
+# The fuzzer can't safely construct these, so treat them as non-constructible.
+# (A future improvement could generate only invariant-respecting values.)
+_UNSAFE_TO_CONSTRUCT = ("UnionFind",)
+
+
 def _is_constructible(ty, stack=()):
     """Can the fuzzer build a value of Lean type `ty`?  True for base-harvestable
     types and for user types whose every constructor's fields are all
@@ -130,6 +138,8 @@ def _is_constructible(ty, stack=()):
         return True
     info = _load_type_info()
     if ty not in info:
+        return False
+    if any(ty.endswith(u) for u in _UNSAFE_TO_CONSTRUCT):
         return False
     if ty in stack:            # recursive — bail (would need a depth bound)
         return False

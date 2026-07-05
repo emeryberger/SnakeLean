@@ -62,13 +62,28 @@ def _lean_env():
     return env
 
 
+# A hung oracle `#eval` (e.g. a corpus function that doesn't terminate on a
+# fuzzer-constructed input) must not stall the whole pool.  Bound each Lean run;
+# a timeout is treated like a Lean error (the seed is skipped), not a hang.
+LEAN_TIMEOUT_S = 60
+
+
 def lean_run(lean_src, tmp_path):
     with open(tmp_path, "w") as f:
         f.write(lean_src)
-    proc = subprocess.run(
-        ["lean", tmp_path],
-        cwd=ROOT, capture_output=True, text=True, env=_lean_env(),
-    )
+    try:
+        proc = subprocess.run(
+            ["lean", tmp_path],
+            cwd=ROOT, capture_output=True, text=True, env=_lean_env(),
+            timeout=LEAN_TIMEOUT_S,
+        )
+    except subprocess.TimeoutExpired as e:
+        # Surface as a Lean 'error' so callers skip the seed; include partial
+        # stdout so any oracle rows already printed aren't lost.
+        out = e.stdout or ""
+        if isinstance(out, bytes):
+            out = out.decode("utf-8", "replace")
+        return 124, out, "error: lean timed out (possible non-terminating #eval)"
     return proc.returncode, proc.stdout, proc.stderr
 
 
