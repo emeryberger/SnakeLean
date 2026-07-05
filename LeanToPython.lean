@@ -119,6 +119,13 @@ structure State where
       calling a nested `def`. -/
   inlineThunks : Std.HashMap FVarId FunDecl := {}
   nextTmpIdx : Nat := 0
+  /-- Self-coverage instrumentation: the set of emission-handler tags that fired
+      while transpiling. Lets the fuzzer report which of the transpiler's
+      special-cased handlers its test corpus actually exercised — an untested
+      handler is where a bug hides (both F12 and F13 lived in handlers the
+      generative grammar never reached). Populated via `markHandler`; dumped by
+      `emitPythonForDecls` as a `### HANDLERS` stderr line. -/
+  firedHandlers : Std.HashSet String := {}
 
 abbrev EmitM := ReaderT Context StateRefT State CompilerM
 
@@ -140,6 +147,13 @@ def emitIndent : EmitM Unit := do
   emitIndent
   emit str
   emit "\n"
+
+/-- Record that emission handler `tag` fired (self-coverage instrumentation).
+    Tags are free-form but conventionally `binop.<Name>`, `stdlib.<Name>`,
+    `special.<name>`, `cases.<kind>`, `struct.<name>` so the fuzzer can group
+    them. See `State.firedHandlers`. -/
+@[inline] def markHandler (tag : String) : EmitM Unit :=
+  modify fun s => { s with firedHandlers := s.firedHandlers.insert tag }
 
 def emitBlankLine : EmitM Unit := emit "\n"
 
@@ -863,6 +877,12 @@ def tryEmitInlinedOp (varName : String) (fnVar : FVarId) (args : Array Arg) : Em
   -- Check if fnVar is an extracted operation
   if let some (instName, _) := st.extractedOps[fnVar]? then
     if let some op := hOpToPyOp? instName then
+      -- Self-coverage: typeclass-instance operator path.  Most arithmetic
+      -- (`a + b`, `a * b`, …) lowers through here via `instHAdd`/`instHMul`
+      -- extraction, NOT through the `const.Nat.add` special case — so this is
+      -- where addition/multiplication/etc. actually get measured.  Tag by the
+      -- Python operator (the meaningful handler identity).
+      markHandler s!"hop.{op}"
       -- Handle unary negation
       if op == "unary-" && args.size == 1 then
         emitIndent
@@ -1012,6 +1032,9 @@ partial def renderLetValueExpr (decl : LetDecl) : EmitM (Option String) := do
     let st ← get
     if let some (instName, _) := st.extractedOps[fnVar]? then
       if let some op := hOpToPyOp? instName then
+        -- Self-coverage: instance-op path in expression mode (inlined lambda
+        -- bodies).  Same handler family as `tryEmitInlinedOp`; tag identically.
+        markHandler s!"hop.{op}"
         if op == "unary-" && args.size == 1 then
           return some s!"(-{← renderArg args[0]!})"
         if args.size == 2 then
@@ -1126,6 +1149,13 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
     -- Skip erased values entirely
     return
   | .const declName _ args =>
+    -- Self-coverage: tag which handler this const dispatches to.  Every special
+    -- handler below is keyed by `declName`, so `const.<declName>` uniquely
+    -- identifies it — one robust tag instead of ~60 hand-placed ones at each
+    -- `return` (which risks under-reporting on a missed return).  The report
+    -- intersects fired tags with a curated watchlist, so user-function callees
+    -- (which also land here via the generic fallback) are ignored.
+    markHandler s!"const.{declName.toString (escape := false)}"
     -- Handle Ordering constructors FIRST before any other checks
     let constNameStr := declName.toString (escape := false)
     if constNameStr == "Ordering.lt" then
@@ -1751,7 +1781,16 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
         emitIndent
         emit s!"{varName} = (lambda a, b: a ^ b)\n"
         return
-    -- Regular function call
+    -- Regular function call — the generic fallback for any const not handled by
+    -- a special case above.  Self-coverage: tag it `fallthrough.<declName>`.  A
+    -- *core-namespace* construct (List/Nat/Int/String/Char/Array/Option/…) that
+    -- lands here is the fingerprint of a Lean API change silently breaking a
+    -- special handler (e.g. a `List.map` → `List.mapImpl` rename): the handler
+    -- stops matching, we fall through, and emit a call to an undefined Python
+    -- name.  The fuzzer's report flags such fallthroughs so an upgrade can't
+    -- regress a handler unnoticed.  (A user function legitimately falling through
+    -- to a real Python def is fine — the report only alarms on core namespaces.)
+    markHandler s!"fallthrough.{declName.toString (escape := false)}"
     emitIndent
     emit s!"{varName} = {toPyFnName declName}("
     emitArgs args
@@ -1813,21 +1852,25 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
       -- For GetElem?, project 1 (getElem?) should be safe indexing
       -- Emit a lambda that does bounds-checked indexing
       if idx == 1 then
+        markHandler "proj.GetElem?"
         emitIndent
         emit s!"{varName} = (lambda xs, i: xs[i] if 0 <= i < len(xs) else None)\n"
         return
       else if idx == 0 then
         -- Project 0 (valid?) is the validity predicate
+        markHandler "proj.GetElem.valid"
         emitIndent
         emit s!"{varName} = (lambda xs, i: 0 <= i < len(xs))\n"
         return
     -- Max instance - project 0 is the max function
     if containsSubstr typeStr "Max" && idx == 0 then
+      markHandler "proj.Max"
       emitIndent
       emit s!"{varName} = max\n"
       return
     -- Min instance - project 0 is the min function
     if containsSubstr typeStr "Min" && idx == 0 then
+      markHandler "proj.Min"
       emitIndent
       emit s!"{varName} = min\n"
       return
@@ -1839,8 +1882,10 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
     -- fields `field_{i}` — not `{typeName}_{i}`.  (A type-name-derived accessor
     -- like `page_0` parses fine but fails at runtime with AttributeError.)
     if typeName == ``Prod then
+      markHandler "proj.Prod"
       emit s!"[{idx}]\n"
     else
+      markHandler "proj.field"
       emit s!".field_{idx}\n"
 
 /-- Check if a type is PUnit or Unit -/
@@ -2236,18 +2281,26 @@ partial def emitCases (cases : Cases) : EmitM Unit := do
     | some lit => pure (litValueStr lit)
     | none => getVarName cases.discr
   if cases.typeName == ``Bool then
+    markHandler "cases.Bool"
     emitBoolCases discr cases.alts
   else if cases.typeName == ``Nat then
+    markHandler "cases.Nat"
     emitNatCases discr cases.alts
   else if cases.typeName == ``Decidable then
     -- Decidable has isFalse and isTrue constructors
     -- Need to check the discriminant type to determine if it's a "match on Nat" vs "if bool"
+    markHandler "cases.Decidable"
     emitDecidableCases discr cases.discr cases.alts
   else if cases.typeName == ``Option then
+    markHandler "cases.Option"
     emitOptionCases discr cases.alts
   else if cases.typeName == ``List then
+    markHandler "cases.List"
     emitListCases discr cases.alts
   else
+    -- Generic structural match (custom inductive / Prod destructuring).  Tag with
+    -- the type name so the report shows which user types exercised the fallback.
+    markHandler s!"cases.match.{cases.typeName.toString (escape := false)}"
     emitIndent
     emit s!"match {discr}:\n"
     withIndent do
@@ -2563,6 +2616,7 @@ def emitDecl (decl : Decl) : EmitM Unit := do
   -- call, rewrite the body into a `while True:` loop so deep recursion does not
   -- overflow the Python stack. Detection is sound (see isSelfTailRecursive).
   if isSelfTailRecursive decl.name (declCode decl) then
+    markHandler "struct.tailLoop"
     -- Collect the Python names of the (non-unit) parameters, in order — these
     -- are what a tail self-call rebinds. emitFunParams already registered them.
     let mut pyParams : Array String := #[]
@@ -2599,6 +2653,7 @@ def emitInductiveType (name : Name) : EmitM Unit := do
   let env ← getEnv
   let some (.inductInfo info) := env.find? name | return
   if (← get).emittedTypes.contains name then return
+  markHandler "struct.inductive"
   modify fun s => { s with emittedTypes := s.emittedTypes.insert name }
 
   if info.ctors.length == 0 then return
@@ -2707,11 +2762,77 @@ def collectTypesFromDecls (decls : Array Decl) : CoreM Lean.NameSet := do
   -- type used only inside another type's fields is still emitted.
   closeOverFieldTypes types
 
+/-- The curated universe of self-coverage handler tags — the denominator for the
+    fuzzer's "transpiler self-coverage" report.  These are the special-cased,
+    semantically-tricky handlers whose emission we want to *prove* the test
+    corpus exercises (an untested one is where a bug hides).  The generic
+    per-`declName` `const.*`/`fallthrough.*`/`cases.match.*` tags are NOT listed
+    here — they are open-ended and reported separately (fallthroughs on core
+    namespaces are flagged as likely-broken handlers; see `markHandler` sites).
+
+    Kept as data, not derived, so the report has a stable target across Lean
+    versions; add a tag here when you add a handler.  The `const.<Name>` form is
+    used for name-keyed handlers so the tag is exactly what flows through at
+    runtime — no Lean-internal constant is hardcoded in a way an API rename could
+    silently invalidate (a rename shows up as the handler dropping to a
+    `fallthrough.*`, which the report surfaces). -/
+def knownHandlerTags : List String := [
+  -- Arithmetic via the typeclass-instance path (`instHAdd`/`instHMul`/… →
+  -- extracted op).  MOST arithmetic lowers through here, tagged by Python
+  -- operator — NOT through the `const.Nat.add`-style special cases (which only
+  -- fire when a raw `Nat.add`/`Int.tdiv` const appears directly, e.g. via a
+  -- comparison-decl or an un-inlined reference).  Both are listed so the report
+  -- shows which path a construct actually took.
+  "hop.+", "hop.-", "hop.*", "hop.//", "hop.%", "hop.**", "hop.==", "hop.<",
+  "hop.<=", "hop.unary-",
+  -- Nat/Int direct-const handlers + arithmetic-semantics special cases
+  "const.Nat.div", "const.Nat.mod", "const.Nat.pow", "const.Nat.beq",
+  "const.Nat.ble", "const.Nat.blt", "const.Nat.decLt", "const.Nat.decLe",
+  "const.Nat.succ", "const.Nat.pred", "const.Nat.xor", "const.Nat.min",
+  "const.Nat.max", "const.Nat.sqrt", "const.Nat.sub",
+  "const.Int.tdiv", "const.Int.tmod", "const.Int.neg", "const.Int.toNat",
+  "const.Int.natAbs", "const.Int.decLt", "const.Int.decLe",
+  -- String / Char (barely tested today — a Phase-1 target)
+  "const.String.length", "const.String.mk", "const.String.toList",
+  "const.String.push", "const.String.isEmpty", "const.String.append",
+  "const.List.asString",
+  "const.Char.isAlpha", "const.Char.isDigit", "const.Char.isAlphanum",
+  "const.Char.isLower", "const.Char.isUpper", "const.Char.isWhitespace",
+  "const.Char.toUpper", "const.Char.toLower", "const.Char.toNat", "const.Char.ofNat",
+  -- Array (the qsort family — F13 lived here)
+  "const.Array.size", "const.Array.toList", "const.Array.qsort",
+  "const.List.toArray",
+  -- List combinators / utilities
+  -- Note: Lean 4.31 lowers `List.map`/`filter`/`take`/`length` to their
+  -- tail-recursive counterparts (`*TR`) in LCNF, so those are the spellings that
+  -- fire; the plain spellings are kept as handled synonyms but rarely fire.
+  "const.List.nil", "const.List.cons", "const.List.headD", "const.List.reverse",
+  "const.List.append", "const.List.mapTR", "const.List.filterTR",
+  "const.List.filterMap", "const.List.filterMapTR", "const.List.flatMap",
+  "const.List.foldl", "const.List.foldrTR", "const.List.all",
+  "const.List.any", "const.List.takeTR", "const.List.drop", "const.List.range",
+  "const.List.find?", "const.List.findSome?", "const.List.eraseDups",
+  "const.List.zipIdx", "const.List.set", "const.List.contains", "const.List.elem",
+  "const.List.isEmpty", "const.List.mergeSort", "const.List.head?",
+  "const.List.tail?", "const.List.getLast?", "const.List.dropLast",
+  -- Option
+  "const.Option.some", "const.Option.none", "const.Option.bind",
+  "const.Option.isSome", "const.Option.isNone", "const.Option.getD",
+  -- Prod / bool / decide / misc
+  "const.Prod.mk", "const.Bool.true", "const.Bool.false", "const.getElem?",
+  "const.bne", "const.xor",
+  -- Structural (proj / cases / whole-decl) handlers
+  "proj.GetElem?", "proj.GetElem.valid", "proj.Max", "proj.Min",
+  "proj.Prod", "proj.field",
+  "cases.Bool", "cases.Nat", "cases.Decidable", "cases.Option", "cases.List",
+  "struct.inductive", "struct.tailLoop"
+]
+
 def emitPythonForDecls (modName : Name) (decls : Array Decl) : CompilerM String := do
   -- First collect custom types
   let customTypes ← collectTypesFromDecls decls
   let ctx : Context := { modName }
-  let (_, { buf, .. }) ← (do
+  let (_, st) ← (do
     emitFileHeader
     -- Emit custom inductive types
     for typeName in customTypes do
@@ -2720,7 +2841,18 @@ def emitPythonForDecls (modName : Name) (decls : Array Decl) : CompilerM String 
     for decl in decls do
       emitDecl decl
   ).run ctx |>.run {}
-  return buf
+  -- Self-coverage: append which handlers fired as trailing Python COMMENTS.
+  -- Comments are inert to `exec`, so they ride safely inside the fuzzer's
+  -- `### PYTHON` section (a `#eval`'s `IO.eprintln` gets captured to the same
+  -- stream as stdout and would land mid-output, corrupting the parse — hence
+  -- comments in the returned buffer rather than stderr).  Two lines: the fired
+  -- tags and the full known-tag universe (the report's denominator).  A
+  -- `fallthrough.<coreNamespace>` tag among the fired set signals a special
+  -- handler a Lean change may have silently broken — the fuzzer flags it.
+  let fired := st.firedHandlers.toList
+  let firedLine := s!"# HANDLERS_FIRED\t{"\t".intercalate fired}"
+  let knownLine := s!"# HANDLERS_KNOWN\t{"\t".intercalate knownHandlerTags}"
+  return st.buf ++ "\n" ++ firedLine ++ "\n" ++ knownLine ++ "\n"
 
 def emitPython (modName : Name) : CoreM String := do
   let env ← getEnv
