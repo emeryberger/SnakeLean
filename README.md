@@ -111,20 +111,39 @@ deterministic so a failure reproduces exactly.
 
 Seeds are checked **in parallel** across CPU cores (each seed's Lean
 elaboration is independent and is the bottleneck), so a sweep scales with
-`--jobs` (default: cores − 1).
+`--jobs` (default: cores − 1). Because per-seed cost is dominated by Lean's
+~1s process startup rather than transpilation, `--batch B` packs `B` seeds'
+functions into a single Lean spawn (each seed in its own `#eval` block, so one
+ill-typed seed can't abort the others), amortizing that startup across many
+functions — ~5x faster in practice. A seed that fails or whose block aborts is
+automatically re-run on its own to isolate it (ill-typed seeds are skipped; a
+real bug is shrunk as usual), so batching changes throughput, not the verdict.
 
 ```bash
 python3 fuzz/fuzz.py --seeds 200             # broad sweep (EMI on by default)
 python3 fuzz/fuzz.py --seeds 1 --start 18    # reproduce a specific seed
 python3 fuzz/fuzz.py --seeds 200 --emi 0     # disable EMI mutation
-python3 fuzz/fuzz.py --seeds 2000 --jobs 190 # big sweep on a many-core box
+python3 fuzz/fuzz.py --seeds 2000 --batch 25 --jobs 190  # big batched sweep
 ```
 
-This layer found **eleven** bugs the curated corpus missed — including several
+This layer found **thirteen** bugs the curated corpus missed — including several
 *silent wrong-value* bugs (Lean's truncated `Nat` subtraction emitted as Python
 `-`; Euclidean `Int` division/modulo emitted as Python's flooring `//`/`%`; an
-`OfNat` literal collision) that no crash-based check would catch. All are
-documented in [`VERIFICATION.md`](VERIFICATION.md).
+`OfNat` literal collision) that no crash-based check would catch. The two most
+recent (F12 `Nat`/`Int` division/modulo by zero — Lean's division is *total*
+(`n/0=0`, `n%0=n`) while Python's `//`/`%` raise; F13 `Array.qsort` argument
+mis-indexing) were surfaced by **fragment-reuse fuzzing** over the real corpus
+(`--corpus`), which exercises constructs the generative grammar can't invent
+(the grammar always guards its divisors and never sorts). All are documented in
+[`VERIFICATION.md`](VERIFICATION.md).
+
+Beyond the default generative sweep, three additional modes deepen coverage:
+
+```bash
+python3 fuzz/fuzz.py --corpus --seeds 3000    # fragment-reuse: fuzz REAL Corpus/*.lean defs
+python3 fuzz/fuzz.py --pycov  --seeds 1000    # input-adequacy: line coverage of transpiled Python
+python3 fuzz/fuzz.py --seeds 5000 --batch 25 --jobs 180   # batched sweep, reports k-path coverage
+```
 
 The design draws on the grammar-fuzzing literature:
 
@@ -164,9 +183,30 @@ The design draws on the grammar-fuzzing literature:
   (default 0.3; `--emi 0` disables). Envelopes are provably identities, so a
   disagreement is unambiguously a transpiler bug.
 
-Techniques we considered but have **not** adopted — remaining fuzzing methods
-(k-path coverage, fragment-reuse grammars, stronger reduction), the
-`Float`-vs-exact-`Fraction` question, and formal-verification / e-graph
+- **Fragment-reuse grammars [8]** — `--corpus` harvests every `Corpus/*.lean`
+  definition whose signature is in the fuzzer's value universe (78 functions)
+  and fuzzes *them* on random inputs (`emitPythonForNames` auto-pulls transitive
+  dependencies, so a one-line fragment drags in its `let rec` helpers). Real code
+  exercises constructs the generative grammar never invents — this immediately
+  found bugs F12/F13.
+- **Context-sensitive (k-path) coverage [5]** — beyond single-production
+  coverage, the generator records every chain of up to 3 nested productions
+  (e.g. `match → map → let`) and reports it. Single-production coverage
+  saturates near 100% while k-path coverage sits far lower (~40–50% of offered
+  paths), exposing the untested *combinations* flat coverage hides.
+- **Structural (HDD/C-Reduce-style) reduction [9,10]** — after the count-based
+  minimizer isolates a single failing def, a term-level shrinker replaces
+  balanced-paren subterms with type-agnostic leaves, keeping any rewrite that
+  still elaborates *and* still reproduces the bug (Lean re-type-checks and the
+  oracle recomputes, so kept rewrites are sound). Reduces sprawling generated
+  terms to a few characters.
+- **Input-adequacy coverage of the transpiled Python** — `--pycov` traces which
+  lines of each *transpiled* function the oracle inputs actually execute (via
+  `sys.settrace`, portable to 3.11). A branch no input reaches is where a
+  transpiler bug hides undiff'd; the mode flags under-exercised functions.
+
+Techniques we considered but have **not** adopted — the
+`Float`-vs-exact-`Fraction` question and formal-verification / e-graph
 approaches — are written up with citations in
 [`RELATED_WORK.md`](RELATED_WORK.md).
 
@@ -185,6 +225,11 @@ approaches — are written up with citations in
    inputs.* PLDI 2014. (EMI) <https://doi.org/10.1145/2594291.2594334>
 7. V. Le, C. Sun, Z. Su. *Finding deep compiler bugs via guided stochastic
    program mutation.* OOPSLA 2015. <https://doi.org/10.1145/2814270.2814319>
+8. C. Holler, K. Herzig, A. Zeller. *Fuzzing with code fragments.* USENIX
+   Security 2012. (LangFuzz) <https://www.usenix.org/conference/usenixsecurity12/technical-sessions/presentation/holler>
+9. G. Misherghi, Z. Su. *HDD: Hierarchical delta debugging.* ICSE 2006. <https://doi.org/10.1145/1134285.1134307>
+10. J. Regehr, Y. Chen, P. Cuoq, E. Eide, C. Ellison, X. Yang. *Test-case
+    reduction for C compiler bugs.* PLDI 2012. (C-Reduce) <https://doi.org/10.1145/2254064.2254104>
 
 ## Corpus
 

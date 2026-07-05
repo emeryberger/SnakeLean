@@ -8,37 +8,28 @@ Lean → Python transpiler and why it isn't in yet.
 
 For techniques the fuzzer **does** use (grammar-based generation, differential
 oracle, delta-debugging-style shrinking, grammar production coverage, grammar
-expansion, and **EMI + guided stochastic mutation**), see the README's
-Correctness section and [`VERIFICATION.md`](VERIFICATION.md).
+expansion, **EMI + guided stochastic mutation**, **fragment-reuse grammars**,
+**k-path coverage**, and **structural HDD/C-Reduce-style reduction**), see the
+README's Correctness section and [`VERIFICATION.md`](VERIFICATION.md).
 
-> Note: **EMI (Le/Afshari/Su, PLDI 2014) and guided stochastic mutation
-> (Le/Sun/Su, OOPSLA 2015) are now implemented** — the generator wraps subterms
-> in semantics-preserving identity envelopes, a stochastic count of them, chosen
-> coverage-guided (`--emi`). They moved out of this file into the README's
-> implemented list; the entries below are what remains *not* adopted.
-
-## Additional fuzzing techniques
-
-### k-path (context-sensitive) grammar coverage [3]
-
-The fuzzer currently tracks and prefers uncovered *productions*. A stronger
-target is covering *combinations* of productions along a derivation path (e.g. a
-`match` inside a `map` inside a `let`) — k-path coverage. This would push the
-generator toward construct interactions, where several of the bugs we found
-actually lived (e.g. a literal `match` discriminant nested in a `let`).
-
-### Probabilistic / fragment-reuse grammars [4]
-
-Bias production probabilities toward rare constructs, or reuse real code
-fragments (as in LangFuzz [4]) drawn from the corpus, to spend generation budget
-where bugs are more likely rather than sampling the grammar uniformly.
-
-### Stronger test-case reduction [5, 6]
-
-The current shrinker only reduces the `(defs, inputs)` counts. A structural
-reducer over the Lean term itself — hierarchical delta debugging [5] or a
-C-Reduce-style pass [6] that deletes subterms and re-checks the failure — would
-yield smaller, more legible minimal reproducers.
+> Note: several techniques once listed here as *not adopted* are **now
+> implemented** and have moved to the README's implemented list:
+> - **EMI (Le/Afshari/Su, PLDI 2014) + guided stochastic mutation (Le/Sun/Su,
+>   OOPSLA 2015)** — semantics-preserving identity envelopes, a stochastic count,
+>   chosen coverage-guided (`--emi`).
+> - **k-path (context-sensitive) coverage [3]** — the generator records and
+>   reports every chain of ≤3 nested productions; single-production coverage
+>   saturates near 100% while k-path coverage reveals the untested combinations
+>   (~89% of offered paths at 5000 seeds).
+> - **Fragment-reuse grammars / LangFuzz [4]** — `--corpus` harvests real
+>   `Corpus/*.lean` definitions and fuzzes them, exercising constructs the
+>   grammar can't invent; found bugs F12 (`Nat`/`Int` div/mod by zero) and F13
+>   (`Array.qsort` mis-indexing).
+> - **Structural reduction / HDD [5], C-Reduce [6]** — `struct_shrink` reduces
+>   the failing Lean *term* (not just `(defs, inputs)` counts), keeping any
+>   rewrite that still elaborates and still reproduces the bug.
+>
+> The empirical/formal material below remains *not* adopted.
 
 ## Formal-verification approaches
 
