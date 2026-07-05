@@ -113,10 +113,34 @@ def _mut_string(rng, v):
     return s[:8]
 
 
+def _mut_list_of(elem_mut):
+    """A list mutator whose element edits use `elem_mut` (for typed element
+    lists: List Int / List Bool / nested List (List Nat))."""
+    def mut(rng, v):
+        xs = list(v)
+        op = rng.randint(0, 4)
+        if op == 0 and xs:
+            xs.pop(rng.randrange(len(xs)))
+        elif op == 1:
+            xs.insert(rng.randint(0, len(xs)), elem_mut(rng, xs[0] if xs else None))
+        elif op == 2 and xs:
+            i = rng.randrange(len(xs))
+            xs[i] = elem_mut(rng, xs[i])
+        elif op == 3:
+            xs = xs + xs
+        else:
+            xs = list(reversed(xs))
+        return xs[:8]
+    return mut
+
+
 _MUTATORS = {
     gen.NAT: _mut_nat, gen.INT: _mut_int, gen.LISTNAT: _mut_list,
     gen.PAIR: _mut_pair, gen.OPTNAT: _mut_opt, gen.BOOL: lambda rng, v: not v,
     gen.STRING: _mut_string, gen.CHAR: _mut_char, gen.ARRAYNAT: _mut_list,
+    gen.LISTINT: _mut_list_of(_mut_int),
+    gen.LISTBOOL: _mut_list_of(lambda rng, v: rng.choice([True, False])),
+    gen.LISTLISTNAT: _mut_list_of(_mut_list),
 }
 
 
