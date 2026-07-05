@@ -426,14 +426,74 @@ def check_corpus_seed(args):
     """Pool worker for corpus mode.  Returns (seed, status, detail, chosen_names,
     fired, known) — `chosen_names` is the corpus functions this seed exercised;
     (fired, known) are the transpiler self-coverage tags for this seed."""
-    seed, nfuncs, ninputs = args
+    seed, nfuncs, ninputs, funcs = args
     try:
-        chosen = run_corpus_seed(seed, nfuncs, ninputs)
+        chosen = run_corpus_seed(seed, nfuncs, ninputs, funcs=funcs)
         return (seed, "ok", "", frozenset(chosen), *_LAST_HANDLERS)
     except Failure as f:
         # Re-derive the chosen names for reporting even on failure.
-        _src, chosen = corpus_frags.emit_corpus_file(seed, nfuncs, ninputs)
+        _src, chosen = corpus_frags.emit_corpus_file(seed, nfuncs, ninputs, funcs=funcs)
         return (seed, f.kind, f.detail, frozenset(chosen), *_LAST_HANDLERS)
+
+
+def run_corpus_batch(seeds, nfuncs, ninputs, funcs=None):
+    """Run many corpus seeds in ONE Lean spawn (amortizing Lean startup + the
+    `import Corpus` olean load, which dominate — NOT the transpilation).  Returns
+    (results, chosen_by_seed): `results` maps each seed to (status, detail), where
+    status is 'ok', a transpiler-bug kind, or 'suspect' (block aborted — e.g. a
+    non-terminating oracle row — so it needs a per-seed run to classify)."""
+    src, chosen_by_seed = corpus_frags.emit_corpus_batch_file(
+        seeds, nfuncs, ninputs, funcs=funcs)
+    fd, path = tempfile.mkstemp(prefix="fuzz_corpus_batch_", suffix=".lean")
+    os.close(fd)
+    try:
+        _rc, out, _err = lean_run(src, path)
+    finally:
+        try:
+            os.unlink(path)
+        except OSError:
+            pass
+    _record_handlers(out)  # per-block HANDLERS comments union across the batch
+    sections = _split_batch_output(out)
+    results = {}
+    for seed in seeds:
+        if seed not in sections:
+            results[seed] = ("suspect", "no output section (block aborted)")
+            continue
+        py_src, oracle_block = sections[seed]
+        try:
+            _check_py_oracle(py_src, oracle_block)
+            results[seed] = ("ok", "")
+        except Failure as f:
+            results[seed] = (f.kind, f.detail)
+    return results, chosen_by_seed
+
+
+def check_corpus_batch(args):
+    """Pool worker: run a chunk of corpus seeds in one Lean spawn, then resolve any
+    anomaly with a per-seed run.  Unlike grammar mode a corpus 'suspect' is NOT an
+    ill-typed generated seed (the corpus type-checks) — it's most likely a
+    non-terminating oracle `#eval` that timed out; the per-seed re-run isolates it
+    and classifies (a corpus Lean error IS a real failure).  Returns a list of
+    (seed, status, detail, chosen_names, fired, known) tuples matching
+    `check_corpus_seed`."""
+    seeds, nfuncs, ninputs, funcs = args
+    results, chosen_by_seed = run_corpus_batch(seeds, nfuncs, ninputs, funcs=funcs)
+    fired, known = _LAST_HANDLERS  # batch-global handler tags (same file)
+    out = []
+    for seed in seeds:
+        status, detail = results[seed]
+        if status != "ok":
+            # Re-run alone: isolates the culprit (and a timed-out oracle row will
+            # time out again → surfaced as a lean-error, i.e. skipped).
+            try:
+                run_corpus_seed(seed, nfuncs, ninputs, funcs=funcs)
+                status, detail = "ok", ""
+            except Failure as f:
+                status, detail = f.kind, f.detail
+        out.append((seed, status, detail,
+                    frozenset(chosen_by_seed[seed]), fired, known))
+    return out
 
 
 def minimize(seed, ndefs, ninputs, emi=0.0):
@@ -618,6 +678,7 @@ def run_pycov_mode(args):
     exercise each transpiled function's body across the whole sweep, unioning hit
     lines per function.  Flags functions that never reach full coverage — their
     unexercised branches are where a transpiler bug would hide undiff'd."""
+    corpus_frags.build_type_info_cache()  # once in parent; workers read the JSON
     all_funcs = corpus_frags.harvest()
     print(f"Input-adequacy (pycov) sweep: {len(all_funcs)} corpus functions, "
           f"{args.seeds} seeds x {args.defs} funcs x {args.inputs} inputs.")
@@ -733,6 +794,7 @@ def run_pycov_search_mode(args):
     function, greybox-search inputs that maximize coverage of its TRANSPILED body,
     then differentially validate those inputs against the Lean oracle.  Reports
     per-function adequacy and any divergence a newly-reached branch exposes."""
+    corpus_frags.build_type_info_cache()  # once in parent; workers read the JSON
     all_funcs = corpus_frags.harvest()
     budget = max(args.inputs * 50, 200)
     paths_mode = pycov.have_path_coverage()
@@ -789,33 +851,56 @@ def run_pycov_search_mode(args):
 
 def run_corpus_mode(args):
     """Fragment-reuse sweep: each seed transpiles `--defs` harvested corpus
-    functions and diffs them against the Lean oracle on random inputs."""
+    functions and diffs them against the Lean oracle on random inputs.
+
+    Efficiency: the type dump and harvest are computed ONCE in the parent (a Lean
+    spawn each) and the function list is passed to workers, instead of every
+    worker re-spawning Lean to reload type info / re-harvesting.  With `--batch B`
+    each worker packs B seeds into one Lean file, amortizing Lean startup + the
+    `import Corpus` olean load across many functions (~5x, per grammar mode)."""
+    corpus_frags.build_type_info_cache()  # once in parent; workers read the JSON
     all_funcs = corpus_frags.harvest()
     print(f"Corpus fragment fuzzing: {len(all_funcs)} harvestable functions, "
-          f"{args.seeds} seeds x {args.defs} funcs x {args.inputs} inputs.")
+          f"{args.seeds} seeds x {args.defs} funcs x {args.inputs} inputs"
+          f"{f' (batch {args.batch})' if args.batch > 0 else ''}.")
     seeds = list(range(args.start, args.start + args.seeds))
     checked = lean_errors = done = 0
     bugs = []
     exercised = set()
     fired_all, known_all = set(), set()
+
+    def handle(seed, status, detail, chosen, fired, known):
+        nonlocal checked, lean_errors, done
+        exercised.update(chosen)
+        fired_all.update(fired)
+        known_all.update(known)
+        done += 1
+        if status == "ok":
+            checked += 1
+        elif status == "lean-error":
+            lean_errors += 1
+        else:
+            bugs.append((seed, status, detail))
+        if done % 25 == 0:
+            print(f"  ... {done}/{len(seeds)} seeds ({checked} checked, "
+                  f"{len(bugs)} bug(s) so far)")
+
     with ProcessPoolExecutor(max_workers=args.jobs) as ex:
-        futures = [ex.submit(check_corpus_seed, (s, args.defs, args.inputs))
-                   for s in seeds]
-        for fut in as_completed(futures):
-            seed, status, detail, chosen, fired, known = fut.result()
-            exercised |= chosen
-            fired_all |= fired
-            known_all |= known
-            done += 1
-            if status == "ok":
-                checked += 1
-            elif status == "lean-error":
-                lean_errors += 1
-            else:
-                bugs.append((seed, status, detail))
-            if done % 25 == 0:
-                print(f"  ... {done}/{len(seeds)} seeds ({checked} checked, "
-                      f"{len(bugs)} bug(s) so far)")
+        if args.batch > 0:
+            chunks = [seeds[i:i + args.batch]
+                      for i in range(0, len(seeds), args.batch)]
+            futures = [ex.submit(check_corpus_batch,
+                                 (c, args.defs, args.inputs, all_funcs))
+                       for c in chunks]
+            for fut in as_completed(futures):
+                for rec in fut.result():
+                    handle(*rec)
+        else:
+            futures = [ex.submit(check_corpus_seed,
+                                 (s, args.defs, args.inputs, all_funcs))
+                       for s in seeds]
+            for fut in as_completed(futures):
+                handle(*fut.result())
 
     if bugs:
         bugs.sort()
