@@ -215,6 +215,31 @@ surfaced five more, two of them silent wrong values.
   args are present, with a fallback to the old `size-2`/`size-1` shape for older
   Lean versions that don't materialize the optParams.
 
+### F15. `xs[i]!` panic-indexing referenced elided instances (crash)
+
+- **Found by:** Phase-1 Array fuzzing (`Corpus.Production.quicksort` via
+  `lomutoPartition`'s `arr[hi]!`); reproduces on plain `List` too (`xs[i]!`)
+  · **Kind:** runtime (`NameError: name '_x_266' is not defined`)
+- **Root cause:** `xs[i]!` is `GetElem?.getElem! … <GetElem-inst> <Inhabited-inst>
+  xs i`. In LCNF the `getElem!` method is a `.proj` (field 2) of the `GetElem`
+  instance, then called with the `Inhabited` instance as a leading argument. Both
+  instances are *elided* (the transpiler never emits typeclass instances), but the
+  projection emitted `_x_N.field_2` and the call passed `_x_M` — referencing the
+  unbound instance names. (Initially misread as a batched-emission name collision;
+  it's actually this instance-projection gap, independent of batching.) The
+  `.proj` handler covered `GetElem?` idx 0/1 (`getElem?`/valid) but not idx 2
+  (`getElem!`), and `emitArg`/`renderArg` had no case for an instance-valued arg.
+- **Fix:** (a) handle `.proj` idx 2 on a `GetElem` instance as
+  `(lambda _inst, xs, i: xs[i])` — absorbing the leading `Inhabited` arg and
+  indexing directly (Lean panics on OOB, Python raises `IndexError` — both errors,
+  so the differential oracle stays consistent); (b) `emitArg`/`renderArg` now emit
+  `None` for a var known to be a typeclass instance, so any elided instance
+  threaded as an argument is a harmless placeholder the callee ignores.
+- **Related (still open):** `List.get!`/`Array.get!` (the *named* method, not
+  `[i]!`) inlines Lean's panic machinery into garbage; no corpus function uses it.
+  `Array.swapIfInBounds` and other Array builtins remain unmapped (see the
+  Phase-1 known-open note).
+
 ## Bugs found by the round-trip differential harness
 
 Found while building `roundtrip/` (before fuzzing), by running corpus functions

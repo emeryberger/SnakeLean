@@ -15,6 +15,7 @@ pick_if = ns["pick_if"]
 min_nat = ns["min_nat"]
 max_nat = ns["max_nat"]
 clamp_high = ns["clamp_high"]
+index_bang = ns["index_bang"]
 
 failures = []
 
@@ -37,6 +38,11 @@ check("max_nat(3, 7)", max_nat(3, 7), 7)
 check("max_nat(9, 4)", max_nat(9, 4), 9)
 check("clamp_high(100, 10)", clamp_high(100, 10), 10)
 check("clamp_high(5, 10)", clamp_high(5, 10), 5)
+
+# (3) getElem! panic-indexing: in-bounds returns the element (OOB would raise,
+# matching Lean's panic — not asserted here since both sides error).
+check("index_bang([10,20,30], 1)", index_bang([10, 20, 30], 1), 20)
+check("index_bang([10,20,30], 0)", index_bang([10, 20, 30], 0), 10)
 
 if failures:
     print("FAIL:")

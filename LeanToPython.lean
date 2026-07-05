@@ -660,6 +660,12 @@ def emitArg (arg : Arg) : EmitM Unit := do
     else if let some (param, body) := (← get).deferredLambdas[fvarId]? then
       -- A deferred lambda used as a plain value: materialize it.
       emit s!"(lambda {param}: {body})"
+    else if (← get).instanceVars.contains fvarId then
+      -- A typeclass-instance var passed as an argument: its binding was elided
+      -- (instances aren't emitted), so emit `None` as a placeholder — the callee
+      -- ignores it (e.g. the `Inhabited`/decidability arg threaded into
+      -- `getElem!`).  Without this it referenced the unbound instance name.
+      emit "None"
     else
       emit (← getVarName fvarId)
   | .erased => emit "None"
@@ -932,6 +938,9 @@ def renderArg (arg : Arg) : EmitM String := do
       return e
     else if let some (param, body) := st.deferredLambdas[fvarId]? then
       return s!"(lambda {param}: {body})"
+    else if st.instanceVars.contains fvarId then
+      -- Elided instance var passed as an argument (see `emitArg`): `None`.
+      return "None"
     else
       return (← getVarName fvarId)
   | .erased => return "None"
@@ -1861,6 +1870,18 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
         markHandler "proj.GetElem.valid"
         emitIndent
         emit s!"{varName} = (lambda xs, i: 0 <= i < len(xs))\n"
+        return
+      else if idx == 2 then
+        -- Project 2 (`getElem!`) is panic-on-out-of-bounds indexing (`xs[i]!`).
+        -- It's called as `f(<Inhabited-inst>, xs, i)` — a leading typeclass arg
+        -- precedes the collection & index — so absorb that arg and index
+        -- directly.  Lean panics on OOB; Python raises IndexError — both are
+        -- errors, so the differential oracle stays consistent.  (Without this,
+        -- the projection referenced the elided GetElem instance → undefined
+        -- name; F14-adjacent.)
+        markHandler "proj.GetElem!"
+        emitIndent
+        emit s!"{varName} = (lambda _inst, xs, i: xs[i])\n"
         return
     -- Max instance - project 0 is the max function
     if containsSubstr typeStr "Max" && idx == 0 then
