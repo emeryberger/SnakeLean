@@ -106,23 +106,14 @@ def _parse_sig(header):
 
 
 # Namespaces with KNOWN-OPEN transpiler bugs, excluded from harvesting so the
-# sweep stays a clean regression signal.  Surfaced by the Phase-1 String/Char/
-# Array expansion; tracked for a follow-up PR.  NOT false positives — genuine
-# transpiler gaps concentrated in `Corpus.Strings` (which leans heavily on Lean
-# String builtins the transpiler doesn't yet map):
-#   - missing builtins falling through to an undefined Python name:
-#     `String.startsWith`→`starts_with`, `.dropWhile`→`drop_while`,
-#     `.replicate`→`replicate_tr`, `.dropLast`→`drop_last_tr`, etc.
-#   - a batched-emission name collision: two functions in one file both bind a
-#     line-numbered temp (`_x_798`), so one references a name from the other's
-#     scope (NameError).  Only manifests in multi-function files.
-# The individual String/Char/Array *value* handlers the fuzzer generates
-# (push/append/toUpper/toLower/is*) ARE fixed — this excludes only functions
-# that reach the still-unmapped builtins or the batch collision.  `Strings.*`
-# hits missing builtins; `Production.*` hits the `_x_NNN` batch name-collision
-# (its Array/nested code reuses LCNF temp numbers across functions in one file).
-# Remove a prefix once its gap is fixed.
-_KNOWN_OPEN_NS = ("Corpus.Strings.", "Corpus.Production.")
+# sweep stays a clean regression signal.  `Corpus.Strings.*` still hits a
+# helper-scoping bug: a nested `let rec`/`where` helper (e.g. inside `splitOn`)
+# isn't collected, so a deferred lambda references an undefined `_uniq_NNN`.
+# (The missing String/List/Array builtins it also used — startsWith, dropWhile,
+# replicate, dropLast, swapIfInBounds, isPrefixOf — are now FIXED, as is the
+# `_x_NNN` getElem! bug that had also afflicted `Corpus.Production`; Production is
+# no longer excluded.)  Remove this prefix once the helper-scoping bug is fixed.
+_KNOWN_OPEN_NS = ("Corpus.Strings.",)
 
 
 def _is_known_open(qual):

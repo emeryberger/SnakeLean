@@ -1579,6 +1579,44 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
           emitArg args[args.size - 2]!  -- xs[:n]
         emit "]\n"
         return
+    -- List.dropLast / List.dropLastTR xs -> xs[:-1]  (empty-safe: [][:-1] == []).
+    -- args: [type, xs].
+    if declName == ``List.dropLast || declName == ``List.dropLastTR then
+      if args.size >= 1 then
+        emitIndent
+        emit s!"{varName} = "
+        emitArg args[args.size - 1]!
+        emit "[:-1]\n"
+        return
+    -- List.replicate / List.replicateTR n x -> [x] * n.  args: [type, n, x].
+    if declName == ``List.replicate || declName == ``List.replicateTR then
+      if args.size >= 2 then
+        emitIndent
+        emit s!"{varName} = ["
+        emitArg args[args.size - 1]!  -- x
+        emit "] * "
+        emitArg args[args.size - 2]!  -- n
+        emit "\n"
+        return
+    -- List.isPrefixOf p xs -> xs[:len(p)] == p.  args: [type, inst, p, xs].
+    if declName == ``List.isPrefixOf then
+      if args.size >= 2 then
+        let p ← renderArg args[args.size - 2]!
+        let xs ← renderArg args[args.size - 1]!
+        emitIndent
+        emit s!"{varName} = ({xs}[:len({p})] == {p})\n"
+        return
+    -- List.dropWhile p xs / List.takeWhile p xs — a prefix-based slice by the
+    -- predicate.  args: [type, pred, xs].  Emit an itertools call (correct for
+    -- either spelling; the predicate may be an inlined lambda via fnCompParts).
+    if declName == ``List.dropWhile || declName == ``List.takeWhile then
+      if args.size >= 2 then
+        let (binder, body) ← fnCompParts args[args.size - 2]! "x"
+        let xs ← renderArg args[args.size - 1]!
+        let fn := if declName == ``List.takeWhile then "takewhile" else "dropwhile"
+        emitIndent
+        emit s!"{varName} = list(__import__('itertools').{fn}(lambda {binder}: {body}, {xs}))\n"
+        return
     -- getElem? (`l[i]?`) - safe indexing (Lean 4.31 removed `List.get?`;
     -- `l[i]?` now lowers through the generic `getElem?`)
     if declName == ``getElem? then
@@ -1788,6 +1826,25 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
         emitArg args[args.size - 1]!
         emit ".lower()\n"
         return
+    -- String.startsWith / endsWith s pat -> Python str.startswith/endswith.
+    -- Signature is `{ρ} → String → (pat : ρ) → [ForwardPattern ρ] → Bool`, so the
+    -- value args are the string and pattern; the type + Pattern-instance args are
+    -- elided (emit as None).  Pick the two String operands by filtering to fvar
+    -- args that aren't known instances.
+    if declName == ``String.startsWith || declName == ``String.endsWith then
+      let meth := if declName == ``String.startsWith then "startswith" else "endswith"
+      -- Collect non-instance fvar operands in order: [s, pat].
+      let mut ops : Array String := #[]
+      for arg in args do
+        match arg with
+        | .fvar fv =>
+          if !((← get).instanceVars.contains fv) then
+            ops := ops.push (← renderArg arg)
+        | _ => pure ()
+      if ops.size >= 2 then
+        emitIndent
+        emit s!"{varName} = {ops[0]!}.{meth}({ops[1]!})\n"
+        return
     -- String.push s c -> s + c  (Lean String.push is functional: returns a new
     -- string).  args: [s, c].  (`stdlibFnToPython?` marks it `none`/"handled
     -- specially" but never had a handler — it fell through to `string_push`.)
@@ -1810,6 +1867,17 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
         emit " + ["
         emitArg args[args.size - 1]!
         emit "]\n"
+        return
+    -- Array.swapIfInBounds a i j -> swap elements i,j if both in bounds, else a
+    -- unchanged (Lean is functional/persistent).  args: [type, a, i, j].  Emit a
+    -- non-mutating helper lambda that copies then swaps.
+    if declName == ``Array.swapIfInBounds then
+      if args.size >= 3 then
+        let a ← renderArg args[args.size - 3]!
+        let i ← renderArg args[args.size - 2]!
+        let j ← renderArg args[args.size - 1]!
+        emitIndent
+        emit s!"{varName} = (lambda a, i, j: (a if not (0 <= i < len(a) and 0 <= j < len(a)) else [a[j] if k == i else a[i] if k == j else a[k] for k in range(len(a))]))({a}, {i}, {j})\n"
         return
     -- Ordering constructors - always emit as int values
     let nameStr := declName.toString (escape := false)
@@ -2884,14 +2952,14 @@ def knownHandlerTags : List String := [
   -- String / Char (barely tested today — a Phase-1 target)
   "const.String.length", "const.String.mk", "const.String.toList",
   "const.String.push", "const.String.isEmpty", "const.String.append",
-  "const.List.asString",
+  "const.String.startsWith", "const.String.endsWith", "const.List.asString",
   "const.Char.isAlpha", "const.Char.isDigit", "const.Char.isAlphanum",
   "const.Char.isLower", "const.Char.isUpper", "const.Char.isWhitespace",
   "const.Char.toUpper", "const.Char.toLower", "const.Char.toNat", "const.Char.ofNat",
   "const.String.push",
   -- Array (the qsort family — F13 lived here)
   "const.Array.size", "const.Array.toList", "const.Array.qsort",
-  "const.Array.push", "const.List.toArray",
+  "const.Array.push", "const.Array.swapIfInBounds", "const.List.toArray",
   -- List combinators / utilities
   -- Note: Lean 4.31 lowers `List.map`/`filter`/`take`/`length` to their
   -- tail-recursive counterparts (`*TR`) in LCNF, so those are the spellings that
@@ -2905,6 +2973,8 @@ def knownHandlerTags : List String := [
   "const.List.zipIdx", "const.List.set", "const.List.contains", "const.List.elem",
   "const.List.isEmpty", "const.List.mergeSort", "const.List.head?",
   "const.List.tail?", "const.List.getLast?", "const.List.dropLast",
+  "const.List.dropLastTR", "const.List.replicateTR", "const.List.isPrefixOf",
+  "const.List.dropWhile", "const.List.takeWhile",
   -- Option
   "const.Option.some", "const.Option.none", "const.Option.bind",
   "const.Option.isSome", "const.Option.isNone", "const.Option.getD",

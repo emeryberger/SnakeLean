@@ -261,17 +261,31 @@ NOT a batched-emission name collision, as first suspected.
 
 ### Known-open (Phase-1 follow-up, not yet fixed)
 
-Phase-1 String/Char/Array fuzzing surfaced further gaps, tracked via
-`corpus_frags._KNOWN_OPEN_NS` (their namespaces are excluded from harvesting so
-the sweep stays a clean regression signal):
-- **Missing Lean String/List builtins** used pervasively by `Corpus.Strings.*`
-  — `String.startsWith`→`starts_with`, `.dropWhile`→`drop_while`,
-  `.replicate`→`replicate_tr`, `.dropLast`→`drop_last_tr` — fall through to
-  undefined names.
-- **Missing Array builtins** used by `Corpus.Production.*` — chiefly
-  `Array.swapIfInBounds`→`swap_if_in_bounds` — likewise fall through. (The
-  `_x_266` failures in this namespace were F15, now fixed; `swapIfInBounds` is
-  the remaining blocker.)
+### F16. Missing Lean List/Array/String builtins (undefined-name / crash)
+
+- **Found by:** Phase-1 corpus fuzzing over `Corpus.Strings.*`/`Corpus.Production.*`
+  · **Kind:** runtime (`NameError`/`TypeError` on snake-cased undefined names)
+- **Root cause:** several common Lean builtins had no handler and fell through to
+  `toPyFnName` → undefined `drop_while`/`replicate_tr`/`drop_last_tr`/
+  `swap_if_in_bounds`/`starts_with`/`is_prefix_of`.
+- **Fix (all verified equal to Lean, incl. empty/OOB edge cases):**
+  `List.dropLast`/`dropLastTR` → `xs[:-1]`; `List.replicate`/`replicateTR n x` →
+  `[x] * n`; `List.isPrefixOf p xs` → `xs[:len(p)] == p`; `List.dropWhile`/
+  `takeWhile` → `itertools.dropwhile`/`takewhile`; `Array.swapIfInBounds a i j` →
+  a non-mutating copy-and-swap lambda (identity when out of bounds, matching
+  Lean's persistent Array); `String.startsWith`/`endsWith` → `str.startswith`/
+  `endswith` (filtering the elided pattern-typeclass instance args).
+- **Impact:** un-blocked `Corpus.Production.*` (no longer excluded from harvest);
+  corpus harvest 82 → 83.
+
+### Known-open (not yet fixed)
+
+Tracked via `corpus_frags._KNOWN_OPEN_NS` (excluded from harvesting so the sweep
+stays a clean regression signal):
+- **Helper-scoping bug in `Corpus.Strings.*`**: a nested `let rec`/`where` helper
+  (e.g. inside `splitOn`) isn't collected, so a deferred lambda references an
+  undefined `_uniq_NNN`. (The missing builtins these functions also used are now
+  fixed — F16 — so this scoping bug is the remaining blocker for the namespace.)
 - **`List.get!`/`Array.get!`** (the *named* method, not `[i]!`) inlines Lean's
   panic machinery into garbage; no corpus function currently uses it.
 
