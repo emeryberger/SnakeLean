@@ -35,6 +35,11 @@ def maxNat (a b : Nat) : Nat := Nat.max a b
 /-- (2) min nested in an expression, to catch arg-order regressions. -/
 def clampHigh (v hi : Nat) : Nat := Nat.min v hi
 
+/-- (3) `xs[i]!` panic-indexing (`GetElem?.getElem!`).  Pre-fix this projected
+    the elided `GetElem` instance (`_x_N.field_2`) and passed the elided
+    `Inhabited` instance as an argument, both referencing unbound names. -/
+def indexBang (xs : List Nat) (i : Nat) : Nat := xs[i]!
+
 end RegressionFixes
 
 #eval show CoreM Unit from do
@@ -43,5 +48,6 @@ end RegressionFixes
       ``RegressionFixes.pickIf,
       ``RegressionFixes.minNat,
       ``RegressionFixes.maxNat,
-      ``RegressionFixes.clampHigh ]
+      ``RegressionFixes.clampHigh,
+      ``RegressionFixes.indexBang ]
   IO.println code
