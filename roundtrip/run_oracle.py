@@ -57,6 +57,46 @@ def normalize(v):
         return [normalize(x) for x in v]
     if isinstance(v, list):
         return [normalize(x) for x in v]
+    # A transpiled custom-inductive value is a `@dataclass` instance: the class
+    # name is the Lean constructor's short name and its fields are `field_0`,
+    # `field_1`, …  Reduce it to the same `{"c": ctor, "f": [fields]}` shape the
+    # Lean oracle serializer (`corpus_frags._emit_user_serializers`) emits, so
+    # the two compare structurally (Phase 3, custom inductive types).
+    if _is_transpiled_dataclass(v):
+        fields = _dataclass_fields_in_order(v)
+        return {"c": type(v).__name__, "f": [normalize(f) for f in fields]}
+    return v
+
+
+def _is_transpiled_dataclass(v):
+    import dataclasses
+    return (not isinstance(v, type) and dataclasses.is_dataclass(v))
+
+
+def _dataclass_fields_in_order(v):
+    """Values of a transpiled dataclass's `field_0`, `field_1`, … in index order
+    (nullary constructors have none)."""
+    import dataclasses
+    names = [f.name for f in dataclasses.fields(v)]
+    # Fields are named field_0.. ; sort by the numeric suffix to be safe.
+    def key(n):
+        return int(n.rsplit("_", 1)[-1]) if n.startswith("field_") else n
+    return [getattr(v, n) for n in sorted(names, key=key)]
+
+
+def materialize(v, ns):
+    """Turn a JSON arg into the Python value the transpiled function expects.
+    A custom-inductive value arrives as `{"c": DataclassName, "f": [fields]}`
+    (see `corpus_frags._json`); build the actual `@dataclass` instance from `ns`
+    (fields recursively materialized).  Lists recurse; scalars pass through."""
+    if isinstance(v, dict) and "c" in v and "f" in v:
+        cls = ns.get(v["c"])
+        fields = [materialize(f, ns) for f in v["f"]]
+        if cls is None:
+            return v  # class not emitted (shouldn't happen) — leave as-is
+        return cls(*fields)
+    if isinstance(v, list):
+        return [materialize(x, ns) for x in v]
     return v
 
 

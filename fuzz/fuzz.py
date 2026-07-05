@@ -169,7 +169,9 @@ def _check_py_oracle(py_src, oracle_block):
         if not line.startswith("ORACLE\t"):
             continue
         _, fn, args_json, res_json = line.split("\t")
-        args = json.loads(args_json)
+        # Materialize any custom-inductive args ({"c":..,"f":..}) into the
+        # transpiled dataclass instances the function expects.
+        args = [run_oracle.materialize(a, ns) for a in json.loads(args_json)]
         expected = run_oracle.normalize(json.loads(res_json))
         py_fn = lean_to_py.get(fn)
         if py_fn is None or py_fn not in ns:
@@ -649,6 +651,12 @@ def pycov_search_fn(args):
     newly-reached branch that mis-transpiles is caught.  Returns
     (qual, hit, body, status, detail)."""
     qual, ptypes, ret, budget = args
+    # Skip user-typed functions here: the coverage-guided search's input
+    # mutators/generators only cover the base value universe.  Such functions are
+    # still differentially validated by the main `--corpus` sweep (the real
+    # bug-finder); `--pycov-search` is an input-adequacy tool for base-typed fns.
+    if any(t not in gen.LEAN_TYPES for t in ptypes):
+        return (qual, 0, 0, "ok", "")
     # (1) transpile once.
     src = corpus_frags.emit_transpile_only(qual)
     fd, path = tempfile.mkstemp(prefix="pcs_t_", suffix=".lean")

@@ -19,12 +19,170 @@ a one-line `insertionSort` fragment still drags in its `let rec insert`/`sort`.
 import os
 import random
 import re
+import subprocess
 
 import gen
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 CORPUS_DIR = os.path.join(ROOT, "Corpus")
+
+
+# ---------------------------------------------------------------------------
+# Phase 3: custom inductive / structure types.
+#
+# A Lean-side dump (`fuzz/TypeInfo.lean`) reports each corpus type's
+# constructors and their field types (robust to source formatting / Lean
+# version, unlike a regex over source).  From it we compute which types are
+# *constructible* from the fuzzer's value universe (all fields base-harvestable
+# or themselves constructible user types), so we can generate values, emit them
+# as Lean literals, and compare a transpiled dataclass instance against the Lean
+# oracle.  We deliberately start with the tractable slice — enums (nullary
+# constructors) and non-recursive structs over constructible fields — leaving
+# recursive types (Expr/Trie/JsonValue) and Float-bearing ones out (recursion
+# needs depth bounds; Float isn't in the value universe).
+# ---------------------------------------------------------------------------
+
+# type name -> list of (ctor_full_name, [field_type_str, ...]); loaded lazily.
+_TYPE_INFO = None
+# type name -> True/False constructibility (memoized during analysis).
+_CONSTRUCTIBLE = {}
+
+
+def _load_type_info():
+    """Run `fuzz/TypeInfo.lean` and parse its `### TYPE` lines into `_TYPE_INFO`
+    ({type: [(ctor, [fieldtypes])]}).  Cached after first call."""
+    global _TYPE_INFO
+    if _TYPE_INFO is not None:
+        return _TYPE_INFO
+    info = {}
+    env = dict(os.environ)
+    env["PATH"] = os.path.expanduser("~/.elan/bin") + ":" + env.get("PATH", "")
+    lp = env.get("FUZZ_LEAN_PATH")
+    if lp is None:
+        out = subprocess.run(["lake", "env", "printenv", "LEAN_PATH"], cwd=ROOT,
+                             capture_output=True, text=True, env=env)
+        lp = out.stdout.strip()
+    env["LEAN_PATH"] = lp
+    proc = subprocess.run(["lean", os.path.join(HERE, "TypeInfo.lean")], cwd=ROOT,
+                          capture_output=True, text=True, env=env)
+    for line in proc.stdout.splitlines():
+        if not line.startswith("### TYPE\t"):
+            continue
+        _, tyname, ctors_str = line.split("\t", 2)
+        ctors = []
+        for cpart in ctors_str.split(" | "):
+            cname, _, fields_str = cpart.partition(";")
+            fields = [f for f in fields_str.split(",") if f]
+            ctors.append((cname, fields))
+        info[tyname] = ctors
+    _TYPE_INFO = info
+    return info
+
+
+_SHORT_TO_QUAL = None
+
+
+def _ns_prefixes(ns, defname):
+    """Namespace prefixes to try when resolving a short type name in a def's
+    signature: every suffix of the `namespace` stack, plus (for a dotted def name
+    like `Card.value`) the def's own leading component joined onto each."""
+    joined = ".".join(ns)
+    prefixes = []
+    if joined:
+        prefixes.append(joined)
+    # a dotted def name (`Card.value`) — the `Card` part is likely a type in scope
+    if "." in defname:
+        head = defname.rsplit(".", 1)[0]
+        prefixes.append(f"{joined}.{head}" if joined else head)
+        prefixes.append(head)
+    return tuple(prefixes)
+
+
+def _resolve_type(ty, ns_prefixes=()):
+    """Resolve a type name as written in a signature to a fully-qualified corpus
+    type name if it is one.  Signatures use either the qualified name
+    (`Corpus.Games.RPS`) or the short name (`RPS`) when in-namespace; try the
+    given namespace prefixes then a unique short-name match.  Returns `ty`
+    unchanged if it's not a (unique) corpus type."""
+    global _SHORT_TO_QUAL
+    info = _load_type_info()
+    if ty in info:
+        return ty
+    for p in ns_prefixes:
+        if f"{p}.{ty}" in info:
+            return f"{p}.{ty}"
+    if _SHORT_TO_QUAL is None:
+        short = {}
+        for q in info:
+            short.setdefault(q.rsplit(".", 1)[-1], []).append(q)
+        _SHORT_TO_QUAL = {s: qs[0] for s, qs in short.items() if len(qs) == 1}
+    return _SHORT_TO_QUAL.get(ty, ty)
+
+
+def _is_constructible(ty, stack=()):
+    """Can the fuzzer build a value of Lean type `ty`?  True for base-harvestable
+    types and for user types whose every constructor's fields are all
+    constructible.  `stack` guards against recursive types (Expr → Expr): a type
+    that recurses through itself is treated as NOT constructible (no depth bound
+    yet)."""
+    if ty in _HARVESTABLE:
+        return True
+    info = _load_type_info()
+    if ty not in info:
+        return False
+    if ty in stack:            # recursive — bail (would need a depth bound)
+        return False
+    if ty in _CONSTRUCTIBLE:
+        return _CONSTRUCTIBLE[ty]
+    ok = all(all(_is_constructible(f, stack + (ty,)) for f in fields)
+             for (_ctor, fields) in info[ty])
+    _CONSTRUCTIBLE[ty] = ok
+    return ok
+
+
+# Constructor names the transpiler prefixes with their parent to avoid dataclass
+# collisions — MUST match `toPyTypeName`/`isCommonCtorName` in LeanToPython.lean.
+_COMMON_CTOR_NAMES = {"mk", "node", "empty", "nil", "cons", "some", "none"}
+
+
+def _lean_ctor_short(ctor_full):
+    """The Lean constructor short name for a match arm / application:
+    `Corpus.Games.Nim.mk` -> `mk`."""
+    return ctor_full.rsplit(".", 1)[-1]
+
+
+def _py_ctor_name(ctor_full):
+    """The Python dataclass name the transpiler emits for constructor
+    `ctor_full` — mirrors `toPyTypeName`: bare short name, except a *common* name
+    (`mk`, `node`, …) is prefixed with its immediate parent (`Corpus.Games.Nim.mk`
+    -> `Nim_mk`) to avoid collisions.  The oracle's JSON `"c"` value and
+    `run_oracle.normalize` (which reads `type(v).__name__`) must agree on this."""
+    parts = ctor_full.split(".")
+    s = parts[-1]
+    if s in _COMMON_CTOR_NAMES and len(parts) >= 2:
+        return f"{parts[-2]}_{s}"
+    return s
+
+
+def _rand_user_value(rng, ty):
+    """A random value of constructible user type `ty`, as a dict
+    `{"__ctor__": full_ctor_name, "fields": [values...]}`.  Field values are
+    generated recursively (base types via `_rand_input`, user types via this)."""
+    ctors = _load_type_info()[ty]
+    ctor, fields = rng.choice(ctors)
+    return {"__ctor__": ctor,
+            "fields": [_rand_input(rng, f) for f in fields]}
+
+
+def _user_lean_lit(ty, v):
+    """Lean literal for a user-type value: `Corpus.Games.Card.mk (rank) (suit)`
+    (fully-qualified constructor applied to its field literals)."""
+    ctor = v["__ctor__"]
+    field_types = dict(_load_type_info()[ty])[ctor]
+    args = " ".join(f"({_lean_lit(ft, fv)})"
+                    for ft, fv in zip(field_types, v["fields"]))
+    return f"({ctor} {args})" if args else f"{ctor}"
 
 # The types the fuzzer can generate values for (must match gen.LEAN_TYPES).  A
 # def is harvestable iff every parameter type and the return type is one of these.
@@ -35,7 +193,8 @@ _HARVESTABLE = {"Nat", "Bool", "Int", "List Nat", "Option Nat", "Nat × Nat",
 # `(a b : T)` binds two params of type T; `(x : T)` binds one.  We only accept
 # a param group whose type is harvestable.
 _PARAM_RE = re.compile(r"\(([^():]+):\s*([^()]+?)\s*\)")
-_DEFNAME_RE = re.compile(r"^def\s+([A-Za-z_][A-Za-z0-9_']*)\s")
+# Allow dotted def names (`Card.value`, `RPS.beats`) — struct/enum methods.
+_DEFNAME_RE = re.compile(r"^def\s+([A-Za-z_][A-Za-z0-9_'.]*)\s")
 _NS_RE = re.compile(r"^namespace\s+(\S+)")
 _END_RE = re.compile(r"^end\b")
 
@@ -81,10 +240,22 @@ def _split_ret(sig):
     return None
 
 
-def _parse_sig(header):
-    """Parse the parameter section of a def header into a flat list of types, or
-    return None if any param group's type is not harvestable (or params use a
-    shape we don't model, e.g. implicit `{α}` or typeclass `[...]`)."""
+def _harvestable_type(ty, ns_prefixes):
+    """Resolve `ty` and return the resolved name if the fuzzer can generate values
+    of it (base-harvestable OR a constructible user type), else None."""
+    if ty in _HARVESTABLE:
+        return ty
+    resolved = _resolve_type(ty, ns_prefixes)
+    if resolved in _HARVESTABLE or _is_constructible(resolved):
+        return resolved
+    return None
+
+
+def _parse_sig(header, ns_prefixes=()):
+    """Parse the parameter section of a def header into a flat list of (resolved)
+    types, or return None if any param group's type isn't
+    harvestable/constructible (or params use a shape we don't model, e.g.
+    implicit `{α}` or typeclass `[...]`)."""
     # Reject implicit/instance binders outright — they mean generics/typeclasses
     # the value universe can't drive.
     if "{" in header or "[" in header:
@@ -98,9 +269,10 @@ def _parse_sig(header):
             return None
         pos = m.end()
         names, ty = m.group(1).split(), _norm_type(m.group(2))
-        if ty not in _HARVESTABLE:
+        resolved = _harvestable_type(ty, ns_prefixes)
+        if resolved is None:
             return None
-        ptypes.extend([ty] * len(names))
+        ptypes.extend([resolved] * len(names))
     if header[pos:].strip():
         return None
     return ptypes
@@ -153,15 +325,17 @@ def harvest(corpus_dir=CORPUS_DIR, include_known_open=False):
                     name, sig = sg
                     parts = _split_ret(sig)
                     if parts:
-                        header, ret = parts
-                        # Need ≥1 param; skip dotted struct methods (receiver type
-                        # not in the universe).
-                        if "." not in name and ret in _HARVESTABLE:
-                            ptypes = _parse_sig(header)
-                            if ptypes:
-                                qual = ".".join(ns + [name]) if ns else name
-                                if include_known_open or not _is_known_open(qual):
-                                    funcs.append((qual, ptypes, ret))
+                        header, ret_raw = parts
+                        # Namespace prefixes for resolving short type names: the
+                        # current `namespace` stack, plus a dotted def name's own
+                        # prefix (e.g. `Card.value` sees the `Card`/`Games` scope).
+                        ns_prefixes = _ns_prefixes(ns, name)
+                        ret = _harvestable_type(_norm_type(ret_raw), ns_prefixes)
+                        ptypes = _parse_sig(header, ns_prefixes) if ret else None
+                        if ptypes:  # ≥1 binder param, all types harvestable
+                            qual = ".".join(ns + [name]) if ns else name
+                            if include_known_open or not _is_known_open(qual):
+                                funcs.append((qual, ptypes, ret))
             offset += len(line)
     return funcs
 
@@ -182,10 +356,109 @@ def _rand_input(rng, ty):
         return rng.randint(0, _MAX_NAT)
     if ty == gen.PAIR:
         return [rng.randint(0, _MAX_NAT), rng.randint(0, _MAX_NAT)]
-    # Reuse gen.py's generators for the rest (a Gen wraps the same rng contract).
-    g = gen.Gen.__new__(gen.Gen)
-    g.rng = rng
-    return g.rand_value(ty)
+    if ty in gen.LEAN_TYPES:
+        # Reuse gen.py's generators (a Gen wraps the same rng contract).
+        g = gen.Gen.__new__(gen.Gen)
+        g.rng = rng
+        return g.rand_value(ty)
+    # User inductive/structure type — build a constructor value.
+    return _rand_user_value(rng, ty)
+
+
+def _lean_lit(ty, v):
+    """Lean literal for `v` of type `ty`, dispatching user types to
+    `_user_lean_lit` and everything else to `gen.lean_lit`."""
+    if ty in gen.LEAN_TYPES:
+        return gen.lean_lit(ty, v)
+    return _user_lean_lit(ty, v)
+
+
+def _json(ty, v):
+    """JSON string for `v` of type `ty` (the oracle-row `args`/expected value).
+    User-type values serialize as `{"c":"<shortctor>","f":[<field json>...]}`,
+    matching what the Lean serializer (`_user_serializer_name`) emits and what
+    `run_oracle.normalize` reduces a transpiled dataclass instance to."""
+    if ty in gen.LEAN_TYPES:
+        return gen.json_lit(ty, v)
+    import json
+    ctor = v["__ctor__"]
+    field_types = dict(_load_type_info()[ty])[ctor]
+    fields = ",".join(_json(ft, fv) for ft, fv in zip(field_types, v["fields"]))
+    return f'{{"c":{json.dumps(_py_ctor_name(ctor))},"f":[{fields}]}}'
+
+
+def _user_serializer_name(ty):
+    """Python-safe name for the Lean JSON serializer of user type `ty`
+    (`Corpus.Games.Card` -> `jU_Corpus_Games_Card`)."""
+    return "jU_" + ty.replace(".", "_")
+
+
+def _serializer_call(ty, expr):
+    """Lean serializer call for a value of type `ty` (dispatches user types to
+    their emitted `jU_*` serializer)."""
+    if ty in gen.LEAN_TYPES:
+        return gen.serializer_call(ty, expr)
+    return f"{_user_serializer_name(ty)} ({expr})"
+
+
+def _field_serializer(ty):
+    """The serializer *function name* to apply to a field of type `ty` inside a
+    generated `jU_*` serializer.  Base types reuse gen.py's `jNat`/`jInt`/…;
+    user types their own `jU_*`."""
+    base = {gen.NAT: "jNat", gen.BOOL: "jBool", gen.INT: "jInt",
+            gen.LISTNAT: "jListNat", gen.OPTNAT: "jOpt",
+            gen.STRING: "jString", gen.CHAR: "jChar", gen.ARRAYNAT: "jArrayNat",
+            gen.LISTINT: "jListInt", gen.LISTBOOL: "jListBool",
+            gen.LISTLISTNAT: "jListListNat"}
+    if ty in base:
+        return base[ty]
+    return _user_serializer_name(ty)
+
+
+def _emit_user_serializers(types):
+    """Emit Lean `jU_<Type>` JSON serializers for each user type in `types` (and
+    their transitive user-type fields), topologically so a serializer is defined
+    before one that calls it.  Each emits `{"c":"<ctor>","f":[...]}`."""
+    info = _load_type_info()
+    # Collect the transitive closure of user types referenced.
+    needed, work = set(), list(types)
+    while work:
+        t = work.pop()
+        if t in needed or t not in info:
+            continue
+        needed.add(t)
+        for (_c, fields) in info[t]:
+            for f in fields:
+                if f in info and f not in needed:
+                    work.append(f)
+    # Order so dependencies come first (bounded passes; non-recursive by
+    # construction, since only constructible — hence acyclic — types are used).
+    ordered, emitted = [], set()
+    for _ in range(len(needed) + 1):
+        for t in sorted(needed):
+            if t in emitted:
+                continue
+            deps = {f for (_c, fields) in info[t] for f in fields if f in info}
+            if deps <= emitted:
+                ordered.append(t)
+                emitted.add(t)
+    lines = []
+    for t in ordered:
+        arms = []
+        for (ctor, fields) in info[t]:
+            binders = " ".join(f"a{i}" for i in range(len(fields)))
+            lean_c = _lean_ctor_short(ctor)   # Lean match arm: `.mk`
+            py_c = _py_ctor_name(ctor)         # JSON "c" value: `Nim_mk`
+            if fields:
+                fjson = ' ++ "," ++ '.join(
+                    f'{_field_serializer(ft)} a{i}' for i, ft in enumerate(fields))
+                body = f'"{{\\"c\\":\\"{py_c}\\",\\"f\\":[" ++ {fjson} ++ "]}}"'
+                arms.append(f"  | .{lean_c} {binders} => {body}")
+            else:
+                arms.append(f'  | .{lean_c} => "{{\\"c\\":\\"{py_c}\\",\\"f\\":[]}}"')
+        lines.append(f"def {_user_serializer_name(t)} : {t} → String")
+        lines.extend(arms)
+    return "\n".join(lines)
 
 
 def emit_corpus_file(seed, nfuncs, ninputs, funcs=None):
@@ -200,20 +473,25 @@ def emit_corpus_file(seed, nfuncs, ninputs, funcs=None):
     chosen = funcs if nfuncs >= len(funcs) else rng.sample(funcs, nfuncs)
 
     names = ", ".join("`" + q for (q, _, _) in chosen)
-    rows = []
+    rows, used_types = [], set()
     for (qual, ptypes, ret) in chosen:
+        for t in ptypes + [ret]:
+            if t not in gen.LEAN_TYPES:
+                used_types.add(t)
         for _ in range(ninputs):
             vals = [_rand_input(rng, t) for t in ptypes]
-            lean_args = " ".join(f"({gen.lean_lit(t, v)})" for (t, v) in zip(ptypes, vals))
-            json_args = "[" + ",".join(gen.json_lit(t, v) for (t, v) in zip(ptypes, vals)) + "]"
+            lean_args = " ".join(f"({_lean_lit(t, v)})" for (t, v) in zip(ptypes, vals))
+            json_args = "[" + ",".join(_json(t, v) for (t, v) in zip(ptypes, vals)) + "]"
             call = f"{qual} {lean_args}"
-            ser = gen.serializer_call(ret, call)
+            ser = _serializer_call(ret, call)
             # Tag the ORACLE row with the qualified name so fuzz.py maps it back
             # to the transpiled `# Lean:` comment.  Escape json_args for embedding
             # in the Lean string literal (String/Char args carry quotes).
             rows.append(f'  IO.println ("ORACLE\\t{qual}\\t{gen._lean_str_escape(json_args)}\\t" ++ {ser})')
 
     parts = [CORPUS_PRELUDE, ""]
+    if used_types:
+        parts.append(_emit_user_serializers(used_types))
     parts.append("#eval show CoreM Unit from do")
     parts.append('  IO.println "### PYTHON"')
     parts.append(f"  IO.println (← emitPythonForNames `Fuzz [{names}])")
@@ -239,12 +517,15 @@ def emit_oracle_over(qual, ptypes, ret, input_rows):
     hand its discovered covering inputs back to the Lean oracle for differential
     validation.  Returns lean_src."""
     rows = []
+    used_types = {t for t in ptypes + [ret] if t not in gen.LEAN_TYPES}
     for vals in input_rows:
-        lean_args = " ".join(f"({gen.lean_lit(t, v)})" for (t, v) in zip(ptypes, vals))
-        json_args = "[" + ",".join(gen.json_lit(t, v) for (t, v) in zip(ptypes, vals)) + "]"
-        ser = gen.serializer_call(ret, f"{qual} {lean_args}")
+        lean_args = " ".join(f"({_lean_lit(t, v)})" for (t, v) in zip(ptypes, vals))
+        json_args = "[" + ",".join(_json(t, v) for (t, v) in zip(ptypes, vals)) + "]"
+        ser = _serializer_call(ret, f"{qual} {lean_args}")
         rows.append(f'  IO.println ("ORACLE\\t{qual}\\t{gen._lean_str_escape(json_args)}\\t" ++ {ser})')
     parts = [CORPUS_PRELUDE, ""]
+    if used_types:
+        parts.append(_emit_user_serializers(used_types))
     parts.append("#eval show CoreM Unit from do")
     parts.append('  IO.println "### PYTHON"')
     parts.append(f"  IO.println (← emitPythonForNames `Fuzz [`{qual}])")
