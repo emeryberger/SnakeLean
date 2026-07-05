@@ -672,13 +672,46 @@ def captureEmit (act : EmitM Unit) : EmitM String := do
   modify fun s => { s with buf := before }
   return (after.drop before.length).toString
 
+/-- Is the rendered operand a syntactically nonzero integer literal (e.g. `2`,
+    `-3`, `(4)`)?  Such a divisor can never be zero, so a zero-guard is
+    unnecessary — and skipping it keeps the common `x % 2` / `x // 10` case clean
+    (a guard there also broke the comprehension regression tests).  Conservative:
+    anything not obviously a nonzero int literal returns `false` (→ guard). -/
+def isNonzeroLiteral (s : String) : Bool :=
+  -- strip enclosing parens/whitespace, e.g. "(2)" → "2".
+  let t := (s.trim.dropWhile (· == '(')).takeWhile (· != ')') |>.trim
+  let digits := if t.startsWith "-" then t.drop 1 else t
+  !digits.isEmpty && digits.all Char.isDigit &&
+    digits.any (· != '0')  -- at least one nonzero digit ⇒ value ≠ 0
+
+/-- Guard a Python `//` / `%` against a zero divisor.  Lean's `Nat`/`Int`
+    division and modulo are TOTAL — `n / 0 = 0` and `n % 0 = n` — whereas
+    Python's `//` / `%` raise `ZeroDivisionError`.  We wrap the (possibly
+    Euclidean) division expression in a conditional so a zero divisor yields
+    Lean's value instead of crashing.  Non-`//`/`%` ops (and provably-nonzero
+    literal divisors) pass through unchanged.  `expr` is the full division
+    expression to use when `b != 0`; `a`/`b` are the rendered dividend/divisor.
+    (Operands are pure in this IR, so re-evaluating `b` in the guard is
+    semantics-preserving.) -/
+def guardZeroDiv (op expr a b : String) : String :=
+  if isNonzeroLiteral b then expr
+  else if op == "//" then s!"({expr} if {b} != 0 else 0)"
+  else if op == "%" then s!"({expr} if {b} != 0 else {a})"
+  else expr
+
 /-- Python expression for a binary op whose semantics differ from Lean's naive
-    operator, given the already-rendered operand strings. -/
+    operator, given the already-rendered operand strings.  Division/modulo forms
+    are zero-guarded (Lean division is total; see `guardZeroDiv`) unless the
+    divisor is a provably-nonzero literal. -/
 def emitArithBinary (kind a b : String) : String :=
   match kind with
   | "natsub" => s!"max(0, {a} - {b})"          -- truncated Nat subtraction
-  | "intmod" => s!"({a} % abs({b}))"           -- Euclidean Int modulo
-  | "intdiv" => s!"(({a} - {a} % abs({b})) // {b})"  -- Euclidean Int division
+  | "intmod" =>
+    if isNonzeroLiteral b then s!"({a} % abs({b}))"
+    else s!"({a} % abs({b}) if {b} != 0 else {a})"           -- Euclidean Int modulo (total)
+  | "intdiv" =>
+    if isNonzeroLiteral b then s!"(({a} - {a} % abs({b})) // {b})"
+    else s!"(({a} - {a} % abs({b})) // {b} if {b} != 0 else 0)"  -- Euclidean Int division (total)
   | _        => s!"({a} - {b})"
 
 /-! ## Expression Emission -/
@@ -847,12 +880,11 @@ def tryEmitInlinedOp (varName : String) (fnVar : FVarId) (args : Array Arg) : Em
           emitIndent
           emit s!"{varName} = {emitArithBinary kind a b}\n"
           return true
+        let a ← captureEmit (emitArg args[0]!)
+        let b ← captureEmit (emitArg args[1]!)
         emitIndent
-        emit s!"{varName} = "
-        emitArg args[0]!
-        emit s!" {op} "
-        emitArg args[1]!
-        emit "\n"
+        -- Nat/Int `//` and `%` are total in Lean; guard against zero divisor.
+        emit s!"{varName} = {guardZeroDiv op s!"({a} {op} {b})" a b}\n"
         return true
   return false
 
@@ -933,7 +965,10 @@ partial def renderLetValueExpr (decl : LetDecl) : EmitM (Option String) := do
         -- `Nat.sub` is truncated subtraction (saturates at 0).
         if declName == ``Nat.sub then
           return some s!"max(0, {← renderArg args[0]!} - {← renderArg args[1]!})"
-        return some s!"({← renderArg args[0]!} {op} {← renderArg args[1]!})"
+        let a ← renderArg args[0]!
+        let b ← renderArg args[1]!
+        -- Nat/Int `//` and `%` are total in Lean (n/0=0, n%0=n); guard them.
+        return some (guardZeroDiv op s!"({a} {op} {b})" a b)
     if let some fn := builtinFn? declName then
       if args.size >= 1 then
         let a ← renderArg args[args.size - 1]!
@@ -983,7 +1018,9 @@ partial def renderLetValueExpr (decl : LetDecl) : EmitM (Option String) := do
           -- Arithmetic whose Python operator differs from Lean's semantics.
           if let some kind := ← arithOf fnVar then
             return some (emitArithBinary kind (← renderArg args[0]!) (← renderArg args[1]!))
-          return some s!"({← renderArg args[0]!} {op} {← renderArg args[1]!})"
+          let a ← renderArg args[0]!
+          let b ← renderArg args[1]!
+          return some (guardZeroDiv op s!"({a} {op} {b})" a b)
     -- Call of a (possibly deferred-lambda) function variable.
     if args.size == 0 then
       -- Value alias.
@@ -1122,20 +1159,21 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
     -- Check for direct Nat/Int binary operations
     if let some op := natBinOp? declName then
       if args.size == 2 then
-        emitIndent
-        emit s!"{varName} = "
         -- `Nat.sub` is truncated subtraction (saturates at 0).
         if declName == ``Nat.sub then
+          emitIndent
+          emit s!"{varName} = "
           emit "max(0, "
           emitArg args[0]!
           emit " - "
           emitArg args[1]!
           emit ")\n"
           return
-        emitArg args[0]!
-        emit s!" {op} "
-        emitArg args[1]!
-        emit "\n"
+        let a ← captureEmit (emitArg args[0]!)
+        let b ← captureEmit (emitArg args[1]!)
+        emitIndent
+        -- Nat/Int `//` and `%` are total in Lean (n/0=0, n%0=n); guard them.
+        emit s!"{varName} = {guardZeroDiv op s!"({a} {op} {b})" a b}\n"
         return
     -- Check for builtin functions (len, not, etc.)
     if let some fn := builtinFn? declName then
@@ -1616,12 +1654,21 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
         emit "))\n"
         return
     if declName == ``Array.qsort || declName.toString == "Array.qsort" then
+      -- `Array.qsort (as) (lt) (low := 0) (high := as.size - 1)`.  Recent Lean
+      -- materializes the two trailing optParams, so the value args are
+      -- `[…, as, lt, low, high]`: the array and comparator are the 4th/3rd from
+      -- the end, NOT the last two (indexing from the end at -2/-1 would grab
+      -- `low`/`high` and emit `sorted(0, key=high(a,b))`).  Fall back to the
+      -- 2-arg shape for older Lean versions without the optParams.
+      let (arrIdx, cmpIdx) :=
+        if args.size >= 4 then (args.size - 4, args.size - 3)
+        else (args.size - 2, args.size - 1)
       if args.size >= 2 then
         emitIndent
         emit s!"{varName} = sorted("
-        emitArg args[args.size - 2]!  -- array
+        emitArg args[arrIdx]!  -- array (`as`)
         emit ", key=functools.cmp_to_key(lambda a, b: -1 if "
-        emitArg args[args.size - 1]!  -- comparator (lt function)
+        emitArg args[cmpIdx]!  -- comparator (lt function)
         emit "(a, b) else 1))\n"
         return
     -- Integer square root (use string matching since Nat.sqrt may not exist in all Lean versions)

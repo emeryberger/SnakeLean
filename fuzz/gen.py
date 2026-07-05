@@ -55,7 +55,15 @@ ALL_PRODUCTIONS = frozenset({
 
 
 class Gen:
-    def __init__(self, seed, max_depth=4, covered=None, emi=0.0):
+    # k-path coverage (Havrikov & Zeller, ASE 2019, §"context-sensitive
+    # coverage"): a single-production metric can't tell `map` inside a `match`
+    # from `map` at top level.  We additionally track *paths* of up to KMAX
+    # nested productions (e.g. `nat.match → list.map → nat.let`), so "did we test
+    # a filter inside a foldr inside an if?" becomes measurable — and steer
+    # generation toward not-yet-covered paths.
+    KMAX = 3
+
+    def __init__(self, seed, max_depth=4, covered=None, emi=0.0, kcovered=None):
         self.rng = random.Random(seed)
         self.max_depth = max_depth
         # Production labels offered / chosen so far (this file).  `covered` may
@@ -63,6 +71,14 @@ class Gen:
         # rng, so the output is a pure function of the seed.
         self.all_prods = set()
         self.covered = set(covered) if covered else set()
+        # Context-sensitive coverage: `ctx` is the stack of production labels
+        # from the root of the current subterm down to the node being generated;
+        # `all_kpaths`/`kpaths` mirror `all_prods`/`covered` but for tuples of 2..
+        # KMAX consecutive labels along that path.  Like `covered`, `kcovered`
+        # may be seeded in to bias the preference, but choice stays rng-keyed.
+        self.ctx = []
+        self.all_kpaths = set()
+        self.kpaths = set(kcovered) if kcovered else set()
         # EMI (equivalence modulo inputs, Le/Afshari/Su PLDI'14) + guided
         # stochastic mutation (Le/Sun/Su OOPSLA'15): `emi` is the per-subterm
         # probability of wrapping a just-generated expression in a
@@ -77,20 +93,46 @@ class Gen:
     def pick(self, xs):
         return self.rng.choice(xs)
 
+    def _kpaths_ending_with(self, label):
+        """The 2..KMAX-length production paths that end at `label` given the
+        current context stack (`self.ctx` holds the ancestor labels)."""
+        paths = []
+        for k in range(2, self.KMAX + 1):
+            if len(self.ctx) >= k - 1:
+                paths.append(tuple(self.ctx[-(k - 1):]) + (label,))
+        return paths
+
     def choose(self, alts):
         """Pick among labeled alternatives, preferring not-yet-covered ones.
 
-        `alts` is a list of `(label, thunk)`.  We record every offered label,
-        prefer the subset whose labels are uncovered (systematic coverage), and
-        break ties with the seeded rng so the choice stays reproducible.
+        `alts` is a list of `(label, thunk)`.  We record every offered label and
+        prefer the subset whose labels are uncovered (systematic single-production
+        coverage).  Among that pool we then prefer alternatives that would open a
+        not-yet-covered *k-path* (a novel chain of nested productions), and break
+        remaining ties with the seeded rng so the choice stays reproducible.
         """
         for (label, _) in alts:
             self.all_prods.add(label)
-        uncovered = [(l, t) for (l, t) in alts if l not in self.covered]
+            for p in self._kpaths_ending_with(label):
+                self.all_kpaths.add(p)
+        uncovered = [(lbl, t) for (lbl, t) in alts if lbl not in self.covered]
         pool = uncovered if uncovered else alts
-        label, thunk = self.rng.choice(pool)
+        # Secondary steer: within `pool`, favour labels that create a fresh
+        # k-path in the current context.  Falls back to the whole pool when none
+        # would (or when there's no context yet), so this never narrows below the
+        # single-production preference.
+        fresh = [(lbl, t) for (lbl, t) in pool
+                 if any(p not in self.kpaths for p in self._kpaths_ending_with(lbl))]
+        label, thunk = self.rng.choice(fresh if fresh else pool)
         self.covered.add(label)
-        return thunk()
+        for p in self._kpaths_ending_with(label):
+            self.kpaths.add(p)
+        # Recurse with `label` pushed so children's k-paths see it as an ancestor.
+        self.ctx.append(label)
+        try:
+            return thunk()
+        finally:
+            self.ctx.pop()
 
     # ---- expression generators, indexed by result type -------------------
     def gen(self, ty, env, depth):
@@ -354,16 +396,19 @@ class Gen:
                 offset -= 1
 
     # ---- whole function definitions --------------------------------------
-    def gen_def(self, idx):
+    def gen_def(self, idx, prefix=""):
+        # `prefix` namespaces the function/param names so many seeds can be
+        # packed into one Lean file (batching) without name clashes; empty for
+        # the single-seed case.
         nparams = self.rng.randint(1, 3)
         params = []
         for i in range(nparams):
             pty = self.pick(LEAN_TYPES)
-            params.append((f"p{idx}_{i}", pty))
+            params.append((f"{prefix}p{idx}_{i}", pty))
         ret = self.pick(LEAN_TYPES)
         env = list(params)
         body = self.gen(ret, env, self.max_depth)
-        name = f"gen{idx}"
+        name = f"{prefix}gen{idx}"
         sig = " ".join(f"({n} : {t})" for (n, t) in params)
         src = f"def {name} {sig} : {ret} :=\n  {body}"
         return name, params, ret, src
@@ -426,6 +471,10 @@ def serializer_call(ty, expr):
 PRELUDE = r"""import LeanToPython
 open Lean LeanToPython
 
+-- Batched files pack many functions + hundreds of oracle-row statements into one
+-- `#eval do` block, which overflows the default elaborator recursion limit.
+set_option maxRecDepth 100000
+
 def jNat (n : Nat) : String := toString n
 def jBool (b : Bool) : String := if b then "true" else "false"
 def jListNat (xs : List Nat) : String :=
@@ -439,30 +488,48 @@ def jOpt : Option Nat → String
 """
 
 
-def emit_lean_file(seed, ndefs, ninputs, covered=None, emi=0.0):  # noqa: E302
-    """Emit the Lean file for `seed`.
+def _gen_defs_for_seed(seed, ndefs, emi, prefix=""):
+    """Generate `ndefs` definitions for one seed. Returns (Gen, defs)."""
+    g = Gen(seed, emi=emi)
+    defs = [g.gen_def(i, prefix=prefix) for i in range(ndefs)]
+    return g, defs
 
-    `covered` optionally seeds the coverage-preference (labels already exercised
-    by earlier files in the sweep), steering this file toward fresh productions.
-    `emi` (0..1) is the per-subterm EMI envelope probability.  Generation is
-    still a pure function of `(seed, emi)`, so `fuzz.py` reproduces/shrinks a
-    failure by re-passing the same values.  The Gen's `all_prods` / `covered`
-    are exposed via `emit_lean_file.last_gen` for the caller to aggregate
-    coverage.
-    """
-    g = Gen(seed, covered=covered, emi=emi)
-    setattr(emit_lean_file, "last_gen", g)
-    defs = [g.gen_def(i) for i in range(ndefs)]
-    parts = [PRELUDE, ""]
-    for _, _, _, src in defs:
-        parts.append(src)
-    parts.append("")
-    # driver
-    names = ", ".join("`" + name for (name, _, _, _) in defs)
-    parts.append("#eval show CoreM Unit from do")
-    parts.append(f"  IO.println \"### PYTHON\"")
-    parts.append(f"  IO.println (← emitPythonForNames `Fuzz [{names}])")
-    parts.append(f"  IO.println \"### ORACLE\"")
+
+def single_def_body(seed, ninputs, emi=0.0):
+    """For the structural shrinker: return `(orig_body, rebuild)` for this seed's
+    FIRST def, where `rebuild(body_str)` produces a complete single-def Lean file
+    with the def's body replaced by `body_str` (params / return type / oracle
+    inputs unchanged).
+
+    The rng is consumed in exactly the same order as `emit_lean_file(seed, 1,
+    ninputs)` — `gen_def(0)` then `_oracle_rows` — so `rebuild(orig_body)` is
+    byte-identical to that file.  Because the oracle calls the def by name on
+    fixed literal args and Lean *recomputes* the expected value at elaboration
+    time, ANY body rewrite keeps the differential check valid: a rewrite is kept
+    only if the transpiler bug still reproduces (see `struct_shrink`)."""
+    g = Gen(seed, emi=emi)
+    name, params, ret, src = g.gen_def(0)
+    # `gen_def` emits `def NAME SIG : RET :=\n  BODY`; recover BODY.
+    marker = ":=\n  "
+    orig_body = src[src.index(marker) + len(marker):]
+    sig = " ".join(f"({n} : {t})" for (n, t) in params)
+    # Freeze the oracle rows ONCE (they consume the rng): every `rebuild` must
+    # reuse the SAME input literals, or shrinking would compare against a moving
+    # oracle.  Rebuilding just swaps the body text; the def name and call sites
+    # are unchanged, so the frozen rows still call it correctly.
+    frozen_rows = _oracle_rows(g, [(name, params, ret, src)], ninputs)
+
+    def rebuild(body):
+        newdef = (name, params, ret,
+                  f"def {name} {sig} : {ret} :=\n  {body}")
+        return _assemble([newdef], frozen_rows)
+
+    return orig_body, rebuild, [n for (n, _) in params]
+
+
+def _oracle_rows(g, defs, ninputs):
+    """Lean `IO.println` lines emitting ORACLE rows for `defs`."""
+    rows = []
     for (name, params, ret, _) in defs:
         for _ in range(ninputs):
             vals = [g.rand_value(t) for (_, t) in params]
@@ -470,10 +537,81 @@ def emit_lean_file(seed, ndefs, ninputs, covered=None, emi=0.0):  # noqa: E302
             json_args = "[" + ",".join(json_lit(t, v) for ((_, t), v) in zip(params, vals)) + "]"
             call = f"{name} {lean_args}" if params else name
             ser = serializer_call(ret, call)
-            # row: python-name TAB json-args TAB json-result
-            row = f'"ORACLE\\t{name}\\t{json_args}\\t" ++ {ser}'
-            parts.append(f"  IO.println ({row})")
+            rows.append(f'  IO.println ("ORACLE\\t{name}\\t{json_args}\\t" ++ {ser})')
+    return rows
+
+
+def _eval_block(defs, rows, tag=""):
+    """Lines for one `#eval` driver: emit the transpiled Python (### PYTHON) and
+    the oracle rows (### ORACLE) for `defs`.  `tag` (a seed id) is appended to
+    the banners so a batched file's output can be split back apart per seed.
+
+    Crucially, this is ONE `#eval` per call: a type error in any def here makes
+    *this* block abort (Lean evaluates it against the `sorry` axiom), but a
+    sibling block in the same file is unaffected.  Batching therefore puts each
+    seed in its own block so a single ill-typed seed drops only its own rows
+    instead of poisoning the whole file."""
+    suffix = f" {tag}" if tag != "" else ""
+    names = ", ".join("`" + name for (name, _, _, _) in defs)
+    block = [
+        "#eval show CoreM Unit from do",
+        f'  IO.println "### PYTHON{suffix}"',
+        f"  IO.println (← emitPythonForNames `Fuzz [{names}])",
+        f'  IO.println "### ORACLE{suffix}"',
+    ]
+    block += rows
+    return block
+
+
+def _assemble(all_defs, all_rows):
+    """Build a single-`#eval` Lean file from def source blocks and oracle rows."""
+    parts = [PRELUDE, ""]
+    parts += [src for (_, _, _, src) in all_defs]
+    parts.append("")
+    parts += _eval_block(all_defs, all_rows)
     return "\n".join(parts) + "\n"
+
+
+def emit_lean_file(seed, ndefs, ninputs, covered=None, emi=0.0):  # noqa: E302
+    """Emit the Lean file for a single `seed`.
+
+    Generation is a pure function of `(seed, emi)`, so `fuzz.py`
+    reproduces/shrinks a failure by re-passing the same values.  The Gen's
+    `all_prods` / `covered` are exposed via `emit_lean_file.last_gen` for the
+    caller to aggregate coverage.
+    """
+    g, defs = _gen_defs_for_seed(seed, ndefs, emi)
+    setattr(emit_lean_file, "last_gen", g)
+    return _assemble(defs, _oracle_rows(g, defs, ninputs))
+
+
+def emit_batch_file(seeds, ndefs, ninputs, emi=0.0):
+    """Pack several seeds' functions into ONE Lean file, amortizing Lean's
+    ~1s process-startup cost (which dominates per-file runtime) across many
+    functions.  Each seed's names are prefixed `s{seed}_` so a failing function
+    identifies its seed, and each seed keeps its own `Gen` (so a single seed is
+    still reproducible standalone).
+
+    Each seed gets its OWN `#eval` block (banners tagged with the seed id).  A
+    type error in one seed's defs aborts only that seed's block — its siblings
+    still elaborate and print — so an ill-typed seed drops just its own rows
+    instead of poisoning the whole batch.  (A single shared `#eval` would abort
+    entirely on the first bad def via the `sorry` axiom.)
+
+    Returns (lean_src, {seed: (all_prods, covered, all_kpaths, kpaths)})."""
+    all_defs, blocks, cov = [], [], {}
+    for seed in seeds:
+        g, defs = _gen_defs_for_seed(seed, ndefs, emi, prefix=f"s{seed}_")
+        all_defs += defs
+        rows = _oracle_rows(g, defs, ninputs)
+        blocks += _eval_block(defs, rows, tag=str(seed))
+        cov[seed] = (frozenset(g.all_prods), frozenset(g.covered),
+                     frozenset(g.all_kpaths), frozenset(g.kpaths))
+    parts = [PRELUDE, ""]
+    parts += [src for (_, _, _, src) in all_defs]
+    parts.append("")
+    parts += blocks
+    return "\n".join(parts) + "\n", cov
 
 
 def main():

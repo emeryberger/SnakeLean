@@ -8,37 +8,28 @@ Lean → Python transpiler and why it isn't in yet.
 
 For techniques the fuzzer **does** use (grammar-based generation, differential
 oracle, delta-debugging-style shrinking, grammar production coverage, grammar
-expansion, and **EMI + guided stochastic mutation**), see the README's
-Correctness section and [`VERIFICATION.md`](VERIFICATION.md).
+expansion, **EMI + guided stochastic mutation**, **fragment-reuse grammars**,
+**k-path coverage**, and **structural HDD/C-Reduce-style reduction**), see the
+README's Correctness section and [`VERIFICATION.md`](VERIFICATION.md).
 
-> Note: **EMI (Le/Afshari/Su, PLDI 2014) and guided stochastic mutation
-> (Le/Sun/Su, OOPSLA 2015) are now implemented** — the generator wraps subterms
-> in semantics-preserving identity envelopes, a stochastic count of them, chosen
-> coverage-guided (`--emi`). They moved out of this file into the README's
-> implemented list; the entries below are what remains *not* adopted.
-
-## Additional fuzzing techniques
-
-### k-path (context-sensitive) grammar coverage [3]
-
-The fuzzer currently tracks and prefers uncovered *productions*. A stronger
-target is covering *combinations* of productions along a derivation path (e.g. a
-`match` inside a `map` inside a `let`) — k-path coverage. This would push the
-generator toward construct interactions, where several of the bugs we found
-actually lived (e.g. a literal `match` discriminant nested in a `let`).
-
-### Probabilistic / fragment-reuse grammars [4]
-
-Bias production probabilities toward rare constructs, or reuse real code
-fragments (as in LangFuzz [4]) drawn from the corpus, to spend generation budget
-where bugs are more likely rather than sampling the grammar uniformly.
-
-### Stronger test-case reduction [5, 6]
-
-The current shrinker only reduces the `(defs, inputs)` counts. A structural
-reducer over the Lean term itself — hierarchical delta debugging [5] or a
-C-Reduce-style pass [6] that deletes subterms and re-checks the failure — would
-yield smaller, more legible minimal reproducers.
+> Note: several techniques once listed here as *not adopted* are **now
+> implemented** and have moved to the README's implemented list:
+> - **EMI (Le/Afshari/Su, PLDI 2014) + guided stochastic mutation (Le/Sun/Su,
+>   OOPSLA 2015)** — semantics-preserving identity envelopes, a stochastic count,
+>   chosen coverage-guided (`--emi`).
+> - **k-path (context-sensitive) coverage [3]** — the generator records and
+>   reports every chain of ≤3 nested productions; single-production coverage
+>   saturates near 100% while k-path coverage reveals the untested combinations
+>   (~89% of offered paths at 5000 seeds).
+> - **Fragment-reuse grammars / LangFuzz [4]** — `--corpus` harvests real
+>   `Corpus/*.lean` definitions and fuzzes them, exercising constructs the
+>   grammar can't invent; found bugs F12 (`Nat`/`Int` div/mod by zero) and F13
+>   (`Array.qsort` mis-indexing).
+> - **Structural reduction / HDD [5], C-Reduce [6]** — `struct_shrink` reduces
+>   the failing Lean *term* (not just `(defs, inputs)` counts), keeping any
+>   rewrite that still elaborates and still reproduces the bug.
+>
+> The empirical/formal material below remains *not* adopted.
 
 ## Formal-verification approaches
 
@@ -93,25 +84,26 @@ unlike that lineage, adding systematic randomized differential testing on top.
 ## References
 
 1. V. Le, M. Afshari, Z. Su. *Compiler validation via equivalence modulo
-   inputs.* PLDI 2014.
+   inputs.* PLDI 2014. <https://doi.org/10.1145/2594291.2594334>
 2. V. Le, C. Sun, Z. Su. *Finding deep compiler bugs via guided stochastic
-   program mutation.* OOPSLA 2015.
-3. N. Havrikov, A. Zeller. *Systematically covering input structure.* ASE 2019.
+   program mutation.* OOPSLA 2015. <https://doi.org/10.1145/2814270.2814319>
+3. N. Havrikov, A. Zeller. *Systematically covering input structure.* ASE 2019. <https://doi.org/10.1109/ASE.2019.00027>
 4. C. Holler, K. Herzig, A. Zeller. *Fuzzing with code fragments.* USENIX
-   Security 2012.
-5. G. Misherghi, Z. Su. *HDD: Hierarchical delta debugging.* ICSE 2006.
+   Security 2012. <https://www.usenix.org/conference/usenixsecurity12/technical-sessions/presentation/holler>
+5. G. Misherghi, Z. Su. *HDD: Hierarchical delta debugging.* ICSE 2006. <https://doi.org/10.1145/1134285.1134307>
 6. J. Regehr, Y. Chen, P. Cuoq, E. Eide, C. Ellison, X. Yang. *Test-case
-   reduction for C compiler bugs.* PLDI 2012.
+   reduction for C compiler bugs.* PLDI 2012. <https://doi.org/10.1145/2254064.2254104>
 7. M. Willsey, C. Nandi, Y. R. Wang, O. Flatt, Z. Tatlock, P. Panchekha.
-   *egg: Fast and extensible equality saturation.* POPL 2021.
-8. T. Koehler et al. *Guided equality saturation.* POPL 2024.
+   *egg: Fast and extensible equality saturation.* POPL 2021. <https://doi.org/10.1145/3434304>
+8. T. Koehler et al. *Guided equality saturation.* POPL 2024. <https://doi.org/10.1145/3632900>
 9. M. Rossel. *An Equality Saturation Tactic for Lean.* MSc thesis, TU
-   Dresden, 2024.
-10. P. Letouzey. *A new extraction for Coq.* TYPES 2002.
+   Dresden, 2024. <https://github.com/marcusrossel/lean-egg>
+10. P. Letouzey. *A new extraction for Coq.* TYPES 2002. <https://doi.org/10.1007/3-540-39185-1_12>
 11. P. Letouzey. *Programmation fonctionnelle certifiée : l'extraction de
     programmes dans l'assistant Coq.* PhD thesis, Université Paris-Sud, 2004.
+    <http://www.pps.jussieu.fr/~letouzey/download/these_letouzey.pdf>
 12. Y. Forster, M. Sozeau, N. Tabareau. *Verified extraction from Coq to
     OCaml.* PLDI 2024. (MetaCoq/MetaRocq + Malfunction;
-    artifact: github.com/MetaRocq/rocq-verified-extraction)
+    artifact: github.com/MetaRocq/rocq-verified-extraction) <https://doi.org/10.1145/3656379>
 13. A. Anand, A. Appel, G. Morrisett, et al. *CertiCoq: A verified compiler for
-    Coq.* CoqPL 2017.
+    Coq.* CoqPL 2017. <https://certicoq.org/>

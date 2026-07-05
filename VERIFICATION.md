@@ -188,6 +188,33 @@ surfaced five more, two of them silent wrong values.
 - **Fix:** capture the per-instance literal for *any* `OfNat` instance
   (`instOfNat`/`instOfNatNat`/namespaced), not just `instOfNatNat`.
 
+### F12. `Nat`/`Int` division & modulo by zero (crash on a total operation)
+
+- **Found by:** fragment-reuse fuzzing (`--corpus`), `Corpus.Math.divMod` on
+  `(a, 0)` · **Kind:** runtime (`ZeroDivisionError`)
+- **Root cause:** Lean's `Nat`/`Int` division and modulo are **total** — `n / 0 =
+  0` and `n % 0 = n` (for both `Nat` and the Euclidean `Int` variants) — whereas
+  Python's `//` and `%` raise `ZeroDivisionError`. The transpiler emitted the
+  bare Python operators. The generative grammar never hit this because it always
+  guards its divisors (`b + 1` / `if b == 0 then 1 else b`); only *real* corpus
+  code divides by an unguarded parameter.
+- **Fix:** a central `guardZeroDiv` wraps every `//` / `%` emission (all four
+  sites + the Euclidean `emitArithBinary` forms) as `(expr if b != 0 else <Lean
+  value>)` — `0` for division, the dividend for modulo — matching Lean on every
+  input including zero divisors.
+
+### F13. `Array.qsort` argument mis-indexing (crash)
+
+- **Found by:** fragment-reuse fuzzing (`--corpus`), `Corpus.Games.yahtzeeScore`
+  · **Kind:** runtime (`TypeError: 'int' object is not iterable`)
+- **Root cause:** `Array.qsort (as) (lt) (low := 0) (high := as.size - 1)` has two
+  trailing `optParam`s that recent Lean **materializes**, so the LCNF value args
+  are `[…, as, lt, low, high]`. The handler grabbed the *last two* — `low`/`high`
+  — emitting `sorted(0, key=<high>(a, b))` (sorting the integer `0`).
+- **Fix:** index the array and comparator from `size-4`/`size-3` when four value
+  args are present, with a fallback to the old `size-2`/`size-1` shape for older
+  Lean versions that don't materialize the optParams.
+
 ## Bugs found by the round-trip differential harness
 
 Found while building `roundtrip/` (before fuzzing), by running corpus functions
@@ -262,17 +289,22 @@ After every fix the full matrix is re-run green:
 - `Comprehensions` / `TailCalls` / `RegressionFixes` structural suites
 - `roundtrip/run.sh` — sampled 112/112 + exhaustive 3807/3807
 - full-corpus extraction parses as valid Python
-- `fuzz/fuzz.py` — with all fixes in place, a **3000-seed EMI-amplified
-  parallel sweep** (run on a 192-core host at ~180-way parallelism) is clean:
-  2987 checked, 13 ill-typed generator seeds skipped, 0 transpiler bugs,
-  61/61 grammar-production coverage. Each seed carries stochastic EMI envelopes,
-  so this is far more than 3000 distinct code shapes.
+- `fuzz/fuzz.py` — with all fixes in place, a **5000-seed EMI-amplified batched
+  parallel sweep** (192-core host, ~180-way) is clean: 4975 checked, 25
+  ill-typed seeds skipped, 0 transpiler bugs, 61/61 production coverage, 89%
+  k-path coverage. Each seed carries stochastic EMI envelopes, so this is far
+  more than 5000 distinct code shapes.
+- `fuzz/fuzz.py --corpus` — a **3000-seed fragment-reuse sweep** over real
+  `Corpus/*.lean` definitions is clean (78/78 functions exercised) with F12/F13
+  fixed; all 216 pre-fix failures were exactly those two bugs.
 
 ## Summary
 
-16 transpiler bugs found and fixed across this work — 4 by the round-trip
-differential harness (R1–R4), 11 by the grammar-based fuzzer (F1–F11), plus the
-upgrade-era set — of which **five were silent wrong-value bugs** (truncated
+18 transpiler bugs found and fixed across this work — 4 by the round-trip
+differential harness (R1–R4), 11 by the grammar-based fuzzer (F1–F11), 2 by
+fragment-reuse fuzzing over the real corpus (F12–F13), plus the upgrade-era set
+— of which **six were silent wrong-value / total-operation bugs** (truncated
 `Nat` subtraction, Euclidean `Int` division and modulo, two `OfNat` literal
-collisions) that no crash-based check would ever catch. The differential oracle
-(Lean's `#eval`) is what makes those catchable.
+collisions, and `Nat`/`Int` division-by-zero) that no crash-based check catches
+on its own. The differential oracle (Lean's `#eval`) is what makes those
+catchable.
