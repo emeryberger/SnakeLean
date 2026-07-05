@@ -40,6 +40,18 @@ def clampHigh (v hi : Nat) : Nat := Nat.min v hi
     `Inhabited` instance as an argument, both referencing unbound names. -/
 def indexBang (xs : List Nat) (i : Nat) : Nat := xs[i]!
 
+/-- (4) Tail-recursive helper whose match-arm continuation both carries the
+    recursion AND is deferred-lambda-eligible.  Pre-fix, the continuation
+    rendered as a call to an unemitted `_uniq_NNN` helper (undefined name); the
+    fix that materialized it then exposed a `continue` inside a nested `def`.
+    This mirrors `Corpus.Strings.splitOn`'s `go`. -/
+def dropUntilZero (xs : List Nat) : List Nat :=
+  let rec go (ys : List Nat) : List Nat :=
+    match ys with
+    | [] => []
+    | y :: rest => if y == 0 then rest else go rest
+  go xs
+
 end RegressionFixes
 
 #eval show CoreM Unit from do
@@ -49,5 +61,6 @@ end RegressionFixes
       ``RegressionFixes.minNat,
       ``RegressionFixes.maxNat,
       ``RegressionFixes.clampHigh,
-      ``RegressionFixes.indexBang ]
+      ``RegressionFixes.indexBang,
+      ``RegressionFixes.dropUntilZero ]
   IO.println code

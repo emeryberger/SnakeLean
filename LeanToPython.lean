@@ -289,6 +289,15 @@ def getVarName (fvarId : FVarId) : EmitM String := do
   -- Fallback: use the fvarId name
   registerVar fvarId fvarId.name
 
+/-- The registered Python name for `fvarId`, or `none` if it was never bound.
+    Unlike `getVarName`, this does NOT invent a fallback name from the raw fvar
+    (`_uniq_NNN`).  Expression-mode rendering uses it to REFUSE to render a body
+    that references an unemitted local function — otherwise the deferred lambda
+    would call a name that never gets a `def` (a `NameError` at runtime). -/
+def knownVarName? (fvarId : FVarId) : EmitM (Option String) := do
+  let fvarId ← resolveAlias fvarId
+  return (← get).varNames[fvarId]?
+
 /-- Alias one variable to another -/
 def aliasVar (from_ to_ : FVarId) : EmitM Unit :=
   modify fun s => { s with varAliases := s.varAliases.insert from_ to_ }
@@ -1058,9 +1067,16 @@ partial def renderLetValueExpr (decl : LetDecl) : EmitM (Option String) := do
       -- Value alias.
       aliasVar decl.fvarId fnVar
       return some ""
-    -- Only inline a call to a locally-known function or a deferred lambda; a
-    -- bare unknown fvar call is safe (it maps to a Python name), so allow it.
-    return some s!"{← getVarName fnVar}({← renderArgs args})"
+    -- A deferred single-param lambda applied here: materialize and apply it.
+    if let some (param, body) := st.deferredLambdas[fnVar]? then
+      return some s!"(lambda {param}: {body})({← renderArgs args})"
+    -- Otherwise only inline a call to an ALREADY-BOUND function.  An unbound
+    -- fvar is an unemitted local function (e.g. a match-arm continuation); its
+    -- raw name would be `_uniq_NNN` — never defined.  Fail the render so the
+    -- enclosing lambda falls back to a real `def` (which emits that function).
+    match ← knownVarName? fnVar with
+    | some name => return some s!"{name}({← renderArgs args})"
+    | none => return none
   | .proj typeName idx structFvar =>
     -- Only tuple projections are safe to inline as expressions.
     if typeName == ``Prod then
@@ -1094,7 +1110,14 @@ partial def renderExprCode (code : Code) : EmitM (Option String) := do
     else if let some (param, body) := st.deferredLambdas[fvarId]? then
       return some s!"(lambda {param}: {body})"
     else
-      return some (← getVarName fvarId)
+      -- Only render a reference to an ALREADY-BOUND variable.  If the fvar names
+      -- an unemitted local function (common when a match arm is a call to a
+      -- sibling continuation), rendering it would emit `_uniq_NNN(...)` for a
+      -- name that never gets defined — so fail the render and let `emitLocalFun`
+      -- fall back to a real `def` (which emits that inner function properly).
+      match ← knownVarName? fvarId with
+      | some name => return some name
+      | none => return none
   -- Anything else (nested funs, cases, jumps) is not a simple expression.
   | _ => return none
 
@@ -2326,6 +2349,18 @@ partial def emitCode (code : Code) : EmitM Unit := do
     emit "raise RuntimeError(\"unreachable\")\n"
 
 partial def emitLocalFun (decl : FunDecl) : EmitM Unit := do
+  -- In loop mode, a continuation that carries the recursion must be INLINED at
+  -- its tail-call site (where `continue` is legal), never emitted as a nested
+  -- `def` (a `def` body can't `continue` the enclosing `while`).  `emitCode`'s
+  -- `.fun` handler already routes such thunks to `inlineThunks`, but a deferred
+  -- single-param lambda whose render fails falls through to this function
+  -- directly — so guard here too, or we'd emit a `def` with an illegal
+  -- `continue`.  (Surfaced once the helper-scoping fix stopped mis-rendering
+  -- such thunks as `_uniq_NNN` calls.)
+  if let some (declName, _) := (← get).tailLoop then
+    if codeHasSelfCall declName decl.value then
+      modify fun s => { s with inlineThunks := s.inlineThunks.insert decl.fvarId decl }
+      return
   -- Count non-unit params for arity tracking
   let nonUnitParams := decl.params.foldl (fun acc p => if isUnitType p.type then acc else acc + 1) 0
   let totalParams := decl.params.size
@@ -2347,8 +2382,19 @@ partial def emitLocalFun (decl : FunDecl) : EmitM Unit := do
           deferredLambdas := s.deferredLambdas.insert decl.fvarId (paramName, body) }
         return
       | none =>
-        -- Roll back render-time mutations, then fall through to a real def.
+        -- Roll back render-time mutations.
         set snapshot
+        -- In loop mode, a lambda whose body didn't render as a pure expression
+        -- may carry a tail `continue` (its body references the loop's recursion,
+        -- e.g. a match-arm continuation whose self-call `codeHasSelfCall` can't
+        -- see through an alias/jmp).  Emitting it as a nested `def` would put a
+        -- `continue` outside its loop.  Route it to `inlineThunks` so it's
+        -- inlined at its tail-call site instead.  (Pure non-recursive loop-body
+        -- lambdas are inlined harmlessly too — their bodies just have no
+        -- `continue`.)
+        if (← get).tailLoop.isSome then
+          modify fun s => { s with inlineThunks := s.inlineThunks.insert decl.fvarId decl }
+          return
   let fnName ← registerVar decl.fvarId decl.binderName
   -- Track both for partial application detection
   modify fun s => { s with localFnArities := s.localFnArities.insert decl.fvarId (nonUnitParams, totalParams) }

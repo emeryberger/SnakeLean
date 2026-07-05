@@ -16,6 +16,7 @@ min_nat = ns["min_nat"]
 max_nat = ns["max_nat"]
 clamp_high = ns["clamp_high"]
 index_bang = ns["index_bang"]
+drop_until_zero = ns["drop_until_zero"]
 
 failures = []
 
@@ -43,6 +44,11 @@ check("clamp_high(5, 10)", clamp_high(5, 10), 5)
 # matching Lean's panic — not asserted here since both sides error).
 check("index_bang([10,20,30], 1)", index_bang([10, 20, 30], 1), 20)
 check("index_bang([10,20,30], 0)", index_bang([10, 20, 30], 0), 10)
+
+# (4) tail-recursive deferred-continuation helper: must compile (no `continue`
+# inside a nested def) and drop everything up to & including the first 0.
+check("drop_until_zero([1,2,0,3])", drop_until_zero([1, 2, 0, 3]), [3])
+check("drop_until_zero([1,2,3])", drop_until_zero([1, 2, 3]), [])
 
 if failures:
     print("FAIL:")
