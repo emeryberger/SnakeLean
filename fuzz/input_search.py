@@ -113,16 +113,18 @@ def _mut_string(rng, v):
     return s[:8]
 
 
-def _mut_list_of(elem_mut):
-    """A list mutator whose element edits use `elem_mut` (for typed element
-    lists: List Int / List Bool / nested List (List Nat))."""
+def _mut_list_of(elem_mut, fresh):
+    """A list mutator whose element edits use `elem_mut` and whose inserts use
+    `fresh(rng)` for a brand-new element (for typed element lists: List Int /
+    List Bool / nested List (List Nat)).  `fresh` avoids feeding `None` to
+    `elem_mut` when the list is empty."""
     def mut(rng, v):
         xs = list(v)
         op = rng.randint(0, 4)
         if op == 0 and xs:
             xs.pop(rng.randrange(len(xs)))
         elif op == 1:
-            xs.insert(rng.randint(0, len(xs)), elem_mut(rng, xs[0] if xs else None))
+            xs.insert(rng.randint(0, len(xs)), fresh(rng))
         elif op == 2 and xs:
             i = rng.randrange(len(xs))
             xs[i] = elem_mut(rng, xs[i])
@@ -138,9 +140,11 @@ _MUTATORS = {
     gen.NAT: _mut_nat, gen.INT: _mut_int, gen.LISTNAT: _mut_list,
     gen.PAIR: _mut_pair, gen.OPTNAT: _mut_opt, gen.BOOL: lambda rng, v: not v,
     gen.STRING: _mut_string, gen.CHAR: _mut_char, gen.ARRAYNAT: _mut_list,
-    gen.LISTINT: _mut_list_of(_mut_int),
-    gen.LISTBOOL: _mut_list_of(lambda rng, v: rng.choice([True, False])),
-    gen.LISTLISTNAT: _mut_list_of(_mut_list),
+    gen.LISTINT: _mut_list_of(_mut_int, lambda rng: rng.randint(-9, 9)),
+    gen.LISTBOOL: _mut_list_of(lambda rng, v: not v,
+                               lambda rng: rng.choice([True, False])),
+    gen.LISTLISTNAT: _mut_list_of(
+        _mut_list, lambda rng: [rng.randint(0, 9) for _ in range(rng.randint(0, 3))]),
 }
 
 
@@ -219,10 +223,18 @@ def search(harness, fn, ptypes, body, seed=0, budget=400):
     covered = set()
     corpus = []          # covering inputs — the seeds worth mutating
     covering = []        # the argument lists we return
+    # An OPEN-ENDED unit universe (empty `body`) means the reachable set isn't
+    # known up front — e.g. execution k-line SUBPATHS in path mode, which are
+    # only discovered by running.  Then we can't intersect with `body` or
+    # early-exit on `covered >= body`; we just keep any input that hits a new
+    # unit and run the full budget.
+    open_ended = not body
 
     def consider(args):
         nonlocal covered
-        hit = harness.trace_call(fn, args) & body
+        hit = harness.trace_call(fn, args)
+        if not open_ended:
+            hit = hit & body
         new = hit - covered
         if new:
             covered |= new
@@ -235,12 +247,12 @@ def search(harness, fn, ptypes, body, seed=0, budget=400):
     # lists, straights, boundary ints) get an early shot before the mutation loop.
     boot = min(budget // 4, 40)
     for _ in range(boot):
-        if covered >= body:
+        if not open_ended and covered >= body:
             return covering, covered
         consider([_interesting(rng, t) for t in ptypes])
 
     for _ in range(boot, budget):
-        if covered >= body:
+        if not open_ended and covered >= body:
             break
         # ~40% explore (fresh random / interesting), ~60% exploit (mutate).
         if not corpus or rng.random() < 0.4:
