@@ -204,6 +204,13 @@ The design draws on the grammar-fuzzing literature:
   lines of each *transpiled* function the oracle inputs actually execute (via
   `sys.settrace`, portable to 3.11). A branch no input reaches is where a
   transpiler bug hides undiff'd; the mode flags under-exercised functions.
+- **Coverage-guided input search** — `--pycov-search` closes those gaps: an
+  AFL-style greybox loop searches inputs that maximize coverage of each
+  transpiled body (running purely in Python — fast, no Lean), then hands the
+  discovered covering inputs back to the Lean oracle for differential validation.
+  Reaches 100% body coverage on all 78 harvested corpus functions (e.g.
+  `yahtzee_score`, unreachable by random 5-die lists, hits every scoring branch
+  with ~6 targeted inputs), turning an adequacy gap into a validated test set.
 
 Techniques we considered but have **not** adopted — the
 `Float`-vs-exact-`Fraction` question and formal-verification / e-graph

@@ -37,6 +37,7 @@ import run_oracle  # noqa: E402  (reuse load/normalize/call)
 import gen  # noqa: E402
 import corpus_frags  # noqa: E402
 import pycov  # noqa: E402
+import input_search  # noqa: E402
 
 
 _LEAN_PATH = None  # captured once; avoids per-seed `lake env` overhead
@@ -578,6 +579,109 @@ def run_pycov_mode(args):
         print("\nEvery transpiled function's body fully exercised by the inputs.")
 
 
+def pycov_search_fn(args):
+    """Coverage-guided input search for ONE transpiled corpus function, then
+    differential validation of the discovered covering inputs.
+
+    Steps: (1) transpile the function once via Lean; (2) run `input_search` on
+    the transpiled Python to find a small input set maximizing body-line
+    coverage; (3) emit a Lean oracle over those inputs and diff — so a
+    newly-reached branch that mis-transpiles is caught.  Returns
+    (qual, hit, body, status, detail)."""
+    qual, ptypes, ret, budget = args
+    # (1) transpile once.
+    src = corpus_frags.emit_transpile_only(qual)
+    fd, path = tempfile.mkstemp(prefix="pcs_t_", suffix=".lean")
+    os.close(fd)
+    try:
+        _rc, out, err = lean_run(src, path)
+    finally:
+        try:
+            os.unlink(path)
+        except OSError:
+            pass
+    if real_errors(err) + real_errors(out) or "### PYTHON" not in out:
+        return (qual, 0, 0, "transpile-error", "\n".join(real_errors(err + out)[:2]))
+    py_src = out[out.index("### PYTHON") + len("### PYTHON"):].strip("\n")
+    py_fn = _name_map(py_src).get(qual)
+    if not py_fn:
+        return (qual, 0, 0, "no-fn", f"{qual} not in transpiled output")
+    ns = {}
+    try:
+        exec(compile(py_src, "<transpiled>", "exec"), ns)
+    except Exception as e:  # noqa: BLE001
+        return (qual, 0, 0, "exec", f"{type(e).__name__}: {e}")
+    body = pycov.body_lines(py_src, py_fn)
+    if not body:
+        return (qual, 0, 0, "ok", "")
+    # (2) search inputs in pure Python (no Lean).
+    covering, hit = input_search.search(ns[py_fn], ptypes, body, seed=0, budget=budget)
+    # (3) validate the covering inputs through the Lean oracle.
+    status, detail = "ok", ""
+    if covering:
+        osrc = corpus_frags.emit_oracle_over(qual, ptypes, ret, covering)
+        fd, opath = tempfile.mkstemp(prefix="pcs_o_", suffix=".lean")
+        os.close(fd)
+        try:
+            _rc, oout, oerr = lean_run(osrc, opath)
+        finally:
+            try:
+                os.unlink(opath)
+            except OSError:
+                pass
+        if real_errors(oerr) + real_errors(oout):
+            status, detail = "lean-error", "\n".join(real_errors(oerr + oout)[:2])
+        else:
+            try:
+                check_output(oout)
+            except Failure as f:
+                status, detail = f.kind, f.detail
+    return (qual, len(hit), len(body), status, detail)
+
+
+def run_pycov_search_mode(args):
+    """Coverage-guided input generation (task-5 follow-up): for each corpus
+    function, greybox-search inputs that maximize coverage of its TRANSPILED body,
+    then differentially validate those inputs against the Lean oracle.  Reports
+    per-function adequacy and any divergence a newly-reached branch exposes."""
+    all_funcs = corpus_frags.harvest()
+    budget = max(args.inputs * 50, 200)
+    print(f"Coverage-guided input search: {len(all_funcs)} corpus functions, "
+          f"budget {budget} candidate inputs each.")
+    bugs, rows, done = [], [], 0
+    with ProcessPoolExecutor(max_workers=args.jobs) as ex:
+        futures = [ex.submit(pycov_search_fn, (q, pt, r, budget))
+                   for (q, pt, r) in all_funcs]
+        for fut in as_completed(futures):
+            qual, hit, body, status, detail = fut.result()
+            if body:
+                rows.append((hit / body, qual, hit, body))
+            if status not in ("ok", "transpile-error", "no-fn", "lean-error"):
+                bugs.append((qual, status, detail))
+            done += 1
+            if done % 20 == 0:
+                print(f"  ... {done}/{len(all_funcs)} functions "
+                      f"({len(bugs)} divergence(s) so far)")
+
+    total_hit = sum(h for (_, _, h, _) in rows)
+    total_body = sum(b for (_, _, _, b) in rows)
+    full = sum(1 for (frac, _, _, _) in rows if frac >= 1.0)
+    print(f"\nGuided input adequacy: {total_hit}/{total_body} body lines "
+          f"({100 * total_hit // max(total_body, 1)}%); "
+          f"{full}/{len(rows)} functions fully covered.")
+    under = sorted(r for r in rows if r[0] < 1.0)
+    if under:
+        print(f"\n{len(under)} function(s) still under full coverage "
+              f"(genuinely rare/undriveable branches):")
+        for (frac, qual, h, b) in under[:20]:
+            print(f"  {qual:45} {h}/{b} ({int(100 * frac)}%)")
+    if bugs:
+        print(f"\n*** {len(bugs)} DIVERGENCE(S) on searched inputs ***")
+        for (qual, status, detail) in sorted(bugs):
+            print(f"  {qual}: {status}: {detail}")
+        sys.exit(1)
+
+
 def run_corpus_mode(args):
     """Fragment-reuse sweep: each seed transpiles `--defs` harvested corpus
     functions and diffs them against the Lean oracle on random inputs."""
@@ -653,12 +757,18 @@ def main():
                     help="input-adequacy mode: measure line coverage of the "
                          "TRANSPILED Python during oracle execution and flag "
                          "functions with unexercised branches (where a bug hides).")
+    ap.add_argument("--pycov-search", action="store_true", dest="pycov_search",
+                    help="coverage-guided input search: for each corpus function, "
+                         "greybox-search inputs that maximize coverage of its "
+                         "transpiled body, then validate them against the oracle.")
     args = ap.parse_args()
 
     # Capture LEAN_PATH once and export it so every worker inherits it instead
     # of each spawning its own (serializing) `lake env`.
     os.environ["FUZZ_LEAN_PATH"] = _lean_env()["LEAN_PATH"]
 
+    if args.pycov_search:
+        return run_pycov_search_mode(args)
     if args.pycov:
         return run_pycov_mode(args)
     if args.corpus:

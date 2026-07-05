@@ -24,7 +24,15 @@ def executable_lines(py_src, func_lines):
     end) 1-based line span.  We count any non-blank, non-comment, non-`def`
     header line as executable — an over-approximation that's fine for an
     adequacy ratio (blank/comment lines never trace, so including only real
-    statements keeps the denominator meaningful)."""
+    statements keeps the denominator meaningful).
+
+    Exception: a *bare* compound-statement header (`else:`, `try:`, `finally:`,
+    `elif …:` with nothing after the colon) never produces its own `line` trace
+    event — control jumps straight to the first statement in the block — so
+    counting it would make 100% coverage unreachable and inflate the denominator.
+    We exclude those (their body statements are still counted)."""
+    # Openers whose bare header line the tracer skips (no line event fires on it).
+    _untraced = ("else:", "try:", "finally:")
     lines = py_src.splitlines()
     out = {}
     for fn, (start, end) in func_lines.items():
@@ -32,6 +40,8 @@ def executable_lines(py_src, func_lines):
         for ln in range(start, min(end, len(lines)) + 1):
             text = lines[ln - 1].strip()
             if not text or text.startswith("#"):
+                continue
+            if text in _untraced:
                 continue
             execs.add(ln)
         out[fn] = execs
@@ -105,3 +115,27 @@ def measure(py_src, run_calls):
         hit = tracer.hit & body
         result[fn] = (hit, body)
     return result
+
+
+def body_lines(py_src, fn):
+    """The set of executable body line numbers of transpiled function `fn`
+    (excluding its `def` header), or an empty set if `fn` isn't present."""
+    spans = function_spans(py_src)
+    if fn not in spans:
+        return set()
+    start, _ = spans[fn]
+    return {ln for ln in executable_lines(py_src, spans)[fn] if ln != start}
+
+
+def trace_call(fn, args):
+    """Run `fn(*args)` under line tracing (scoped to `<transpiled>`) and return
+    the set of line numbers hit.  Swallows exceptions — a crashing input still
+    covered the lines it reached before raising, which is what a coverage-guided
+    search wants to keep."""
+    tracer = LineTracer("<transpiled>")
+    with tracer:
+        try:
+            fn(*args)
+        except Exception:  # noqa: BLE001
+            pass
+    return frozenset(tracer.hit)

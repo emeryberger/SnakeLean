@@ -104,9 +104,20 @@ throughput AND code-shape diversity, and adds coverage feedback.
    never form a Yahtzee/straight/full-house, so its scoring branches are barely
    tested; many number-theory `go` helpers sit at 60–85%. This is the exact
    adequacy gap the task anticipated: a transpiler bug in one of those unreached
-   branches would pass every differential test. Actionable next step (not yet
-   done): bias oracle-input generation per function until its transpiled body
-   saturates (e.g. hand-seed Yahtzee-shaped dice).
+   branches would pass every differential test.
+5b. [DONE] **Coverage-guided input search** (task-5 follow-up): `fuzz/input_search.py`
+   + `fuzz.py --pycov-search`. Rather than hand-seed inputs per function (doesn't
+   scale to 78), an AFL-style greybox loop runs entirely on the *transpiled
+   Python* (fast, in-process, Lean-free): transpile once → search inputs that hit
+   new body lines, mutating covering inputs (typed mutators + structure-aware
+   bootstrap: all-equal / consecutive / full-house lists, boundary ints) →
+   emit a Lean oracle over the discovered covering inputs and diff, so any
+   mis-transpiled branch the search reaches is still caught. RESULT: 100% body
+   coverage on ALL 78 functions (yahtzee_score 96%→100% with ~6 inputs vs 400
+   random), 0 divergences — the transpiler is correct on the newly-reached
+   branches. Deterministic (seed 0). Also fixed a pycov measurement bug: bare
+   `else:`/`try:`/`finally:` header lines never fire a `line` trace event, so
+   counting them made 100% unreachable — now excluded from the denominator.
 
 ## Scaled validation on cloudnew (192 cores, python3.11) — this session
 All work synced to cloudnew via patch off origin/main and run on 90–180 cores:

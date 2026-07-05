@@ -203,6 +203,37 @@ def emit_corpus_file(seed, nfuncs, ninputs, funcs=None):
     return "\n".join(parts) + "\n", [q for (q, _, _) in chosen]
 
 
+def emit_transpile_only(qual):
+    """A Lean file that only transpiles `qual` (and its deps) to Python — no
+    oracle rows.  Used by the coverage-guided input search, which needs the
+    transpiled body once and then searches inputs purely in Python."""
+    parts = [CORPUS_PRELUDE, ""]
+    parts.append("#eval show CoreM Unit from do")
+    parts.append('  IO.println "### PYTHON"')
+    parts.append(f"  IO.println (← emitPythonForNames `Fuzz [`{qual}])")
+    return "\n".join(parts) + "\n"
+
+
+def emit_oracle_over(qual, ptypes, ret, input_rows):
+    """A Lean file transpiling `qual` and printing ORACLE rows for the EXPLICIT
+    `input_rows` (each a list of Python values, one per param).  Lets the search
+    hand its discovered covering inputs back to the Lean oracle for differential
+    validation.  Returns lean_src."""
+    rows = []
+    for vals in input_rows:
+        lean_args = " ".join(f"({gen.lean_lit(t, v)})" for (t, v) in zip(ptypes, vals))
+        json_args = "[" + ",".join(gen.json_lit(t, v) for (t, v) in zip(ptypes, vals)) + "]"
+        ser = gen.serializer_call(ret, f"{qual} {lean_args}")
+        rows.append(f'  IO.println ("ORACLE\\t{qual}\\t{json_args}\\t" ++ {ser})')
+    parts = [CORPUS_PRELUDE, ""]
+    parts.append("#eval show CoreM Unit from do")
+    parts.append('  IO.println "### PYTHON"')
+    parts.append(f"  IO.println (← emitPythonForNames `Fuzz [`{qual}])")
+    parts.append('  IO.println "### ORACLE"')
+    parts += rows
+    return "\n".join(parts) + "\n"
+
+
 if __name__ == "__main__":
     fs = harvest()
     print(f"{len(fs)} harvestable corpus functions:")
