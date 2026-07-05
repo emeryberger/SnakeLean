@@ -66,16 +66,26 @@ def _lean_env():
 # fuzzer-constructed input) must not stall the whole pool.  Bound each Lean run;
 # a timeout is treated like a Lean error (the seed is skipped), not a hang.
 LEAN_TIMEOUT_S = 60
+# Extra wall-clock a batched file gets PER extra seed beyond the first.  A
+# batch packs N seeds' `#eval` blocks into one Lean process, so its legitimate
+# runtime scales with N (each corpus seed is ~3s of transpile+eval); the fixed
+# per-seed timeout would kill a healthy batch mid-print.  A genuine hang in one
+# block still bounds the whole run at `LEAN_TIMEOUT_S + PER_SEED_TIMEOUT_S*(N-1)`.
+PER_SEED_TIMEOUT_S = 10
 
 
-def lean_run(lean_src, tmp_path):
+def _batch_timeout(nseeds):
+    return LEAN_TIMEOUT_S + PER_SEED_TIMEOUT_S * max(0, nseeds - 1)
+
+
+def lean_run(lean_src, tmp_path, timeout=LEAN_TIMEOUT_S):
     with open(tmp_path, "w") as f:
         f.write(lean_src)
     try:
         proc = subprocess.run(
             ["lean", tmp_path],
             cwd=ROOT, capture_output=True, text=True, env=_lean_env(),
-            timeout=LEAN_TIMEOUT_S,
+            timeout=timeout,
         )
     except subprocess.TimeoutExpired as e:
         # Surface as a Lean 'error' so callers skip the seed; include partial
@@ -183,7 +193,15 @@ def _check_py_oracle(py_src, oracle_block):
     for line in oracle_block.splitlines():
         if not line.startswith("ORACLE\t"):
             continue
-        _, fn, args_json, res_json = line.split("\t")
+        parts = line.split("\t")
+        if len(parts) != 4:
+            # A truncated row — the Lean process was killed mid-print (e.g. a
+            # batch timed out, or a genuine hang in one `#eval`).  Not a diff we
+            # can trust; surface as a Failure so the batch worker re-runs this
+            # seed alone (where a real hang times out → skipped, and a healthy
+            # seed passes).  Never let a bare ValueError escape and kill the pool.
+            raise Failure("truncated", f"malformed ORACLE row: {line[:80]!r}")
+        _, fn, args_json, res_json = parts
         # Materialize any custom-inductive args ({"c":..,"f":..}) into the
         # transpiled dataclass instances the function expects.
         args = [run_oracle.materialize(a, ns) for a in json.loads(args_json)]
@@ -297,7 +315,7 @@ def run_batch(seeds, ndefs, ninputs, emi=0.0, tmp_path=None):
         fd, path = tempfile.mkstemp(prefix="fuzz_batch_", suffix=".lean")
         os.close(fd)
     try:
-        _rc, out, _err = lean_run(src, path)
+        _rc, out, _err = lean_run(src, path, timeout=_batch_timeout(len(seeds)))
     finally:
         if tmp_path is None:
             try:
@@ -447,7 +465,7 @@ def run_corpus_batch(seeds, nfuncs, ninputs, funcs=None):
     fd, path = tempfile.mkstemp(prefix="fuzz_corpus_batch_", suffix=".lean")
     os.close(fd)
     try:
-        _rc, out, _err = lean_run(src, path)
+        _rc, out, _err = lean_run(src, path, timeout=_batch_timeout(len(seeds)))
     finally:
         try:
             os.unlink(path)
