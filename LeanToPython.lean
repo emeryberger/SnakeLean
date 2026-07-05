@@ -672,27 +672,46 @@ def captureEmit (act : EmitM Unit) : EmitM String := do
   modify fun s => { s with buf := before }
   return (after.drop before.length).toString
 
+/-- Is the rendered operand a syntactically nonzero integer literal (e.g. `2`,
+    `-3`, `(4)`)?  Such a divisor can never be zero, so a zero-guard is
+    unnecessary — and skipping it keeps the common `x % 2` / `x // 10` case clean
+    (a guard there also broke the comprehension regression tests).  Conservative:
+    anything not obviously a nonzero int literal returns `false` (→ guard). -/
+def isNonzeroLiteral (s : String) : Bool :=
+  -- strip enclosing parens/whitespace, e.g. "(2)" → "2".
+  let t := (s.trim.dropWhile (· == '(')).takeWhile (· != ')') |>.trim
+  let digits := if t.startsWith "-" then t.drop 1 else t
+  !digits.isEmpty && digits.all Char.isDigit &&
+    digits.any (· != '0')  -- at least one nonzero digit ⇒ value ≠ 0
+
 /-- Guard a Python `//` / `%` against a zero divisor.  Lean's `Nat`/`Int`
     division and modulo are TOTAL — `n / 0 = 0` and `n % 0 = n` — whereas
     Python's `//` / `%` raise `ZeroDivisionError`.  We wrap the (possibly
     Euclidean) division expression in a conditional so a zero divisor yields
-    Lean's value instead of crashing.  Non-`//`/`%` ops pass through unchanged.
-    `expr` is the full division expression to use when `b != 0`; `a`/`b` are the
-    rendered dividend/divisor.  (Operands are pure in this IR, so re-evaluating
-    `b` in the guard is semantics-preserving.) -/
+    Lean's value instead of crashing.  Non-`//`/`%` ops (and provably-nonzero
+    literal divisors) pass through unchanged.  `expr` is the full division
+    expression to use when `b != 0`; `a`/`b` are the rendered dividend/divisor.
+    (Operands are pure in this IR, so re-evaluating `b` in the guard is
+    semantics-preserving.) -/
 def guardZeroDiv (op expr a b : String) : String :=
-  if op == "//" then s!"({expr} if {b} != 0 else 0)"
+  if isNonzeroLiteral b then expr
+  else if op == "//" then s!"({expr} if {b} != 0 else 0)"
   else if op == "%" then s!"({expr} if {b} != 0 else {a})"
   else expr
 
 /-- Python expression for a binary op whose semantics differ from Lean's naive
     operator, given the already-rendered operand strings.  Division/modulo forms
-    are zero-guarded (Lean division is total; see `guardZeroDiv`). -/
+    are zero-guarded (Lean division is total; see `guardZeroDiv`) unless the
+    divisor is a provably-nonzero literal. -/
 def emitArithBinary (kind a b : String) : String :=
   match kind with
   | "natsub" => s!"max(0, {a} - {b})"          -- truncated Nat subtraction
-  | "intmod" => s!"({a} % abs({b}) if {b} != 0 else {a})"           -- Euclidean Int modulo (total)
-  | "intdiv" => s!"(({a} - {a} % abs({b})) // {b} if {b} != 0 else 0)"  -- Euclidean Int division (total)
+  | "intmod" =>
+    if isNonzeroLiteral b then s!"({a} % abs({b}))"
+    else s!"({a} % abs({b}) if {b} != 0 else {a})"           -- Euclidean Int modulo (total)
+  | "intdiv" =>
+    if isNonzeroLiteral b then s!"(({a} - {a} % abs({b})) // {b})"
+    else s!"(({a} - {a} % abs({b})) // {b} if {b} != 0 else 0)"  -- Euclidean Int division (total)
   | _        => s!"({a} - {b})"
 
 /-! ## Expression Emission -/
