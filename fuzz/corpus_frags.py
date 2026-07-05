@@ -29,7 +29,8 @@ CORPUS_DIR = os.path.join(ROOT, "Corpus")
 # The types the fuzzer can generate values for (must match gen.LEAN_TYPES).  A
 # def is harvestable iff every parameter type and the return type is one of these.
 _HARVESTABLE = {"Nat", "Bool", "Int", "List Nat", "Option Nat", "Nat × Nat",
-                "String", "Char", "Array Nat"}
+                "String", "Char", "Array Nat",
+                "List Int", "List Bool", "List (List Nat)"}
 
 # `(a b : T)` binds two params of type T; `(x : T)` binds one.  We only accept
 # a param group whose type is harvestable.

@@ -33,7 +33,11 @@ NAT, BOOL, LISTNAT, PAIR, INT, OPTNAT = (
 # Phase 1 types: exercise the transpiler's barely-tested String/Char/Array
 # handlers (the qsort bug F13 lived in Array; CLAUDE.md flags Max/Xor).
 STRING, CHAR, ARRAYNAT = ("String", "Char", "Array Nat")
-LEAN_TYPES = [NAT, BOOL, LISTNAT, PAIR, INT, OPTNAT, STRING, CHAR, ARRAYNAT]
+# Phase 2 types: list element-type variety — exercise the list combinators
+# (map/filter/foldr/append/reverse) over non-Nat elements and one nesting level.
+LISTINT, LISTBOOL, LISTLISTNAT = ("List Int", "List Bool", "List (List Nat)")
+LEAN_TYPES = [NAT, BOOL, LISTNAT, PAIR, INT, OPTNAT, STRING, CHAR, ARRAYNAT,
+              LISTINT, LISTBOOL, LISTLISTNAT]
 
 # Every production label the grammar can emit — the coverage universe.  Kept in
 # sync with the `choose(...)` labels below; `fuzz.py` reports coverage against
@@ -64,6 +68,14 @@ ALL_PRODUCTIONS = frozenset({
     # String/Char/Array observations returning Nat/Bool (added to those gens)
     "nat.strlen", "nat.arrsize", "nat.charToNat",
     "bool.strEmpty", "bool.charEq", "bool.charIsDigit", "bool.charIsAlpha",
+    # List Int / List Bool / nested lists (element-type variety)
+    "listint.lit", "listint.var", "listint.map", "listint.append",
+    "listint.cons", "listint.reverse",
+    "listbool.lit", "listbool.var", "listbool.map", "listbool.append",
+    "listbool.cons", "listbool.reverse",
+    "listlist.lit", "listlist.var", "listlist.map", "listlist.append",
+    "listlist.cons", "listlist.reverse",
+    "nat.listlistlen",  # observe a nested list's length back into Nat
 })
 
 
@@ -168,6 +180,12 @@ class Gen:
             e = self.gen_char(env, depth)
         elif ty == ARRAYNAT:
             e = self.gen_array(env, depth)
+        elif ty == LISTINT:
+            e = self.gen_list_elem(env, depth, LISTINT, INT, "listint")
+        elif ty == LISTBOOL:
+            e = self.gen_list_elem(env, depth, LISTBOOL, BOOL, "listbool")
+        elif ty == LISTLISTNAT:
+            e = self.gen_list_elem(env, depth, LISTLISTNAT, LISTNAT, "listlist")
         else:
             raise ValueError(ty)
         return self.maybe_envelope(ty, e)
@@ -227,6 +245,8 @@ class Gen:
                 alts.append(("nat.arrsize", (lambda n=n: f"{n}.size")))
             if t == CHAR:
                 alts.append(("nat.charToNat", (lambda n=n: f"{n}.toNat")))
+            if t == LISTINT or t == LISTBOOL or t == LISTLISTNAT:
+                alts.append(("nat.listlistlen", (lambda n=n: f"{n}.length")))
         # Recursive productions (only while we have depth budget).
         if depth > 0 and self.rng.random() >= 0.35:
             def binop(op):
@@ -506,6 +526,50 @@ class Gen:
             alts.append(("arr.if", arr_if))
         return self.choose(alts)
 
+    def gen_list_elem(self, env, depth, listty, elemty, tag):
+        """Generate a `List <elemty>` expression.  Parameterized over the element
+        type so `List Int`/`List Bool`/`List (List Nat)` reuse one generator and
+        exercise the list combinators (map/append/cons/reverse) over non-Nat
+        elements.  A typed empty literal (`([] : listty)`) keeps Lean from
+        defaulting `[]` to `List Nat`."""
+        vs = self.vars_of(env, listty)
+        alts = [(f"{tag}.lit", lambda: self._list_elem_lit(listty, elemty))]
+        for v in vs:
+            alts.append((f"{tag}.var", (lambda v=v: v)))
+        if depth > 0 and self.rng.random() >= 0.35:
+            if vs:
+                def lmap():
+                    n = self.pick(vs)
+                    fresh = self.fresh(env)
+                    # map each element to a fresh element of the same type.
+                    body = self.gen(elemty, env + [(fresh, elemty)], depth - 1)
+                    return f"({n}.map (fun {fresh} => {body}))"
+                alts.append((f"{tag}.map", lmap))
+                alts.append((f"{tag}.reverse", (lambda: f"({self.pick(vs)}.reverse)")))
+            alts.append((f"{tag}.append",
+                         lambda: f"({self.gen(listty, env, depth-1)} ++ {self.gen(listty, env, depth-1)})"))
+            alts.append((f"{tag}.cons",
+                         lambda: f"({self.gen(elemty, env, depth-1)} :: {self.gen(listty, env, depth-1)})"))
+        return self.choose(alts)
+
+    def _list_elem_lit(self, listty, elemty):
+        """A typed list literal, e.g. `([(-1 : Int), 2])` or `([] : List Bool)`."""
+        n = self.rng.randint(0, 3)
+        if n == 0:
+            return f"(([] : {listty}))"
+        elems = ", ".join(self._elem_lit(elemty) for _ in range(n))
+        return f"[{elems}]"
+
+    def _elem_lit(self, elemty):
+        if elemty == INT:
+            return f"({self.rng.randint(-9, 9)} : Int)"
+        if elemty == BOOL:
+            return self.rng.choice(["true", "false"])
+        if elemty == LISTNAT:
+            return "[" + ", ".join(str(self.rng.randint(0, 9))
+                                   for _ in range(self.rng.randint(0, 3))) + "]"
+        return str(self.rng.randint(0, 9))
+
     _counter = 0
 
     def fresh(self, env, offset=0):
@@ -558,6 +622,13 @@ class Gen:
             return self.rng.choice(self._ALPHABET)
         if ty == ARRAYNAT:
             return [self.rng.randint(0, 9) for _ in range(self.rng.randint(0, 5))]
+        if ty == LISTINT:
+            return [self.rng.randint(-9, 9) for _ in range(self.rng.randint(0, 5))]
+        if ty == LISTBOOL:
+            return [self.rng.choice([True, False]) for _ in range(self.rng.randint(0, 5))]
+        if ty == LISTLISTNAT:
+            return [[self.rng.randint(0, 9) for _ in range(self.rng.randint(0, 3))]
+                    for _ in range(self.rng.randint(0, 3))]
         raise ValueError(ty)
 
 
@@ -589,6 +660,17 @@ def lean_lit(ty, v):
         return f"'{v}'"
     if ty == ARRAYNAT:
         return "#[" + ", ".join(str(x) for x in v) + "]"
+    if ty == LISTINT:
+        if not v:
+            return "([] : List Int)"
+        return "[" + ", ".join(f"({x} : Int)" for x in v) + "]"
+    if ty == LISTBOOL:
+        if not v:
+            return "([] : List Bool)"
+        return "[" + ", ".join("true" if x else "false" for x in v) + "]"
+    if ty == LISTLISTNAT:
+        inner = ", ".join("[" + ", ".join(str(x) for x in row) + "]" for row in v)
+        return f"([{inner}] : List (List Nat))"
     raise ValueError(ty)
 
 
@@ -616,6 +698,12 @@ def serializer_call(ty, expr):
         return f"jChar ({expr})"
     if ty == ARRAYNAT:
         return f"jArrayNat ({expr})"
+    if ty == LISTINT:
+        return f"jListInt ({expr})"
+    if ty == LISTBOOL:
+        return f"jListBool ({expr})"
+    if ty == LISTLISTNAT:
+        return f"jListListNat ({expr})"
     raise ValueError(ty)
 
 
@@ -658,6 +746,12 @@ def jString (s : String) : String := "\"" ++ jStrEscape s ++ "\""
 def jChar (c : Char) : String := jString c.toString
 def jArrayNat (xs : Array Nat) : String :=
   "[" ++ String.intercalate "," (xs.toList.map toString) ++ "]"
+def jListInt (xs : List Int) : String :=
+  "[" ++ String.intercalate "," (xs.map toString) ++ "]"
+def jListBool (xs : List Bool) : String :=
+  "[" ++ String.intercalate "," (xs.map (fun b => if b then "true" else "false")) ++ "]"
+def jListListNat (xss : List (List Nat)) : String :=
+  "[" ++ String.intercalate "," (xss.map jListNat) ++ "]"
 """
 
 
