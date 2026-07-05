@@ -330,12 +330,18 @@ constructors and field types; the harness computes which are *constructible*
 excluded), generates values by applying constructors, emits per-type JSON
 serializers into the oracle, and `run_oracle.normalize` reduces a transpiled
 `@dataclass` instance to the same `{"c": ctor, "f": [...]}` shape for comparison.
-Harvest grew 129 → 145 (16 user-typed functions).  This exercises the
-transpiler's inductive-emission + `match`-on-user-type paths under differential
-testing for the first time.  *Bugs found:* recorded here as F19+ if any survive
-the scaled sweep; the infrastructure itself surfaced two harness/transpiler name
-subtleties (dataclass names for common constructors like `mk` are parent-prefixed
-`Nim_mk`; the serializer must match `toPyTypeName`).
+This exercises the transpiler's inductive-emission + `match`-on-user-type paths
+under differential testing for the first time.  *Result:* the transpiler is
+correct on this slice — a 1500-seed sweep over 139 harvestable functions
+(including 7 user-typed: `Nim`/`Card`/`RPS` methods) found **no transpiler bug**
+(its inductive emission was already sound).  The phase's findings were two
+*harness* issues, both fixed: (a) a fuzzer-constructed value of a type with an
+internal invariant (`UnionFind`'s parent array must be acyclic) makes its
+`find` loop forever — such types are now excluded from construction
+(`_UNSAFE_TO_CONSTRUCT`), and `lean_run` gained a 60 s timeout so no single hung
+`#eval` can stall the pool; (b) dataclass names for common constructors (`mk`,
+`node`, …) are parent-prefixed (`Nim.mk` → `Nim_mk`), so the oracle serializer
+and `run_oracle.normalize` must match `toPyTypeName` — they now do.
 
 ### Known-open
 
