@@ -30,7 +30,10 @@ import sys
 # Types in the grammar.
 NAT, BOOL, LISTNAT, PAIR, INT, OPTNAT = (
     "Nat", "Bool", "List Nat", "Nat × Nat", "Int", "Option Nat")
-LEAN_TYPES = [NAT, BOOL, LISTNAT, PAIR, INT, OPTNAT]
+# Phase 1 types: exercise the transpiler's barely-tested String/Char/Array
+# handlers (the qsort bug F13 lived in Array; CLAUDE.md flags Max/Xor).
+STRING, CHAR, ARRAYNAT = ("String", "Char", "Array Nat")
+LEAN_TYPES = [NAT, BOOL, LISTNAT, PAIR, INT, OPTNAT, STRING, CHAR, ARRAYNAT]
 
 # Every production label the grammar can emit — the coverage universe.  Kept in
 # sync with the `choose(...)` labels below; `fuzz.py` reports coverage against
@@ -51,6 +54,16 @@ ALL_PRODUCTIONS = frozenset({
     "int.mul", "int.div", "int.mod", "int.if",
     # Option Nat
     "opt.none", "opt.some", "opt.var", "opt.getD", "opt.if", "opt.match",
+    # String
+    "str.lit", "str.var", "str.append", "str.push", "str.mk", "str.if",
+    "str.let",
+    # Char
+    "char.lit", "char.var", "char.toUpper", "char.toLower", "char.if",
+    # Array Nat
+    "arr.lit", "arr.var", "arr.mk", "arr.push", "arr.append", "arr.if",
+    # String/Char/Array observations returning Nat/Bool (added to those gens)
+    "nat.strlen", "nat.arrsize", "nat.charToNat",
+    "bool.strEmpty", "bool.charEq", "bool.charIsDigit", "bool.charIsAlpha",
 })
 
 
@@ -149,6 +162,12 @@ class Gen:
             e = self.gen_int(env, depth)
         elif ty == OPTNAT:
             e = self.gen_opt(env, depth)
+        elif ty == STRING:
+            e = self.gen_string(env, depth)
+        elif ty == CHAR:
+            e = self.gen_char(env, depth)
+        elif ty == ARRAYNAT:
+            e = self.gen_array(env, depth)
         else:
             raise ValueError(ty)
         return self.maybe_envelope(ty, e)
@@ -168,6 +187,10 @@ class Gen:
                   ("emi.list.mapid", "(({x} : List Nat).map (fun z => z))")],
         OPTNAT: [("emi.opt.ite", "(if true then {x} else (none : Option Nat))")],
         PAIR: [("emi.pair.ite", "(if true then {x} else (0, 0))")],
+        STRING: [("emi.str.appempty", '(({x} : String) ++ "")'),
+                 ("emi.str.ite", '(if true then {x} else "")')],
+        CHAR: [("emi.char.ite", "(if true then {x} else 'a')")],
+        ARRAYNAT: [("emi.arr.ite", "(if true then {x} else (#[] : Array Nat))")],
     }
 
     def maybe_envelope(self, ty, expr):
@@ -198,6 +221,12 @@ class Gen:
                 alts.append(("nat.length", (lambda n=n: f"{n}.length")))
                 alts.append(("nat.headD", (lambda n=n: f"({n}.headD 0)")))
                 alts.append(("nat.foldl", (lambda n=n: f"({n}.foldl (· + ·) 0)")))
+            if t == STRING:
+                alts.append(("nat.strlen", (lambda n=n: f"{n}.length")))
+            if t == ARRAYNAT:
+                alts.append(("nat.arrsize", (lambda n=n: f"{n}.size")))
+            if t == CHAR:
+                alts.append(("nat.charToNat", (lambda n=n: f"{n}.toNat")))
         # Recursive productions (only while we have depth budget).
         if depth > 0 and self.rng.random() >= 0.35:
             def binop(op):
@@ -268,6 +297,18 @@ class Gen:
                          lambda: f"(({self.gen(LISTNAT, env, depth-1)} : List Nat)).isEmpty"))
             alts.append(("bool.elem",
                          lambda: f"(({self.gen(LISTNAT, env, depth-1)} : List Nat)).contains {self.gen(NAT, env, depth-1)}"))
+            # String / Char predicates — exercise String.isEmpty and the Char
+            # classification handlers (Char.isDigit/isAlpha) that are never hit by
+            # numeric code.  These are prime spots for Lean-vs-Python semantic
+            # divergence, so make them reachable.
+            alts.append(("bool.strEmpty",
+                         lambda: f"({self.gen(STRING, env, depth-1)}).isEmpty"))
+            alts.append(("bool.charEq",
+                         lambda: f"({self.gen(CHAR, env, depth-1)} == {self.gen(CHAR, env, depth-1)})"))
+            alts.append(("bool.charIsDigit",
+                         lambda: f"({self.gen(CHAR, env, depth-1)}).isDigit"))
+            alts.append(("bool.charIsAlpha",
+                         lambda: f"({self.gen(CHAR, env, depth-1)}).isAlpha"))
         return self.choose(alts)
 
     def gen_list(self, env, depth):
@@ -383,6 +424,88 @@ class Gen:
                 alts.append(("opt.match", opt_match))
         return self.choose(alts)
 
+    # A small ASCII alphabet for string/char literals — kept to letters+digits so
+    # generated Lean string/char literals never need escaping (no `"`, `\`,
+    # newline) and Char predicate semantics stay on well-defined ASCII.  (Widening
+    # to punctuation/Unicode later is exactly how to surface Char.isAlpha-style
+    # Lean-vs-Python divergences.)
+    _ALPHABET = "abcXYZ019"
+
+    def _str_lit(self):
+        n = self.rng.randint(0, 4)
+        return "".join(self.rng.choice(self._ALPHABET) for _ in range(n))
+
+    def gen_string(self, env, depth):
+        vs = self.vars_of(env, STRING)
+        alts = [("str.lit", lambda: f'"{self._str_lit()}"')]
+        for v in vs:
+            alts.append(("str.var", (lambda v=v: v)))
+        if depth > 0 and self.rng.random() >= 0.35:
+            alts.append(("str.append",
+                         lambda: f"({self.gen(STRING, env, depth-1)} ++ {self.gen(STRING, env, depth-1)})"))
+            alts.append(("str.push",
+                         lambda: f"({self.gen(STRING, env, depth-1)}.push {self.gen(CHAR, env, depth-1)})"))
+            # String.mk from a List Char isn't easily generated (no List Char
+            # type), so build a singleton via toString of a char instead.
+            alts.append(("str.mk",
+                         lambda: f"(String.mk [{self.gen(CHAR, env, depth-1)}])"))
+
+            def str_if():
+                c = self.gen(BOOL, env, depth - 1)
+                a = self.gen(STRING, env, depth - 1)
+                b = self.gen(STRING, env, depth - 1)
+                return f"(if {c} then {a} else {b})"
+            alts.append(("str.if", str_if))
+
+            def str_let():
+                fresh = self.fresh(env)
+                val = self.gen(STRING, env, depth - 1)
+                body = self.gen(STRING, env + [(fresh, STRING)], depth - 1)
+                return f"(let {fresh} := {val}; {body})"
+            alts.append(("str.let", str_let))
+        return self.choose(alts)
+
+    def gen_char(self, env, depth):
+        vs = self.vars_of(env, CHAR)
+        alts = [("char.lit", lambda: f"'{self.rng.choice(self._ALPHABET)}'")]
+        for v in vs:
+            alts.append(("char.var", (lambda v=v: v)))
+        if depth > 0 and self.rng.random() >= 0.35:
+            alts.append(("char.toUpper", lambda: f"({self.gen(CHAR, env, depth-1)}).toUpper"))
+            alts.append(("char.toLower", lambda: f"({self.gen(CHAR, env, depth-1)}).toLower"))
+
+            def char_if():
+                c = self.gen(BOOL, env, depth - 1)
+                a = self.gen(CHAR, env, depth - 1)
+                b = self.gen(CHAR, env, depth - 1)
+                return f"(if {c} then {a} else {b})"
+            alts.append(("char.if", char_if))
+        return self.choose(alts)
+
+    def gen_array(self, env, depth):
+        vs = self.vars_of(env, ARRAYNAT)
+        alts = [
+            ("arr.lit", lambda: "#[" + ", ".join(
+                str(self.rng.randint(0, 9)) for _ in range(self.rng.randint(0, 3))) + "]"),
+            # `#[]` alone is ambiguous; annotate an empty literal.
+            ("arr.mk", lambda: "(#[] : Array Nat)"),
+        ]
+        for v in vs:
+            alts.append(("arr.var", (lambda v=v: v)))
+        if depth > 0 and self.rng.random() >= 0.35:
+            alts.append(("arr.push",
+                         lambda: f"({self.gen(ARRAYNAT, env, depth-1)}.push {self.gen(NAT, env, depth-1)})"))
+            alts.append(("arr.append",
+                         lambda: f"({self.gen(ARRAYNAT, env, depth-1)} ++ {self.gen(ARRAYNAT, env, depth-1)})"))
+
+            def arr_if():
+                c = self.gen(BOOL, env, depth - 1)
+                a = self.gen(ARRAYNAT, env, depth - 1)
+                b = self.gen(ARRAYNAT, env, depth - 1)
+                return f"(if {c} then {a} else {b})"
+            alts.append(("arr.if", arr_if))
+        return self.choose(alts)
+
     _counter = 0
 
     def fresh(self, env, offset=0):
@@ -428,7 +551,23 @@ class Gen:
             return self.rng.randint(-12, 12)
         if ty == OPTNAT:
             return None if self.rng.random() < 0.3 else self.rng.randint(0, 12)
+        if ty == STRING:
+            return "".join(self.rng.choice(self._ALPHABET)
+                           for _ in range(self.rng.randint(0, 5)))
+        if ty == CHAR:
+            return self.rng.choice(self._ALPHABET)
+        if ty == ARRAYNAT:
+            return [self.rng.randint(0, 9) for _ in range(self.rng.randint(0, 5))]
         raise ValueError(ty)
+
+
+# JSON-escape a Python string for embedding in a Lean string literal (must match
+# how `json.dumps` escapes, since the oracle serializer output is compared to the
+# JSON of the input value).  Only `"` and `\` occur in our alphabet-restricted
+# strings today, but escape the full set so widening the alphabet stays safe.
+def _lean_str_escape(s):
+    return (s.replace("\\", "\\\\").replace('"', '\\"')
+             .replace("\n", "\\n").replace("\t", "\\t"))
 
 
 def lean_lit(ty, v):
@@ -444,6 +583,12 @@ def lean_lit(ty, v):
         return f"({v} : Int)"
     if ty == OPTNAT:
         return "(none : Option Nat)" if v is None else f"(some {v} : Option Nat)"
+    if ty == STRING:
+        return f'"{_lean_str_escape(v)}"'
+    if ty == CHAR:
+        return f"'{v}'"
+    if ty == ARRAYNAT:
+        return "#[" + ", ".join(str(x) for x in v) + "]"
     raise ValueError(ty)
 
 
@@ -465,6 +610,12 @@ def serializer_call(ty, expr):
         return f"jInt ({expr})"
     if ty == OPTNAT:
         return f"jOpt ({expr})"
+    if ty == STRING:
+        return f"jString ({expr})"
+    if ty == CHAR:
+        return f"jChar ({expr})"
+    if ty == ARRAYNAT:
+        return f"jArrayNat ({expr})"
     raise ValueError(ty)
 
 
@@ -485,6 +636,28 @@ def jInt (n : Int) : String := toString n
 def jOpt : Option Nat → String
   | none => "null"
   | some n => toString n
+-- JSON-escape a string so the oracle row is valid JSON that Python's
+-- `json.loads` parses back to the same value, matching `json.dumps`.  Besides
+-- quote/backslash/named controls, JSON forbids ALL raw control chars (<0x20) —
+-- they must be `\uXXXX`.  Corpus functions like `Strings.fromAsciiCodes`/`chr`
+-- readily produce such chars, so escape the whole <0x20 range (else json.loads
+-- raises "Invalid control character").
+def jHex4 (n : Nat) : String :=
+  let d := fun (k : Nat) => "0123456789abcdef".toList[k % 16]!.toString
+  "\\u00" ++ d (n / 16) ++ d n
+def jStrEscape (s : String) : String :=
+  s.foldl (fun acc c =>
+    acc ++ (match c with
+      | '"'  => "\\\""
+      | '\\' => "\\\\"
+      | '\n' => "\\n"
+      | '\t' => "\\t"
+      | '\r' => "\\r"
+      | _    => if c.toNat < 0x20 then jHex4 c.toNat else c.toString)) ""
+def jString (s : String) : String := "\"" ++ jStrEscape s ++ "\""
+def jChar (c : Char) : String := jString c.toString
+def jArrayNat (xs : Array Nat) : String :=
+  "[" ++ String.intercalate "," (xs.toList.map toString) ++ "]"
 """
 
 
@@ -535,9 +708,14 @@ def _oracle_rows(g, defs, ninputs):
             vals = [g.rand_value(t) for (_, t) in params]
             lean_args = " ".join(f"({lean_lit(t, v)})" for ((_, t), v) in zip(params, vals))
             json_args = "[" + ",".join(json_lit(t, v) for ((_, t), v) in zip(params, vals)) + "]"
+            # `json_args` is embedded inside a Lean string literal, so escape any
+            # `"`/`\` it contains (JSON strings for String/Char args have quotes).
+            # fuzz.py parses the row by splitting on the literal tab, then
+            # json.loads() the field — which un-escapes back to the original.
+            json_args_esc = _lean_str_escape(json_args)
             call = f"{name} {lean_args}" if params else name
             ser = serializer_call(ret, call)
-            rows.append(f'  IO.println ("ORACLE\\t{name}\\t{json_args}\\t" ++ {ser})')
+            rows.append(f'  IO.println ("ORACLE\\t{name}\\t{json_args_esc}\\t" ++ {ser})')
     return rows
 
 

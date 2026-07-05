@@ -86,9 +86,37 @@ def _mut_opt(rng, v):
     return rng.randint(0, 12) if v is None else _mut_nat(rng, v)
 
 
+# Char mutations pick across classes (digit / lower / upper / punctuation-ish) so
+# the Char.isDigit / isAlpha / isUpper branches all get driven — where Lean-vs-
+# Python semantics most plausibly diverge.
+_CHAR_CLASSES = "aZ0 x9Bc"
+
+
+def _mut_char(rng, v):
+    return rng.choice(_CHAR_CLASSES)
+
+
+def _mut_string(rng, v):
+    s = v
+    op = rng.randint(0, 4)
+    if op == 0 and s:                 # drop a char
+        i = rng.randrange(len(s))
+        s = s[:i] + s[i + 1:]
+    elif op == 1:                     # append a class-diverse char
+        s = s + rng.choice(_CHAR_CLASSES)
+    elif op == 2:                     # empty (String.isEmpty branch)
+        s = ""
+    elif op == 3:                     # duplicate
+        s = s + s
+    else:                             # all-same char
+        s = rng.choice(_CHAR_CLASSES) * (len(s) or 1)
+    return s[:8]
+
+
 _MUTATORS = {
     gen.NAT: _mut_nat, gen.INT: _mut_int, gen.LISTNAT: _mut_list,
     gen.PAIR: _mut_pair, gen.OPTNAT: _mut_opt, gen.BOOL: lambda rng, v: not v,
+    gen.STRING: _mut_string, gen.CHAR: _mut_char, gen.ARRAYNAT: _mut_list,
 }
 
 
@@ -124,6 +152,19 @@ def _interesting(rng, ty):
         return [rng.choice(_NAT_INTERESTING), rng.choice(_NAT_INTERESTING)]
     if ty == gen.OPTNAT:
         return rng.choice([None, 0, 1])
+    if ty == gen.STRING:
+        # empty / all-digit / all-alpha / mixed — drives isEmpty & char classes.
+        return rng.choice(["", "000", "abc", "aZ9", "x"])
+    if ty == gen.CHAR:
+        return rng.choice(_CHAR_CLASSES)
+    if ty == gen.ARRAYNAT:
+        n = rng.randint(0, 4)
+        kind = rng.randint(0, 2)
+        if kind == 0:
+            return [rng.randint(0, 6)] * n            # all equal
+        if kind == 1:
+            return list(range(n))                     # ascending
+        return []                                     # empty
     return _rand(rng, ty)
 
 
