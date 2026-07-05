@@ -319,12 +319,35 @@ NOT a batched-emission name collision, as first suspected.
 - **Impact:** all 128 harvestable corpus functions now transpile and agree with
   the oracle, **batched** as well as alone; `_KNOWN_OPEN_NS` is empty.
 
+### Custom inductive / structure types (Phase 3 fragment-reuse expansion)
+
+The fragment-reuse harvester now handles corpus functions whose parameters or
+return type are **custom inductive/structure types** (enums like `RPS`/`Player`/
+`Suit`; structs like `Card`/`Nim`/`UnionFind`) — not just the base value
+universe.  A Lean-side dump (`fuzz/TypeInfo.lean`) reports each type's
+constructors and field types; the harness computes which are *constructible*
+(all fields base-typed or themselves constructible; recursive/`Float` types
+excluded), generates values by applying constructors, emits per-type JSON
+serializers into the oracle, and `run_oracle.normalize` reduces a transpiled
+`@dataclass` instance to the same `{"c": ctor, "f": [...]}` shape for comparison.
+This exercises the transpiler's inductive-emission + `match`-on-user-type paths
+under differential testing for the first time.  *Result:* the transpiler is
+correct on this slice — a 1500-seed sweep over 139 harvestable functions
+(including 7 user-typed: `Nim`/`Card`/`RPS` methods) found **no transpiler bug**
+(its inductive emission was already sound).  The phase's findings were two
+*harness* issues, both fixed: (a) a fuzzer-constructed value of a type with an
+internal invariant (`UnionFind`'s parent array must be acyclic) makes its
+`find` loop forever — such types are now excluded from construction
+(`_UNSAFE_TO_CONSTRUCT`), and `lean_run` gained a 60 s timeout so no single hung
+`#eval` can stall the pool; (b) dataclass names for common constructors (`mk`,
+`node`, …) are parent-prefixed (`Nim.mk` → `Nim_mk`), so the oracle serializer
+and `run_oracle.normalize` must match `toPyTypeName` — they now do.
+
 ### Known-open
 
-None. Every gap surfaced by the Phase-1 corpus expansion (F14–F18) is fixed;
-`corpus_frags._KNOWN_OPEN_NS` is empty. (`List.get!`/`Array.get!` — the *named*
-method, not `[i]!` — still inlines Lean's panic machinery into garbage, but no
-corpus function uses it, and the grammar/corpus fuzzers never generate it.)
+None currently in `corpus_frags._KNOWN_OPEN_NS`.  (`List.get!`/`Array.get!` — the
+*named* method, not `[i]!` — still inlines Lean's panic machinery into garbage,
+but no corpus function uses it, and the fuzzers never generate it.)
 
 ## Bugs found by the round-trip differential harness
 

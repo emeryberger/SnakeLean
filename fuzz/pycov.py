@@ -232,11 +232,25 @@ class Harness:
             return {tuple(b) for b in cov.get("executed_branches", [])}
         return set(cov.get("executed_lines", []))
 
+    def _materialize(self, v):
+        """Turn a custom-inductive dict arg `{"c":cls,"f":[...]}` into the
+        transpiled `@dataclass` instance from `self.ns` (the coverage-guided
+        search generates user-typed args as such dicts; the function needs the
+        real instance).  Mirrors `run_oracle.materialize`."""
+        if isinstance(v, dict) and "c" in v and "f" in v:
+            cls = self.ns.get(v["c"])
+            fields = [self._materialize(f) for f in v["f"]]
+            return cls(*fields) if cls is not None else v
+        if isinstance(v, list):
+            return [self._materialize(x) for x in v]
+        return v
+
     def trace_call(self, fn, args):
         """Run `fn(*args)` and return the frozenset of coverage units it hit
         (k-line subpaths in path mode, branches in branch mode, else lines).
         Swallows exceptions — a crashing input still covered the units it reached
         before raising, which is what a coverage-guided search wants to keep."""
+        args = [self._materialize(a) for a in args]
         if self.paths:
             tracer = PathTracer(self.FILENAME)
             with tracer:

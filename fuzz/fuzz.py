@@ -62,13 +62,28 @@ def _lean_env():
     return env
 
 
+# A hung oracle `#eval` (e.g. a corpus function that doesn't terminate on a
+# fuzzer-constructed input) must not stall the whole pool.  Bound each Lean run;
+# a timeout is treated like a Lean error (the seed is skipped), not a hang.
+LEAN_TIMEOUT_S = 60
+
+
 def lean_run(lean_src, tmp_path):
     with open(tmp_path, "w") as f:
         f.write(lean_src)
-    proc = subprocess.run(
-        ["lean", tmp_path],
-        cwd=ROOT, capture_output=True, text=True, env=_lean_env(),
-    )
+    try:
+        proc = subprocess.run(
+            ["lean", tmp_path],
+            cwd=ROOT, capture_output=True, text=True, env=_lean_env(),
+            timeout=LEAN_TIMEOUT_S,
+        )
+    except subprocess.TimeoutExpired as e:
+        # Surface as a Lean 'error' so callers skip the seed; include partial
+        # stdout so any oracle rows already printed aren't lost.
+        out = e.stdout or ""
+        if isinstance(out, bytes):
+            out = out.decode("utf-8", "replace")
+        return 124, out, "error: lean timed out (possible non-terminating #eval)"
     return proc.returncode, proc.stdout, proc.stderr
 
 
@@ -169,7 +184,9 @@ def _check_py_oracle(py_src, oracle_block):
         if not line.startswith("ORACLE\t"):
             continue
         _, fn, args_json, res_json = line.split("\t")
-        args = json.loads(args_json)
+        # Materialize any custom-inductive args ({"c":..,"f":..}) into the
+        # transpiled dataclass instances the function expects.
+        args = [run_oracle.materialize(a, ns) for a in json.loads(args_json)]
         expected = run_oracle.normalize(json.loads(res_json))
         py_fn = lean_to_py.get(fn)
         if py_fn is None or py_fn not in ns:
@@ -649,6 +666,12 @@ def pycov_search_fn(args):
     newly-reached branch that mis-transpiles is caught.  Returns
     (qual, hit, body, status, detail)."""
     qual, ptypes, ret, budget = args
+    # Skip user-typed functions here: the coverage-guided search's input
+    # mutators/generators only cover the base value universe.  Such functions are
+    # still differentially validated by the main `--corpus` sweep (the real
+    # bug-finder); `--pycov-search` is an input-adequacy tool for base-typed fns.
+    if any(t not in gen.LEAN_TYPES for t in ptypes):
+        return (qual, 0, 0, "ok", "")
     # (1) transpile once.
     src = corpus_frags.emit_transpile_only(qual)
     fd, path = tempfile.mkstemp(prefix="pcs_t_", suffix=".lean")
