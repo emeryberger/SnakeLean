@@ -259,8 +259,6 @@ NOT a batched-emission name collision, as first suspected.
   `None` for a var known to be a typeclass instance, so any elided instance
   threaded as an argument is a harmless placeholder the callee ignores.
 
-### Known-open (Phase-1 follow-up, not yet fixed)
-
 ### F16. Missing Lean List/Array/String builtins (undefined-name / crash)
 
 - **Found by:** Phase-1 corpus fuzzing over `Corpus.Strings.*`/`Corpus.Production.*`
@@ -278,16 +276,55 @@ NOT a batched-emission name collision, as first suspected.
 - **Impact:** un-blocked `Corpus.Production.*` (no longer excluded from harvest);
   corpus harvest 82 → 83.
 
-### Known-open (not yet fixed)
+### F17. Deferred continuation referenced an unemitted helper (`_uniq_NNN`)
 
-Tracked via `corpus_frags._KNOWN_OPEN_NS` (excluded from harvesting so the sweep
-stays a clean regression signal):
-- **Helper-scoping bug in `Corpus.Strings.*`**: a nested `let rec`/`where` helper
-  (e.g. inside `splitOn`) isn't collected, so a deferred lambda references an
-  undefined `_uniq_NNN`. (The missing builtins these functions also used are now
-  fixed — F16 — so this scoping bug is the remaining blocker for the namespace.)
-- **`List.get!`/`Array.get!`** (the *named* method, not `[i]!`) inlines Lean's
-  panic machinery into garbage; no corpus function currently uses it.
+- **Found by:** Phase-1 corpus fuzzing over `Corpus.Strings.*` (`splitOn`,
+  `replace`, …) · **Kind:** runtime (`NameError: name '_uniq_644' is not defined`)
+- **Root cause:** expression-mode rendering (`renderExprCode` /
+  `renderLetValueExpr`, used to inline single-param lambdas) resolved a
+  referenced fvar via `getVarName`, which *invents* a fallback name from the raw
+  fvar (`_uniq_NNN`) when it was never bound. So a match-arm continuation that
+  called an **unemitted sibling** local function "rendered" successfully as
+  `_uniq_644(...)` — a name that never got a `def`. Deferring the lambda then
+  emitted that dangling call.
+- **Fix:** added `knownVarName?` (like `getVarName` but no fallback); the
+  expression-mode `.return` and fvar-call paths now REFUSE to render a reference
+  to an unbound fvar (return `none`), so `emitLocalFun` falls back to emitting a
+  real `def` for the continuation. That fallback then exposed a second issue —
+  the continuation carries the enclosing tail-loop's `continue`, illegal inside a
+  nested `def` — so in tail-loop mode such a continuation is now routed to
+  `inlineThunks` (inlined at its tail-call site where `continue` is legal) rather
+  than emitted as a `def`.
+- **Impact:** cleared the entire `Corpus.Strings.*` namespace (45 functions) for
+  *per-function* transpilation — which then exposed F18.
+
+### F18. Cross-function top-level name collision (shadowing → wrong body)
+
+- **Found by:** the **scaled** corpus sweep (3000 seeds on cloudnew — a bug the
+  100-seed local run missed): `Corpus.Sorting.mode([0,8,8])` → `TypeError: 'int'
+  object is not iterable`, only when `mode` was batched with `Corpus.Strings.*`.
+- **Root cause:** `toPyFnName` is a *pure* function with a hand-curated collision
+  list, so distinct Lean decls can map to the SAME Python name — e.g.
+  `Corpus.Sorting.mode`'s helper `count` and `Corpus.Strings.count` both →
+  `count` (and `isqrt`, `coprime`, `divisors`, `insertionSort`, … across
+  modules).  When several land in one file the later `def` shadows the earlier,
+  and every call resolves — by Python's late binding — to the wrong body.  Only
+  manifests when the colliding functions are emitted together (fragment-reuse
+  batches them; single-function runs never collide — why smaller sweeps passed).
+- **Fix:** a pre-pass in `emitPythonForDecls` assigns each decl a globally-unique
+  Python name up front (suffixing collisions: `count`, `count_2`, …) into
+  `State.globalFnNames`; `pyFnName` routes the `def` and *every* call site through
+  that map, and the assigned names pre-seed `usedNames` so nested/local `def`s
+  steer clear too.
+- **Impact:** all 128 harvestable corpus functions now transpile and agree with
+  the oracle, **batched** as well as alone; `_KNOWN_OPEN_NS` is empty.
+
+### Known-open
+
+None. Every gap surfaced by the Phase-1 corpus expansion (F14–F18) is fixed;
+`corpus_frags._KNOWN_OPEN_NS` is empty. (`List.get!`/`Array.get!` — the *named*
+method, not `[i]!` — still inlines Lean's panic machinery into garbage, but no
+corpus function uses it, and the grammar/corpus fuzzers never generate it.)
 
 ## Bugs found by the round-trip differential harness
 
@@ -374,11 +411,12 @@ After every fix the full matrix is re-run green:
 
 ## Summary
 
-19 transpiler bugs found and fixed across this work — 4 by the round-trip
-differential harness (R1–R4), 11 by the grammar-based fuzzer (F1–F11), 3 by
-fragment-reuse + Phase-1 type expansion (F12–F14), plus the upgrade-era set
+23 transpiler bugs found and fixed across this work — 4 by the round-trip
+differential harness (R1–R4), 11 by the grammar-based fuzzer (F1–F11), 7 by
+fragment-reuse + Phase-1 type expansion (F12–F18), plus the upgrade-era set
 — of which **six were silent wrong-value / total-operation bugs** (truncated
 `Nat` subtraction, Euclidean `Int` division and modulo, two `OfNat` literal
 collisions, and `Nat`/`Int` division-by-zero) that no crash-based check catches
 on its own. The differential oracle (Lean's `#eval`) is what makes those
-catchable.
+catchable. After F14–F17, all 128 harvestable corpus functions transpile
+correctly (up from 78 before the String/Char/Array expansion).

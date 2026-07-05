@@ -40,6 +40,31 @@ def clampHigh (v hi : Nat) : Nat := Nat.min v hi
     `Inhabited` instance as an argument, both referencing unbound names. -/
 def indexBang (xs : List Nat) (i : Nat) : Nat := xs[i]!
 
+/-- (4) Tail-recursive helper whose match-arm continuation both carries the
+    recursion AND is deferred-lambda-eligible.  Pre-fix, the continuation
+    rendered as a call to an unemitted `_uniq_NNN` helper (undefined name); the
+    fix that materialized it then exposed a `continue` inside a nested `def`.
+    This mirrors `Corpus.Strings.splitOn`'s `go`. -/
+def dropUntilZero (xs : List Nat) : List Nat :=
+  let rec go (ys : List Nat) : List Nat :=
+    match ys with
+    | [] => []
+    | y :: rest => if y == 0 then rest else go rest
+  go xs
+
+-- (5) Name-collision (F18): two functions in different namespaces both map to
+-- the Python name `tally`.  Pre-fix, the later `def` shadowed the earlier, so a
+-- call to one ran the other's body.  `useTally` calls `A.tally`; if collision
+-- de-dup fails it would run `B.tally` (a different function) and give a wrong
+-- answer.  Mirrors `Corpus.Sorting.mode.count` vs `Corpus.Strings.count`.
+namespace ModA
+def tally (xs : List Nat) : Nat := xs.foldl (· + ·) 0   -- sum
+end ModA
+namespace ModB
+def tally (xs : List Nat) : Nat := xs.length            -- count (different!)
+end ModB
+def useTally (xs : List Nat) : Nat := ModA.tally xs      -- must be the SUM
+
 end RegressionFixes
 
 #eval show CoreM Unit from do
@@ -49,5 +74,9 @@ end RegressionFixes
       ``RegressionFixes.minNat,
       ``RegressionFixes.maxNat,
       ``RegressionFixes.clampHigh,
-      ``RegressionFixes.indexBang ]
+      ``RegressionFixes.indexBang,
+      ``RegressionFixes.dropUntilZero,
+      ``RegressionFixes.ModA.tally,
+      ``RegressionFixes.ModB.tally,
+      ``RegressionFixes.useTally ]
   IO.println code

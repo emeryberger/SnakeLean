@@ -106,14 +106,12 @@ def _parse_sig(header):
 
 
 # Namespaces with KNOWN-OPEN transpiler bugs, excluded from harvesting so the
-# sweep stays a clean regression signal.  `Corpus.Strings.*` still hits a
-# helper-scoping bug: a nested `let rec`/`where` helper (e.g. inside `splitOn`)
-# isn't collected, so a deferred lambda references an undefined `_uniq_NNN`.
-# (The missing String/List/Array builtins it also used — startsWith, dropWhile,
-# replicate, dropLast, swapIfInBounds, isPrefixOf — are now FIXED, as is the
-# `_x_NNN` getElem! bug that had also afflicted `Corpus.Production`; Production is
-# no longer excluded.)  Remove this prefix once the helper-scoping bug is fixed.
-_KNOWN_OPEN_NS = ("Corpus.Strings.",)
+# sweep stays a clean regression signal.  Now EMPTY: every Phase-1 gap is fixed
+# (F14 method fall-throughs, F15 getElem!, F16 missing builtins, F17
+# helper-scoping/`_uniq_NNN`, F18 cross-function name collisions).  Every
+# harvestable corpus function transpiles and agrees with the oracle, alone and
+# batched.  Add a prefix back here only if a new bug is found and deferred.
+_KNOWN_OPEN_NS = ()
 
 
 def _is_known_open(qual):
