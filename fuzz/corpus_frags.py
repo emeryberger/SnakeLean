@@ -108,9 +108,9 @@ def _parse_sig(header):
 # Namespaces with KNOWN-OPEN transpiler bugs, excluded from harvesting so the
 # sweep stays a clean regression signal.  Now EMPTY: every Phase-1 gap is fixed
 # (F14 method fall-throughs, F15 getElem!, F16 missing builtins, F17
-# helper-scoping/`_uniq_NNN`).  Every harvestable corpus function transpiles and
-# agrees with the oracle.  Add a prefix back here only if a new bug is found and
-# deferred to a follow-up.
+# helper-scoping/`_uniq_NNN`, F18 cross-function name collisions).  Every
+# harvestable corpus function transpiles and agrees with the oracle, alone and
+# batched.  Add a prefix back here only if a new bug is found and deferred.
 _KNOWN_OPEN_NS = ()
 
 

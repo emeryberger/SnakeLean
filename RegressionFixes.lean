@@ -52,6 +52,19 @@ def dropUntilZero (xs : List Nat) : List Nat :=
     | y :: rest => if y == 0 then rest else go rest
   go xs
 
+-- (5) Name-collision (F18): two functions in different namespaces both map to
+-- the Python name `tally`.  Pre-fix, the later `def` shadowed the earlier, so a
+-- call to one ran the other's body.  `useTally` calls `A.tally`; if collision
+-- de-dup fails it would run `B.tally` (a different function) and give a wrong
+-- answer.  Mirrors `Corpus.Sorting.mode.count` vs `Corpus.Strings.count`.
+namespace ModA
+def tally (xs : List Nat) : Nat := xs.foldl (· + ·) 0   -- sum
+end ModA
+namespace ModB
+def tally (xs : List Nat) : Nat := xs.length            -- count (different!)
+end ModB
+def useTally (xs : List Nat) : Nat := ModA.tally xs      -- must be the SUM
+
 end RegressionFixes
 
 #eval show CoreM Unit from do
@@ -62,5 +75,8 @@ end RegressionFixes
       ``RegressionFixes.maxNat,
       ``RegressionFixes.clampHigh,
       ``RegressionFixes.indexBang,
-      ``RegressionFixes.dropUntilZero ]
+      ``RegressionFixes.dropUntilZero,
+      ``RegressionFixes.ModA.tally,
+      ``RegressionFixes.ModB.tally,
+      ``RegressionFixes.useTally ]
   IO.println code

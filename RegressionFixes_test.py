@@ -50,6 +50,12 @@ check("index_bang([10,20,30], 0)", index_bang([10, 20, 30], 0), 10)
 check("drop_until_zero([1,2,0,3])", drop_until_zero([1, 2, 0, 3]), [3])
 check("drop_until_zero([1,2,3])", drop_until_zero([1, 2, 3]), [])
 
+# (5) name collision: use_tally calls ModA.tally (sum), which must NOT be
+# shadowed by ModB.tally (length). [1,2,3] -> sum 6, not length 3.
+use_tally = ns["use_tally"]
+check("use_tally([1,2,3])", use_tally([1, 2, 3]), 6)
+check("use_tally([4,5])", use_tally([4, 5]), 9)
+
 if failures:
     print("FAIL:")
     for f in failures:

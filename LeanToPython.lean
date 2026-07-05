@@ -126,6 +126,15 @@ structure State where
       generative grammar never reached). Populated via `markHandler`; dumped by
       `emitPythonForDecls` as a `### HANDLERS` stderr line. -/
   firedHandlers : Std.HashSet String := {}
+  /-- Global de-duplicated Python names for top-level (and helper) declarations,
+      keyed by the full Lean `Name`.  `toPyFnName` maps some distinct Lean
+      functions to the SAME short Python name (e.g. `Corpus.Sorting.mode.count`
+      and `Corpus.Strings.count` both → `count`); when several such functions are
+      emitted into one file the later `def` shadows the earlier, and calls
+      resolve to the wrong body.  A pre-pass (`assignGlobalFnNames`) fills this
+      map, suffixing collisions (`count`, `count_2`, …); `pyFnName` consults it so
+      the `def` and every call site agree on the unique name. -/
+  globalFnNames : Std.HashMap Name String := {}
 
 abbrev EmitM := ReaderT Context StateRefT State CompilerM
 
@@ -297,6 +306,15 @@ def getVarName (fvarId : FVarId) : EmitM String := do
 def knownVarName? (fvarId : FVarId) : EmitM (Option String) := do
   let fvarId ← resolveAlias fvarId
   return (← get).varNames[fvarId]?
+
+/-- The Python name for a top-level/helper declaration `name`, using the global
+    de-duplicated map when present (see `State.globalFnNames`) and falling back
+    to the pure `toPyFnName` otherwise.  Both the `def` and every call site route
+    through this so a collision-suffixed name (`count_2`) is used consistently. -/
+def pyFnName (name : Name) : EmitM String := do
+  match (← get).globalFnNames[name]? with
+  | some n => return n
+  | none => return toPyFnName name
 
 /-- Alias one variable to another -/
 def aliasVar (from_ to_ : FVarId) : EmitM Unit :=
@@ -1960,7 +1978,7 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
     -- to a real Python def is fine — the report only alarms on core namespaces.)
     markHandler s!"fallthrough.{declName.toString (escape := false)}"
     emitIndent
-    emit s!"{varName} = {toPyFnName declName}("
+    emit s!"{varName} = {← pyFnName declName}("
     emitArgs args
     emit ")\n"
   | .fvar fnVar args =>
@@ -2432,7 +2450,7 @@ partial def emitTailStep (params : Array String) (args : Array Arg) : EmitM Unit
     -- to a plain recursive call so we never emit wrong code (correct, just not
     -- stack-optimized).
     emitIndent
-    emit s!"return {toPyFnName declName}("
+    emit s!"return {← pyFnName declName}("
     emitArgs args
     emit ")\n"
     return
@@ -2805,7 +2823,7 @@ end
 /-! ## Declaration Emission -/
 
 def emitDecl (decl : Decl) : EmitM Unit := do
-  let fnName := toPyFnName decl.name
+  let fnName ← pyFnName decl.name
   -- Emit a comment with the full Lean name for traceability
   emitLn s!"# Lean: {decl.name}"
   emitIndent
@@ -3038,6 +3056,23 @@ def emitPythonForDecls (modName : Name) (decls : Array Decl) : CompilerM String 
   -- First collect custom types
   let customTypes ← collectTypesFromDecls decls
   let ctx : Context := { modName }
+  -- Global name de-duplication (F18): distinct top-level decls can map to the
+  -- same `toPyFnName` (e.g. `Corpus.Sorting.mode`'s helper `count` vs
+  -- `Corpus.Strings.count`), so the later `def` would shadow the earlier and
+  -- calls resolve wrong.  Assign each decl a unique Python name up front,
+  -- suffixing collisions (`count`, `count_2`, …), and pre-seed `usedNames` so
+  -- nested/local `def`s (via `registerVar`) also steer clear of these names.
+  let mut fnNames : Std.HashMap Name String := {}
+  let mut used : Std.HashSet String := {}
+  for decl in decls do
+    let base := toPyFnName decl.name
+    let mut nm := base
+    let mut i := 2
+    while used.contains nm do
+      nm := s!"{base}_{i}"
+      i := i + 1
+    used := used.insert nm
+    fnNames := fnNames.insert decl.name nm
   let (_, st) ← (do
     emitFileHeader
     -- Emit custom inductive types
@@ -3046,7 +3081,7 @@ def emitPythonForDecls (modName : Name) (decls : Array Decl) : CompilerM String 
     -- Emit function declarations
     for decl in decls do
       emitDecl decl
-  ).run ctx |>.run {}
+  ).run ctx |>.run { globalFnNames := fnNames, usedNames := used }
   -- Self-coverage: append which handlers fired as trailing Python COMMENTS.
   -- Comments are inert to `exec`, so they ride safely inside the fuzzer's
   -- `### PYTHON` section (a `#eval`'s `IO.eprintln` gets captured to the same
