@@ -56,6 +56,38 @@ use_tally = ns["use_tally"]
 check("use_tally([1,2,3])", use_tally([1, 2, 3]), 6)
 check("use_tally([4,5])", use_tally([4, 5]), 9)
 
+# (6) loop-mode find? predicate: must compile (no undefined _uniq_NNN) and find
+# the pair whose first component equals k.
+look_loop = ns["look_loop"]
+check("look_loop([(1,9),(2,8)], 2)", look_loop([(1, 9), (2, 8)], 2), True)
+check("look_loop([(1,9),(2,8)], 5)", look_loop([(1, 9), (2, 8)], 5), False)
+
+# (7) point-free predicates passed to filter (Option.isSome + a user fn).
+count_some = ns["count_some"]
+count_big = ns["count_big"]
+check("count_some([1,None,3,None])", count_some([1, None, 3, None]), 2)
+check("count_big([1,5,2,9])", count_big([1, 5, 2, 9]), 2)
+
+# (8) Option.map / List.zip / List.set (setTR).
+bump = ns["bump"]
+pair_up = ns["pair_up"]
+set_at = ns["set_at"]
+check("bump(4)", bump(4), 5)
+check("bump(None)", bump(None), None)
+check("pair_up([1,2,3],[4,5,6])", pair_up([1, 2, 3], [4, 5, 6]), [(1, 4), (2, 5), (3, 6)])
+check("set_at([1,2,3], 1, 9)", set_at([1, 2, 3], 1, 9), [1, 9, 3])
+
+# (9) List.head?/getLast? applied over the value arg only.
+first_of = ns["first_of"]
+last_of = ns["last_of"]
+check("first_of([7,8,9])", first_of([7, 8, 9]), 7)
+check("first_of([])", first_of([]), None)
+check("last_of([7,8,9])", last_of([7, 8, 9]), 9)
+
+# (10) nullary user value used point-free must be CALLED: prepend_base(5) = [5, 0].
+prepend_base = ns["prepend_base"]
+check("prepend_base(5)", prepend_base(5), [5, 0])
+
 if failures:
     print("FAIL:")
     for f in failures:

@@ -1497,6 +1497,28 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
           emitIndent
           emit s!"{varName} = {pyFn}\n"
           return
+      -- A self-contained lambda mapping (`(lambda …)`, no `{}` placeholder), e.g.
+      -- `List.head?`/`getLast?`/`take`/`drop`/`Option.getD`.  The bare-callable
+      -- path above rejects it (it has parens/spaces), so without this it fell
+      -- through to an undefined snake name (`head_`, `get_last_`).  Handle both
+      -- shapes: point-free (`xs.filter Option.isSome` — 0 value args → the lambda
+      -- itself) and applied (`s.toList.head?` → `(lambda …)(xs)` over the value
+      -- args, in Lean order).
+      else if !(containsSubstr pyFn "{}") then
+        -- Only the VALUE args (drop erased type/instance args, which render as
+        -- `None`): `List.head?` reaches us as `head?(<type>, xs)`, so passing all
+        -- args would call the 1-param lambda with `(None, xs)`.
+        let mut valArgs : Array Arg := #[]
+        for a in args do
+          match a with
+          | .fvar fv => if !(← get).unitVars.contains fv then valArgs := valArgs.push a
+          | _ => pure ()
+        emitIndent
+        if valArgs.isEmpty then
+          emit s!"{varName} = {pyFn}\n"
+        else
+          emit s!"{varName} = {pyFn}({← renderArgs valArgs})\n"
+        return
     -- Special handling for List.map and List.filter - use idiomatic list
     -- comprehensions.  Lean 4.31 lowers `List.map`/`filter`/`filterMap` to their
     -- tail-recursive counterparts (`List.mapTR` etc.) in LCNF, with the same
@@ -1673,6 +1695,14 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
         emitArg args[args.size - 2]!
         emit ") else None\n"
         return
+    -- List.zip - pair up two lists elementwise (`List (α × β)`).
+    if declName == ``List.zip then
+      if args.size >= 2 then
+        let xs ← renderArg args[args.size - 2]!
+        let ys ← renderArg args[args.size - 1]!
+        emitIndent
+        emit s!"{varName} = list(zip({xs}, {ys}))\n"
+        return
     -- List.zipIdx (was List.enum) - enumerate with indices
     if declName == ``List.zipIdx then
       if args.size >= 1 then
@@ -1681,8 +1711,10 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
         emitArg args[args.size - 1]!
         emit "))\n"
         return
-    -- List.set - update element at index
-    if declName == ``List.set then
+    -- List.set - update element at index.  Lean 4.31 lowers `List.set` to its
+    -- tail-recursive `List.setTR` in LCNF (same `(…, xs, i, v)` value-arg shape),
+    -- so recognize both spellings.
+    if declName == ``List.set || declName == ``List.setTR then
       if args.size >= 3 then
         emitIndent
         emit s!"{varName} = "
@@ -1731,6 +1763,14 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
         emit ", "
         emitArg args[args.size - 1]!  -- function
         emit ")\n"
+        return
+    -- Option.map - apply f inside Some (Lean arg order: `Option.map f o`).
+    if declName == ``Option.map then
+      if args.size >= 2 then
+        let f ← renderArg args[args.size - 2]!   -- function
+        let o ← renderArg args[args.size - 1]!   -- option
+        emitIndent
+        emit s!"{varName} = (lambda f, opt: None if opt is None else f(opt))({f}, {o})\n"
         return
     -- List.find? - find first element matching predicate
     if declName == ``List.find? then
@@ -1967,6 +2007,28 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
         emitIndent
         emit s!"{varName} = (lambda a, b: a ^ b)\n"
         return
+    -- Option.isSome / isNone.  These map (in `stdlibFnToPython?`) to a `(lambda …)`
+    -- value, which the bare-callable path above skips (it has parens/spaces), so
+    -- without this they fall through to an undefined snake name (`is_some`).
+    -- Handle both shapes: applied (`Option.isSome x` → `(x is not None)`) and
+    -- point-free (`xs.filter Option.isSome` → the lambda itself as a value).
+    if declName == ``Option.isSome || declName == ``Option.isNone then
+      let cmp := if declName == ``Option.isSome then "is not None" else "is None"
+      emitIndent
+      -- Distinguish applied (`o.isSome` → `(o is not None)`) from point-free
+      -- (`xs.filter Option.isSome`).  In the point-free case LCNF passes the
+      -- eta-placeholder `Option.none`, which renders as the literal `None`; that
+      -- binding is later CALLED (`pred(x)`), so it must be the lambda, not the
+      -- bool `(None is not None)`.  Any other (real) argument is a true applied use.
+      let applied ← (do
+        if args.size >= 1 then
+          let a ← renderArg args[args.size - 1]!
+          return if a == "None" then none else some a
+        else return none)
+      match applied with
+      | some a => emit s!"{varName} = ({a} {cmp})\n"
+      | none   => emit s!"{varName} = (lambda x: x {cmp})\n"
+      return
     -- Regular function call — the generic fallback for any const not handled by
     -- a special case above.  Self-coverage: tag it `fallthrough.<declName>`.  A
     -- *core-namespace* construct (List/Nat/Int/String/Char/Array/Option/…) that
@@ -1977,10 +2039,31 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
     -- regress a handler unnoticed.  (A user function legitimately falling through
     -- to a real Python def is fine — the report only alarms on core namespaces.)
     markHandler s!"fallthrough.{declName.toString (escape := false)}"
+    -- With no value args, disambiguate two very different point-free consts:
+    --   * a FUNCTION-typed const passed unapplied (e.g. `xs.filter Card.isAce`):
+    --     emit the bare name (`= is_ace`), a reference the combinator will call.
+    --   * a NULLARY value const (e.g. `Trie.empty : Trie`, which transpiles to a
+    --     `def trie_empty()`): CALL it (`= trie_empty()`) — a bare name would bind
+    --     the function object, not its value, silently corrupting downstream use.
+    -- The discriminator is whether the const's Lean type is a function (pi) type.
+    let mut anyVal := false
+    for a in args do
+      match a with
+      | .fvar fv => if !(← get).unitVars.contains fv then anyVal := true
+      | _ => pure ()
     emitIndent
-    emit s!"{varName} = {← pyFnName declName}("
-    emitArgs args
-    emit ")\n"
+    if anyVal then
+      emit s!"{varName} = {← pyFnName declName}("
+      emitArgs args
+      emit ")\n"
+    else
+      let isFnTyped := match env.find? declName with
+        | some ci => ci.type.isForall
+        | none => false
+      if isFnTyped then
+        emit s!"{varName} = {← pyFnName declName}\n"
+      else
+        emit s!"{varName} = {← pyFnName declName}()\n"
   | .fvar fnVar args =>
     -- Try to inline instance operations
     if ← tryEmitInlinedOp varName fnVar args then
@@ -2226,6 +2309,32 @@ partial def codeHasSelfCall (declName : Name) (c : Code) : Bool :=
       match alt with | .alt _ _ code => codeHasSelfCall declName code | .default code => codeHasSelfCall declName code)
   | _ => false
 
+/-- Like `codeHasSelfCall`, but ALSO treats a call/jump to any fvar in `carriers`
+    as carrying the recursion.  In loop mode the recursion is often buried one
+    level of indirection deep: a continuation thunk `_f` whose body calls another
+    thunk `_uniq` that itself self-calls.  `_f` never names `declName` directly,
+    so plain `codeHasSelfCall` misses it and `_f` gets emitted as a nested `def`
+    that references the (suppressed, never-emitted) `_uniq`.  Passing the set of
+    known recursion-carrying thunks (the `inlineThunks` keys) closes that gap so
+    `_f` is inlined too. -/
+partial def codeHasRecursion (declName : Name) (carriers : Std.HashMap FVarId FunDecl)
+    (c : Code) : Bool :=
+  match c with
+  | .let decl k =>
+    (match decl.value with
+     | .const n _ _ => n == declName
+     | .fvar fv _ => carriers.contains fv
+     | _ => false)
+      || codeHasRecursion declName carriers k
+  | .fun d k | .jp d k =>
+    codeHasRecursion declName carriers d.value || codeHasRecursion declName carriers k
+  | .jmp f _ => carriers.contains f
+  | .cases cs => cs.alts.any (fun alt =>
+      match alt with
+      | .alt _ _ code => codeHasRecursion declName carriers code
+      | .default code => codeHasRecursion declName carriers code)
+  | _ => false
+
 /-- Count call sites (`_x := f args` with args, or `jmp f`) targeting each
     local function, resolving through the zero-arg alias map so `_alt := _f`
     chains attribute the call to `_f`. -/
@@ -2318,9 +2427,10 @@ partial def emitCode (code : Code) : EmitM Unit := do
     emitCode k
   | .fun decl k =>
     -- In loop mode, defer emitting a `def` for a continuation thunk that
-    -- carries the recursion; it will be inlined at its tail-call site.
+    -- carries the recursion (directly, or via another already-deferred thunk);
+    -- it will be inlined at its tail-call site.
     if let some (declName, _) := (← get).tailLoop then
-      if codeHasSelfCall declName decl.value then
+      if codeHasRecursion declName (← get).inlineThunks decl.value then
         modify fun s => { s with inlineThunks := s.inlineThunks.insert decl.fvarId decl }
         emitCode k
         return
@@ -2376,7 +2486,7 @@ partial def emitLocalFun (decl : FunDecl) : EmitM Unit := do
   -- `continue`.  (Surfaced once the helper-scoping fix stopped mis-rendering
   -- such thunks as `_uniq_NNN` calls.)
   if let some (declName, _) := (← get).tailLoop then
-    if codeHasSelfCall declName decl.value then
+    if codeHasRecursion declName ((← get).inlineThunks) decl.value then
       modify fun s => { s with inlineThunks := s.inlineThunks.insert decl.fvarId decl }
       return
   -- Count non-unit params for arity tracking
@@ -2402,17 +2512,19 @@ partial def emitLocalFun (decl : FunDecl) : EmitM Unit := do
       | none =>
         -- Roll back render-time mutations.
         set snapshot
-        -- In loop mode, a lambda whose body didn't render as a pure expression
-        -- may carry a tail `continue` (its body references the loop's recursion,
-        -- e.g. a match-arm continuation whose self-call `codeHasSelfCall` can't
-        -- see through an alias/jmp).  Emitting it as a nested `def` would put a
-        -- `continue` outside its loop.  Route it to `inlineThunks` so it's
-        -- inlined at its tail-call site instead.  (Pure non-recursive loop-body
-        -- lambdas are inlined harmlessly too — their bodies just have no
-        -- `continue`.)
+        -- In loop mode, a lambda whose body carries the recursion must be
+        -- INLINED at its tail-call site (a nested `def` couldn't `continue` the
+        -- enclosing loop).  Only divert to `inlineThunks` when the body actually
+        -- self-calls, though: a NON-recursive loop-body lambda (e.g. a `find?`
+        -- predicate `fun (ch,_) => ch == c`) is referenced BY NAME from the
+        -- consuming comprehension (`fnCompParts`/`renderArg`), so diverting it
+        -- would leave that reference pointing at a `_uniq_NNN` def that never
+        -- gets emitted.  Such a lambda must fall through to a real nested `def`.
         if (← get).tailLoop.isSome then
-          modify fun s => { s with inlineThunks := s.inlineThunks.insert decl.fvarId decl }
-          return
+          if let some (declName, _) := (← get).tailLoop then
+            if codeHasRecursion declName ((← get).inlineThunks) decl.value then
+              modify fun s => { s with inlineThunks := s.inlineThunks.insert decl.fvarId decl }
+              return
   let fnName ← registerVar decl.fvarId decl.binderName
   -- Track both for partial application detection
   modify fun s => { s with localFnArities := s.localFnArities.insert decl.fvarId (nonUnitParams, totalParams) }
@@ -2420,8 +2532,16 @@ partial def emitLocalFun (decl : FunDecl) : EmitM Unit := do
   emit s!"def {fnName}("
   emitFunParams decl.params
   emit "):\n"
+  -- Clear `tailLoop` while emitting the nested `def`'s body: the loop belongs to
+  -- the ENCLOSING function, and a self-call reachable only through a hidden
+  -- alias/jmp inside this lambda (which `codeHasSelfCall` above didn't see) must
+  -- emit as a plain recursive `return f(...)`, never a bare `continue` illegal
+  -- outside the loop.  Restore it after (a sibling continuation may still tail-loop).
+  let savedLoop := (← get).tailLoop
+  modify fun s => { s with tailLoop := none }
   withIndent do
     emitCode decl.value
+  modify fun s => { s with tailLoop := savedLoop }
 
 partial def emitJoinPoint (decl : FunDecl) : EmitM Unit := do
   let jpName ← registerVar decl.fvarId decl.binderName
@@ -3041,6 +3161,7 @@ def knownHandlerTags : List String := [
   "const.List.dropWhile", "const.List.takeWhile",
   -- Option
   "const.Option.some", "const.Option.none", "const.Option.bind",
+  "const.Option.map",
   "const.Option.isSome", "const.Option.isNone", "const.Option.getD",
   -- Prod / bool / decide / misc
   "const.Prod.mk", "const.Bool.true", "const.Bool.false", "const.getElem?",

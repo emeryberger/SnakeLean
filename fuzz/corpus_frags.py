@@ -188,25 +188,161 @@ def _resolve_type(ty, ns_prefixes=()):
 _UNSAFE_TO_CONSTRUCT = ("UnionFind",)
 
 
+# ---------------------------------------------------------------------------
+# Type-string structure.  A field / signature type is one of: a base type in
+# `gen.LEAN_TYPES` (drives gen.py's value/serializer machinery directly); a
+# container `List T` / `Array T` / `Option T`; a binary product `T₁ × T₂`; or a
+# (fully-qualified, in `_TYPE_INFO`) user type.  These small parsers decompose a
+# type string so the value generator, Lean-literal emitter, JSON emitter, and
+# serializer emitter can all recurse over the SAME structure — the single reason
+# containers-over-user-types (`List Card`) and recursive types (`Expr`, `Trie`,
+# `JsonValue`) become constructible.
+# ---------------------------------------------------------------------------
+
+def _strip_outer_parens(s):
+    """Remove one fully-enclosing paren pair from `s` (e.g. `(Nat × Nat)` ->
+    `Nat × Nat`); leave `s` alone if the leading `(` doesn't match the trailing
+    `)` (e.g. `(Nat × Nat) × Bool`)."""
+    s = s.strip()
+    if not (s.startswith("(") and s.endswith(")")):
+        return s
+    depth = 0
+    for i, c in enumerate(s):
+        if c == "(":
+            depth += 1
+        elif c == ")":
+            depth -= 1
+            if depth == 0:
+                return s[1:-1].strip() if i == len(s) - 1 else s
+    return s
+
+
+def _split_top_pair(s):
+    """Index of the FIRST top-level `×` in `s` (outside any parens/brackets), or
+    -1.  `×` is the lowest-precedence type operator, so a top-level `×` means the
+    whole type is a product — checked BEFORE `List`/`Array`/`Option` prefixes so
+    `List Nat × List Nat` parses as a product, not a `List (Nat × List Nat)`."""
+    depth = 0
+    for i, c in enumerate(s):
+        if c in "([":
+            depth += 1
+        elif c in ")]":
+            depth -= 1
+        elif c == "×" and depth == 0:
+            return i
+    return -1
+
+
+def _pair(s):
+    """If `s` is a top-level binary product `T₁ × T₂`, return (T₁, T₂) (parens
+    stripped); else None.  Splits at the first top-level `×` (products in the
+    corpus are binary)."""
+    s = _strip_outer_parens(s)
+    i = _split_top_pair(s)
+    if i < 0:
+        return None
+    return _strip_outer_parens(s[:i]), _strip_outer_parens(s[i + 1:])
+
+
+def _container(s):
+    """If `s` is `List T` / `Array T` / `Option T`, return (`List`/`Array`/
+    `Option`, T); else None.  `T` is returned with any enclosing parens stripped
+    so callers can recurse on it directly.  A top-level product (`… × …`) is NOT a
+    container even when it starts with `List` (`List Nat × Bool`)."""
+    s = _strip_outer_parens(s)
+    if _split_top_pair(s) >= 0:
+        return None
+    for pfx in ("List", "Array", "Option"):
+        if s.startswith(pfx + " "):
+            return pfx, _strip_outer_parens(s[len(pfx) + 1:])
+    return None
+
+
+# Minimal term-depth: the height of the SMALLEST value of a type.  This is what
+# makes depth-bounded generation of recursive types (`Expr`, `JsonValue`, `Trie`)
+# terminate: with a remaining budget, we prefer constructors we can finish within
+# it, but always fall back to a minimal-depth constructor when the budget runs
+# out — so the tree can always be capped off with a base case (`Expr.num`,
+# `JsonValue.null`, `Trie.node _ []`).  A user type with NO finite value (no base
+# case) has infinite min-depth and is therefore not constructible.
+#
+# Conventions: base types and (force-emptyable) containers/options have depth 0;
+# a product is the max of its components; a user constructor is 1 + the max of its
+# field depths (nullary → 1); a user type is the min over its constructors.
+_MIN_DEPTH = None
+_INF = float("inf")
+
+
+def _md_field(ty, md):
+    """Minimal depth to construct a value of field type `ty`, given the per-user-
+    type map `md`.  Containers/options are 0 (empty/none); products max their
+    components; bare user types read `md` (default ∞ until computed)."""
+    ty = ty.strip()
+    if ty in gen.LEAN_TYPES or ty in _HARVESTABLE:
+        return 0
+    if _container(ty):
+        return 0               # empty list / `none` — a finite value at any budget
+    p = _pair(ty)
+    if p:
+        return max(_md_field(p[0], md), _md_field(p[1], md))
+    return md.get(ty, _INF)
+
+
+def _md_ctor(fields, md):
+    """Minimal depth of a value built with constructor `fields`: 1 + max field
+    depth (a nullary constructor is depth 1)."""
+    return 1 + (max((_md_field(f, md) for f in fields), default=0))
+
+
+def _min_depths():
+    """Fixpoint map {user_type: minimal term-depth} (∞ if it has no finite value)."""
+    global _MIN_DEPTH
+    if _MIN_DEPTH is not None:
+        return _MIN_DEPTH
+    info = _load_type_info()
+    md = {ty: _INF for ty in info}
+    changed = True
+    while changed:
+        changed = False
+        for ty, ctors in info.items():
+            best = min((_md_ctor(fields, md) for (_c, fields) in ctors),
+                       default=_INF)
+            if best < md[ty]:
+                md[ty] = best
+                changed = True
+    _MIN_DEPTH = md
+    return md
+
+
 def _is_constructible(ty, stack=()):
-    """Can the fuzzer build a value of Lean type `ty`?  True for base-harvestable
-    types and for user types whose every constructor's fields are all
-    constructible.  `stack` guards against recursive types (Expr → Expr): a type
-    that recurses through itself is treated as NOT constructible (no depth bound
-    yet)."""
-    if ty in _HARVESTABLE:
+    """Can the fuzzer build a value of Lean type `ty`?  True for base types,
+    containers/products over constructible element types, and user types that
+    (a) have a finite value (finite minimal term-depth — a base case) and
+    (b) have every constructor field constructible.  A field that refers back to
+    a type already on `stack` is allowed — recursion is handled by the depth-
+    bounded generator — so recursive types (`Expr`, `Trie`, `JsonValue`) are now
+    constructible, unlike before."""
+    ty = ty.strip()
+    if ty in _HARVESTABLE or ty in gen.LEAN_TYPES:
         return True
+    c = _container(ty)
+    if c:
+        return _is_constructible(c[1], stack)
+    p = _pair(ty)
+    if p:
+        return all(_is_constructible(x, stack) for x in p)
     info = _load_type_info()
     if ty not in info:
-        return False
+        return False           # unknown / Float / function type
     if any(ty.endswith(u) for u in _UNSAFE_TO_CONSTRUCT):
         return False
-    if ty in stack:            # recursive — bail (would need a depth bound)
-        return False
+    if ty in stack:            # recursive back-reference — the depth bound covers it
+        return True
     if ty in _CONSTRUCTIBLE:
         return _CONSTRUCTIBLE[ty]
-    ok = all(all(_is_constructible(f, stack + (ty,)) for f in fields)
-             for (_ctor, fields) in info[ty])
+    ok = (_min_depths().get(ty, _INF) != _INF and
+          all(all(_is_constructible(f, stack + (ty,)) for f in fields)
+              for (_ctor, fields) in info[ty]))
     _CONSTRUCTIBLE[ty] = ok
     return ok
 
@@ -235,14 +371,25 @@ def _py_ctor_name(ctor_full):
     return s
 
 
-def _rand_user_value(rng, ty):
-    """A random value of constructible user type `ty`, as a dict
-    `{"__ctor__": full_ctor_name, "fields": [values...]}`.  Field values are
-    generated recursively (base types via `_rand_input`, user types via this)."""
+def _rand_user_value(rng, ty, depth):
+    """A random value of constructible user type `ty` at recursion budget `depth`,
+    as a dict `{"__ctor__": full_ctor_name, "fields": [values...]}`.
+
+    Termination: choose only among constructors *affordable* within `depth`
+    (minimal term-depth ≤ depth+1); if the budget is too small for any, fall back
+    to the minimal-depth constructor(s) so the tree is always capped by a base
+    case (`Expr.num`, `JsonValue.null`, `Trie.node _ []`).  Fields recurse with
+    `depth-1`, and container fields are forced empty at depth ≤ 0 in
+    `_rand_input`, so recursion always bottoms out."""
+    md = _min_depths()
     ctors = _load_type_info()[ty]
-    ctor, fields = rng.choice(ctors)
+    affordable = [(c, f) for (c, f) in ctors if _md_ctor(f, md) <= depth + 1]
+    if not affordable:
+        best = min(_md_ctor(f, md) for (_c, f) in ctors)
+        affordable = [(c, f) for (c, f) in ctors if _md_ctor(f, md) == best]
+    ctor, fields = rng.choice(affordable)
     return {"__ctor__": ctor,
-            "fields": [_rand_input(rng, f) for f in fields]}
+            "fields": [_rand_input(rng, f, depth - 1) for f in fields]}
 
 
 def _user_lean_lit(ty, v):
@@ -349,16 +496,28 @@ def _parse_sig(header, ns_prefixes=()):
 
 
 # Namespaces with KNOWN-OPEN transpiler bugs, excluded from harvesting so the
-# sweep stays a clean regression signal.  Now EMPTY: every Phase-1 gap is fixed
-# (F14 method fall-throughs, F15 getElem!, F16 missing builtins, F17
-# helper-scoping/`_uniq_NNN`, F18 cross-function name collisions).  Every
-# harvestable corpus function transpiles and agrees with the oracle, alone and
-# batched.  Add a prefix back here only if a new bug is found and deferred.
+# sweep stays a clean regression signal.  Phase-1 gaps are all fixed (F14 method
+# fall-throughs, F15 getElem!, F16 missing builtins, F17 helper-scoping/`_uniq`,
+# F18 cross-function name collisions), as are the recursive/container-type gaps
+# (loop-mode `find?` predicate, Option.isSome/map point-free, List.setTR/zip,
+# point-free user fns, nullary-const call, transitive loop recursion).
 _KNOWN_OPEN_NS = ()
+
+# Individual functions with a KNOWN, DEFERRED transpiler limitation, excluded by
+# exact qualified name (a signature-level exclusion can't reach them — the issue
+# is in the body, not the types).
+#   * TicTacToe.validMoves indexes a `List (Option Player)` with `[i]?` and
+#     matches `some none`.  Python models `Option` as `None`, so the outer
+#     `some none` (empty cell) and the out-of-bounds `none` COLLAPSE to the same
+#     `None` — the classic nested-Option faithfulness gap.  A faithful fix needs
+#     a sentinel-based Option representation (a large redesign); deferred.  See
+#     CLAUDE.md "Known Limitations".
+_KNOWN_OPEN_FNS = ("Corpus.Games.TicTacToe.validMoves",)
 
 
 def _is_known_open(qual):
-    return any(qual.startswith(ns) for ns in _KNOWN_OPEN_NS)
+    return (any(qual.startswith(ns) for ns in _KNOWN_OPEN_NS)
+            or qual in _KNOWN_OPEN_FNS)
 
 
 def harvest(corpus_dir=CORPUS_DIR, include_known_open=False):
@@ -421,7 +580,18 @@ CORPUS_PRELUDE = gen.PRELUDE.replace(
 _MAX_NAT = 8
 
 
-def _rand_input(rng, ty):
+# Depth budget for recursive user-type generation (Expr/JsonValue/Trie): the
+# maximum constructor nesting.  Small — the transpiler bugs live in the recursive
+# `match` structure, which even depth 1-2 exercises, and deep trees blow up the
+# oracle `#eval` cost.  Container elements at the top level also draw from this.
+_MAX_DEPTH = 3
+# Element count for containers OVER USER TYPES (`List Card`, `List JsonValue`).
+# Kept tiny so recursive element trees don't explode.
+_MAX_USER_LIST = 3
+
+
+def _rand_input(rng, ty, depth=_MAX_DEPTH):
+    ty = ty.strip()
     if ty == gen.NAT:
         return rng.randint(0, _MAX_NAT)
     if ty == gen.PAIR:
@@ -431,25 +601,64 @@ def _rand_input(rng, ty):
         g = gen.Gen.__new__(gen.Gen)
         g.rng = rng
         return g.rand_value(ty)
-    # User inductive/structure type — build a constructor value.
-    return _rand_user_value(rng, ty)
+    # Compound types INVOLVING USER TYPES (base compounds are handled above).
+    c = _container(ty)
+    if c:
+        kind, elem = c
+        if kind == "Option":
+            return None if rng.random() < 0.3 else _rand_input(rng, elem, depth)
+        # List/Array: force empty at depth 0 so recursive elements terminate.
+        n = 0 if depth <= 0 else rng.randint(0, _MAX_USER_LIST)
+        return [_rand_input(rng, elem, depth - 1) for _ in range(n)]
+    p = _pair(ty)
+    if p:
+        return [_rand_input(rng, p[0], depth), _rand_input(rng, p[1], depth)]
+    # User inductive/structure type — build a (depth-bounded) constructor value.
+    return _rand_user_value(rng, ty, depth)
 
 
 def _lean_lit(ty, v):
-    """Lean literal for `v` of type `ty`, dispatching user types to
-    `_user_lean_lit` and everything else to `gen.lean_lit`."""
+    """Lean literal for `v` of type `ty`, dispatching base types to
+    `gen.lean_lit`, compound-with-user types (containers / products) structurally,
+    and user types to `_user_lean_lit`."""
+    ty = ty.strip()
     if ty in gen.LEAN_TYPES:
         return gen.lean_lit(ty, v)
+    c = _container(ty)
+    if c:
+        kind, elem = c
+        if kind == "Option":
+            if v is None:
+                return f"(none : {ty})"
+            return f"(some ({_lean_lit(elem, v)}) : {ty})"
+        # List / Array: annotate so an empty (or user-element) literal type-checks.
+        open_, close_ = ("#[", "]") if kind == "Array" else ("[", "]")
+        items = ", ".join(_lean_lit(elem, x) for x in v)
+        return f"({open_}{items}{close_} : {ty})"
+    p = _pair(ty)
+    if p:
+        return f"({_lean_lit(p[0], v[0])}, {_lean_lit(p[1], v[1])})"
     return _user_lean_lit(ty, v)
 
 
 def _json(ty, v):
     """JSON string for `v` of type `ty` (the oracle-row `args`/expected value).
-    User-type values serialize as `{"c":"<shortctor>","f":[<field json>...]}`,
-    matching what the Lean serializer (`_user_serializer_name`) emits and what
-    `run_oracle.normalize` reduces a transpiled dataclass instance to."""
+    Must byte-match what the Lean serializer (`_field_serializer` chain) emits and
+    what `run_oracle.materialize`/`normalize` expect: base types as plain JSON,
+    containers as JSON arrays (`Option` as value-or-null), products as 2-element
+    arrays, user-type values as `{"c":"<pyctor>","f":[<field json>...]}`."""
+    ty = ty.strip()
     if ty in gen.LEAN_TYPES:
         return gen.json_lit(ty, v)
+    c = _container(ty)
+    if c:
+        kind, elem = c
+        if kind == "Option":
+            return "null" if v is None else _json(elem, v)
+        return "[" + ",".join(_json(elem, x) for x in v) + "]"
+    p = _pair(ty)
+    if p:
+        return "[" + _json(p[0], v[0]) + "," + _json(p[1], v[1]) + "]"
     import json
     ctor = v["__ctor__"]
     field_types = dict(_load_type_info()[ty])[ctor]
@@ -464,33 +673,105 @@ def _user_serializer_name(ty):
 
 
 def _serializer_call(ty, expr):
-    """Lean serializer call for a value of type `ty` (dispatches user types to
-    their emitted `jU_*` serializer)."""
+    """Lean serializer call for a RETURN value of type `ty`.  Base types use
+    gen.py's serializers; everything else (containers / products / user types,
+    incl. compounds like `Option (List Nat)` or `List Card`) reuses the inline
+    structural serializer so no per-shape named helper is needed."""
+    ty = ty.strip()
     if ty in gen.LEAN_TYPES:
         return gen.serializer_call(ty, expr)
-    return f"{_user_serializer_name(ty)} ({expr})"
+    return _field_serializer_expr(ty, f"({expr})")
 
 
-def _field_serializer(ty):
-    """The serializer *function name* to apply to a field of type `ty` inside a
-    generated `jU_*` serializer.  Base types reuse gen.py's `jNat`/`jInt`/…;
-    user types their own `jU_*`."""
-    base = {gen.NAT: "jNat", gen.BOOL: "jBool", gen.INT: "jInt",
-            gen.LISTNAT: "jListNat", gen.OPTNAT: "jOpt",
-            gen.STRING: "jString", gen.CHAR: "jChar", gen.ARRAYNAT: "jArrayNat",
-            gen.LISTINT: "jListInt", gen.LISTBOOL: "jListBool",
-            gen.LISTLISTNAT: "jListListNat"}
-    if ty in base:
-        return base[ty]
-    return _user_serializer_name(ty)
+_BASE_SERIALIZER = {gen.NAT: "jNat", gen.BOOL: "jBool", gen.INT: "jInt",
+                    gen.LISTNAT: "jListNat", gen.OPTNAT: "jOpt",
+                    gen.STRING: "jString", gen.CHAR: "jChar",
+                    gen.ARRAYNAT: "jArrayNat", gen.LISTINT: "jListInt",
+                    gen.LISTBOOL: "jListBool", gen.LISTLISTNAT: "jListListNat",
+                    gen.PAIR: "jPair"}
+
+
+def _field_serializer_expr(ty, var, depth=0):
+    """A Lean expression (a String) that serializes `var : ty` to the SAME JSON
+    shape `_json` produces.  Base types call gen.py's `jNat`/`jListNat`/…; bare
+    user types their emitted `jU_*`; containers/products serialize inline (a
+    `.map` for List/Array, a `match` for Option/product) so a field like
+    `List (Char × Trie)` needs no named helper.  `depth` freshens bound names to
+    avoid shadowing in nested lambdas/matches.  Bound names use a `fx`/`fp`/`fq`
+    prefix so they can never collide with a constructor arm's `a0`,`a1`,… binders
+    (the field serializer is spliced into a `| .ctor a0 a1 => …` arm)."""
+    ty = ty.strip()
+    if ty in _BASE_SERIALIZER:
+        return f"({_BASE_SERIALIZER[ty]} {var})"
+    c = _container(ty)
+    if c:
+        kind, elem = c
+        x = f"fx{depth}"
+        ser_x = _field_serializer_expr(elem, x, depth + 1)
+        if kind == "Option":
+            return (f'(match {var} with | none => "null" '
+                    f"| some {x} => {ser_x})")
+        seq = f"({var}).toList" if kind == "Array" else f"({var})"
+        return (f'("[" ++ String.intercalate "," '
+                f"({seq}.map (fun {x} => {ser_x})) ++ \"]\")")
+    p = _pair(ty)
+    if p:
+        a, b = f"fp{depth}", f"fq{depth}"
+        return (f"(match {var} with | ({a}, {b}) => "
+                f'"[" ++ {_field_serializer_expr(p[0], a, depth + 1)} ++ "," '
+                f"++ {_field_serializer_expr(p[1], b, depth + 1)} ++ \"]\")")
+    return f"({_user_serializer_name(ty)} {var})"
+
+
+def _referenced_user_types(ty, acc):
+    """Add to `acc` every user type reachable from type string `ty` (through
+    containers and products, not just bare positions)."""
+    ty = ty.strip()
+    if ty in gen.LEAN_TYPES:
+        return
+    c = _container(ty)
+    if c:
+        return _referenced_user_types(c[1], acc)
+    p = _pair(ty)
+    if p:
+        _referenced_user_types(p[0], acc)
+        _referenced_user_types(p[1], acc)
+        return
+    if ty in _load_type_info():
+        acc.add(ty)
+
+
+def _is_recursive_type(ty):
+    """Does `ty` reach itself through some constructor field (directly or via a
+    container/product)?  Such serializers must be emitted `partial def`."""
+    info = _load_type_info()
+    seen, work = set(), [ty]
+    first = True
+    while work:
+        t = work.pop()
+        if not first and t == ty:
+            return True
+        first = False
+        if t in seen:
+            continue
+        seen.add(t)
+        for (_c, fields) in info.get(t, []):
+            for f in fields:
+                refs = set()
+                _referenced_user_types(f, refs)
+                work.extend(refs)
+    return False
 
 
 def _emit_user_serializers(types):
     """Emit Lean `jU_<Type>` JSON serializers for each user type in `types` (and
-    their transitive user-type fields), topologically so a serializer is defined
-    before one that calls it.  Each emits `{"c":"<ctor>","f":[...]}`."""
+    their transitive user-type fields, reached through containers/products too),
+    topologically so a serializer is defined before one that calls it.  Recursive
+    types are emitted as one `mutual … end` block of `partial def`s (order within
+    a `mutual` block doesn't matter, sidestepping the self-dependency the topo
+    sort can't order).  Each emits `{"c":"<ctor>","f":[...]}`."""
     info = _load_type_info()
-    # Collect the transitive closure of user types referenced.
+    # Transitive closure of referenced user types (through containers/products).
     needed, work = set(), list(types)
     while work:
         t = work.pop()
@@ -499,35 +780,50 @@ def _emit_user_serializers(types):
         needed.add(t)
         for (_c, fields) in info[t]:
             for f in fields:
-                if f in info and f not in needed:
-                    work.append(f)
-    # Order so dependencies come first (bounded passes; non-recursive by
-    # construction, since only constructible — hence acyclic — types are used).
-    ordered, emitted = [], set()
-    for _ in range(len(needed) + 1):
-        for t in sorted(needed):
-            if t in emitted:
-                continue
-            deps = {f for (_c, fields) in info[t] for f in fields if f in info}
-            if deps <= emitted:
-                ordered.append(t)
-                emitted.add(t)
-    lines = []
-    for t in ordered:
-        arms = []
+                refs = set()
+                _referenced_user_types(f, refs)
+                work.extend(refs - needed)
+
+    def serializer_def(t, keyword):
+        """The `<keyword> jU_T : T → String` lines for type `t`."""
+        out = [f"{keyword} {_user_serializer_name(t)} : {t} → String"]
         for (ctor, fields) in info[t]:
             binders = " ".join(f"a{i}" for i in range(len(fields)))
-            lean_c = _lean_ctor_short(ctor)   # Lean match arm: `.mk`
-            py_c = _py_ctor_name(ctor)         # JSON "c" value: `Nim_mk`
+            lean_c = _lean_ctor_short(ctor)
+            py_c = _py_ctor_name(ctor)
             if fields:
                 fjson = ' ++ "," ++ '.join(
-                    f'{_field_serializer(ft)} a{i}' for i, ft in enumerate(fields))
+                    _field_serializer_expr(ft, f"a{i}") for i, ft in enumerate(fields))
                 body = f'"{{\\"c\\":\\"{py_c}\\",\\"f\\":[" ++ {fjson} ++ "]}}"'
-                arms.append(f"  | .{lean_c} {binders} => {body}")
+                out.append(f"  | .{lean_c} {binders} => {body}")
             else:
-                arms.append(f'  | .{lean_c} => "{{\\"c\\":\\"{py_c}\\",\\"f\\":[]}}"')
-        lines.append(f"def {_user_serializer_name(t)} : {t} → String")
-        lines.extend(arms)
+                out.append(f'  | .{lean_c} => "{{\\"c\\":\\"{py_c}\\",\\"f\\":[]}}"')
+        return out
+
+    recursive = {t for t in needed if _is_recursive_type(t)}
+    lines = []
+    # Non-recursive types first, in dependency order (acyclic by construction).
+    nonrec = needed - recursive
+    ordered, emitted = [], set()
+    for _ in range(len(nonrec) + 1):
+        for t in sorted(nonrec):
+            if t in emitted:
+                continue
+            deps = set()
+            for (_c, fields) in info[t]:
+                for f in fields:
+                    _referenced_user_types(f, deps)
+            if (deps - {t}) <= emitted:
+                ordered.append(t)
+                emitted.add(t)
+    for t in ordered:
+        lines += serializer_def(t, "def")
+    # Recursive types together in one `mutual` block of `partial def`s.
+    if recursive:
+        lines.append("mutual")
+        for t in sorted(recursive):
+            lines += serializer_def(t, "partial def")
+        lines.append("end")
     return "\n".join(lines)
 
 
