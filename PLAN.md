@@ -24,33 +24,40 @@ R1–R4, upgrade-era), each with a regression test in `RegressionFixes.lean` /
 Every harvestable corpus function (139) transpiles and agrees with the oracle,
 alone and batched. `corpus_frags._KNOWN_OPEN_NS` is empty.
 
-## THE efficiency problem to fix FIRST (blocks massive scale)
+## THE efficiency problem (items 1 & 2 DONE; verify at scale on cloudnew)
 A 3000-seed `--corpus` sweep at 14 fns/file **did not finish** on 150 cores.
 Root causes, in priority order:
 
-1. **`--corpus` does not batch.** Grammar mode has `--batch B` (packs B seeds per
-   Lean spawn — 5x win, since Lean startup + `import Corpus` olean load dominates,
-   NOT transpilation). `--corpus` spawns **one Lean process per seed**, each
-   re-importing `Corpus` (~5–8 s each). This is the single biggest lever.
-   → Add batching to `emit_corpus_file` / `run_corpus_mode`: pack many seeds'
-     function-selections into ONE Lean file, each seed in its OWN `#eval` block
-     (per the grammar-mode lesson: a shared `#eval` aborts entirely on one
-     ill-typed def via the `sorry` axiom; per-seed blocks isolate). Reuse the
-     `### PYTHON {seed}` / `### ORACLE {seed}` banner + `_split_batch_output`
-     machinery from `gen.emit_batch_file`. Expect a similar ~5x.
-2. **`TypeInfo.lean` re-runs per worker.** `corpus_frags.harvest()` (called in
-   every pool worker) shells out to `lean fuzz/TypeInfo.lean` (a full Lean spawn)
-   via `_load_type_info()`. With 150 workers that's 150 concurrent Lean spawns
-   just to load type info. → Run it ONCE in the parent, cache to a JSON file
-   (e.g. `fuzz/.typeinfo.json`, regenerated only when `Corpus/*.lean` is newer),
-   and have workers read the cache. Same for `harvest()` — compute once, pass the
-   function list to workers (it's picklable) instead of re-harvesting per worker.
-3. **`lean_run` per-call timeout is 60 s** (added in Phase 3 after UnionFind
-   hangs). Fine for safety, but a batched file that hits one slow `#eval` burns
-   60 s. With batching, keep the timeout but consider a smaller per-eval budget.
+1. ✅ **`--corpus` now batches** (`corpus-batching-efficiency` branch). `--corpus
+   --batch B` packs B seeds into ONE Lean file, each seed in its OWN `#eval` block
+   (banners `### PYTHON {seed}` / `### ORACLE {seed}`, split by the existing
+   `_split_batch_output`); user-type JSON serializers are emitted once as the
+   union over the batch. A `suspect`/failing seed is re-run alone to classify +
+   isolate (`check_corpus_batch`, mirroring grammar `check_batch`). Verified:
+   every seed's block is byte-identical to its standalone file, and batched vs
+   unbatched give identical verdict + coverage (incl. uneven batches / `--start`
+   offsets). Measured ~2x even on the mac at 20 seeds; the win compounds at scale.
+2. ✅ **`TypeInfo.lean` cached** (`corpus_frags.build_type_info_cache`). The parent
+   spawns Lean once, writes `fuzz/.typeinfo.json` (keyed by newest `Corpus/*.lean`
+   + `TypeInfo.lean` mtime; atomic replace); workers `_load_type_info()` from the
+   JSON with no Lean spawn. Stale/missing/corrupt cache falls back to a live spawn.
+   `harvest()` also runs once in the parent and the (picklable) function list is
+   passed to workers. Eliminates the ~150 concurrent bootstrap Lean spawns.
+3. ✅ **Batch timeout scaled with size** (`_batch_timeout`). The fixed per-seed
+   60 s killed a healthy 25-seed batch mid-print (each corpus seed is ~3 s of
+   transpile+eval, so a batch is ~75 s of legitimate work). Now
+   `LEAN_TIMEOUT_S + PER_SEED_TIMEOUT_S*(N-1)` (60 + 10*(N-1)); a genuine hang in
+   one block still bounds the whole run. This also exposed a latent robustness
+   bug (BOTH batch modes): a process killed mid-print leaves a truncated final
+   ORACLE row, and `_check_py_oracle`'s `line.split("\t")` raised a bare
+   `ValueError` that escaped `Failure` handling and killed the whole pool — now
+   raised as `Failure("truncated")` so the seed is re-run alone.
 
-Verify efficiency the same way as `--batch` was: identical verdict + coverage,
-per-seed determinism preserved, and measure wall-clock speedup on cloudnew.
+**VERIFIED AT SCALE (2026-07-05, cloudnew, 180 jobs):** the 3000-seed
+`--corpus --batch 25 --defs 14 --inputs 6` sweep that previously DID NOT FINISH
+now completes: **3000/3000 checked, 0 transpiler bugs, 139/139 corpus functions
+exercised, 65/118 handlers fired.** Per-seed blocks byte-identical to standalone;
+batched vs unbatched give identical verdict+coverage.
 
 ## New bug-finding directions (after efficiency; ~ by expected yield)
 1. **Invariant-respecting user-value generation.** Phase 3 excluded `UnionFind`
@@ -119,8 +126,9 @@ bug/feature as its own PR, CI green before merge.
 - `fuzz/gen.py` — grammar generator; `LEAN_TYPES`, `ALL_PRODUCTIONS`, per-type
   `gen_*`, `rand_value`/`lean_lit`/`serializer_call`/PRELUDE serializers.
 - `fuzz/corpus_frags.py` — fragment reuse + Phase-3 custom-type registry
-  (`TypeInfo.lean` loader, `_is_constructible`, `_UNSAFE_TO_CONSTRUCT`,
-  `_emit_user_serializers`). **Batching lives to be added here.**
+  (`TypeInfo.lean` loader w/ `build_type_info_cache` JSON cache, `_is_constructible`,
+  `_UNSAFE_TO_CONSTRUCT`, `_emit_user_serializers`). Batching: `_corpus_block`
+  (shared per-seed block) + `emit_corpus_batch_file`.
 - `fuzz/fuzz.py` — CLI/modes (`--batch`, `--corpus`, `--pycov`, `--pycov-search`),
   `lean_run` (has the timeout), pool workers, self-coverage report.
 - `fuzz/pycov.py` — coverage backends (SlipCover / settrace / sys.monitoring
