@@ -496,16 +496,28 @@ def _parse_sig(header, ns_prefixes=()):
 
 
 # Namespaces with KNOWN-OPEN transpiler bugs, excluded from harvesting so the
-# sweep stays a clean regression signal.  Now EMPTY: every Phase-1 gap is fixed
-# (F14 method fall-throughs, F15 getElem!, F16 missing builtins, F17
-# helper-scoping/`_uniq_NNN`, F18 cross-function name collisions).  Every
-# harvestable corpus function transpiles and agrees with the oracle, alone and
-# batched.  Add a prefix back here only if a new bug is found and deferred.
+# sweep stays a clean regression signal.  Phase-1 gaps are all fixed (F14 method
+# fall-throughs, F15 getElem!, F16 missing builtins, F17 helper-scoping/`_uniq`,
+# F18 cross-function name collisions), as are the recursive/container-type gaps
+# (loop-mode `find?` predicate, Option.isSome/map point-free, List.setTR/zip,
+# point-free user fns, nullary-const call, transitive loop recursion).
 _KNOWN_OPEN_NS = ()
+
+# Individual functions with a KNOWN, DEFERRED transpiler limitation, excluded by
+# exact qualified name (a signature-level exclusion can't reach them — the issue
+# is in the body, not the types).
+#   * TicTacToe.validMoves indexes a `List (Option Player)` with `[i]?` and
+#     matches `some none`.  Python models `Option` as `None`, so the outer
+#     `some none` (empty cell) and the out-of-bounds `none` COLLAPSE to the same
+#     `None` — the classic nested-Option faithfulness gap.  A faithful fix needs
+#     a sentinel-based Option representation (a large redesign); deferred.  See
+#     CLAUDE.md "Known Limitations".
+_KNOWN_OPEN_FNS = ("Corpus.Games.TicTacToe.validMoves",)
 
 
 def _is_known_open(qual):
-    return any(qual.startswith(ns) for ns in _KNOWN_OPEN_NS)
+    return (any(qual.startswith(ns) for ns in _KNOWN_OPEN_NS)
+            or qual in _KNOWN_OPEN_FNS)
 
 
 def harvest(corpus_dir=CORPUS_DIR, include_known_open=False):

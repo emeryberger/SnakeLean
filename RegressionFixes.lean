@@ -65,6 +65,42 @@ def tally (xs : List Nat) : Nat := xs.length            -- count (different!)
 end ModB
 def useTally (xs : List Nat) : Nat := ModA.tally xs      -- must be the SUM
 
+-- (6) Loop-mode `find?` with a tuple-destructuring predicate lambda.  Pre-fix,
+-- the tail-loop transform diverted the (non-recursive) predicate lambda to the
+-- inline-thunk set, so the comprehension referenced an unemitted `_uniq_NNN`.
+-- Mirrors `Corpus.DataStructures.Trie.contains`.
+def lookLoop (xs : List (Nat × Nat)) (k : Nat) : Bool :=
+  match xs with
+  | [] => false
+  | _ :: rest =>
+    match xs.find? (fun (p, _) => p == k) with
+    | some _ => true
+    | none => lookLoop rest k
+
+-- (7) Option predicate / user function passed POINT-FREE to a combinator.  Both
+-- must become a function *reference*, not `is_some(...)` / `is_ace(...)` calls
+-- with a spurious arg.  Mirrors `ConnectFour.columnHeight` / `BlackjackHand.numAces`.
+def isBig (n : Nat) : Bool := n > 3
+def countSome (xs : List (Option Nat)) : Nat := (xs.filter Option.isSome).length
+def countBig (xs : List Nat) : Nat := (xs.filter isBig).length
+
+-- (8) Option.map, List.zip, List.set (setTR) — previously undefined names.
+def bump (o : Option Nat) : Option Nat := o.map (· + 1)
+def pairUp (xs ys : List Nat) : List (Nat × Nat) := xs.zip ys
+def setAt (xs : List Nat) (i v : Nat) : List Nat := xs.set i v
+
+-- (9) List.head?/getLast? applied (must apply over the value arg only, not the
+-- erased type arg).  Mirrors `Corpus.Strings.head`/`last`.
+def firstOf (xs : List Nat) : Option Nat := xs.head?
+def lastOf (xs : List Nat) : Option Nat := xs.getLast?
+
+-- (10) Nullary user value referenced point-free must be CALLED, not bound as the
+-- function object.  Here `base` (a nullary def) is used inside a recursive call;
+-- pre-fix `base` bound the function, corrupting the result.  Mirrors
+-- `Corpus.DataStructures.Trie.insert`'s use of `Trie.empty`.
+def base : List Nat := [0]
+def prependBase (n : Nat) : List Nat := n :: base
+
 end RegressionFixes
 
 #eval show CoreM Unit from do
@@ -78,5 +114,16 @@ end RegressionFixes
       ``RegressionFixes.dropUntilZero,
       ``RegressionFixes.ModA.tally,
       ``RegressionFixes.ModB.tally,
-      ``RegressionFixes.useTally ]
+      ``RegressionFixes.useTally,
+      ``RegressionFixes.lookLoop,
+      ``RegressionFixes.isBig,
+      ``RegressionFixes.countSome,
+      ``RegressionFixes.countBig,
+      ``RegressionFixes.bump,
+      ``RegressionFixes.pairUp,
+      ``RegressionFixes.setAt,
+      ``RegressionFixes.firstOf,
+      ``RegressionFixes.lastOf,
+      ``RegressionFixes.base,
+      ``RegressionFixes.prependBase ]
   IO.println code
