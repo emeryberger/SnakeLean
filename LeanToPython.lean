@@ -2309,6 +2309,32 @@ partial def codeHasSelfCall (declName : Name) (c : Code) : Bool :=
       match alt with | .alt _ _ code => codeHasSelfCall declName code | .default code => codeHasSelfCall declName code)
   | _ => false
 
+/-- Like `codeHasSelfCall`, but ALSO treats a call/jump to any fvar in `carriers`
+    as carrying the recursion.  In loop mode the recursion is often buried one
+    level of indirection deep: a continuation thunk `_f` whose body calls another
+    thunk `_uniq` that itself self-calls.  `_f` never names `declName` directly,
+    so plain `codeHasSelfCall` misses it and `_f` gets emitted as a nested `def`
+    that references the (suppressed, never-emitted) `_uniq`.  Passing the set of
+    known recursion-carrying thunks (the `inlineThunks` keys) closes that gap so
+    `_f` is inlined too. -/
+partial def codeHasRecursion (declName : Name) (carriers : Std.HashMap FVarId FunDecl)
+    (c : Code) : Bool :=
+  match c with
+  | .let decl k =>
+    (match decl.value with
+     | .const n _ _ => n == declName
+     | .fvar fv _ => carriers.contains fv
+     | _ => false)
+      || codeHasRecursion declName carriers k
+  | .fun d k | .jp d k =>
+    codeHasRecursion declName carriers d.value || codeHasRecursion declName carriers k
+  | .jmp f _ => carriers.contains f
+  | .cases cs => cs.alts.any (fun alt =>
+      match alt with
+      | .alt _ _ code => codeHasRecursion declName carriers code
+      | .default code => codeHasRecursion declName carriers code)
+  | _ => false
+
 /-- Count call sites (`_x := f args` with args, or `jmp f`) targeting each
     local function, resolving through the zero-arg alias map so `_alt := _f`
     chains attribute the call to `_f`. -/
@@ -2401,9 +2427,10 @@ partial def emitCode (code : Code) : EmitM Unit := do
     emitCode k
   | .fun decl k =>
     -- In loop mode, defer emitting a `def` for a continuation thunk that
-    -- carries the recursion; it will be inlined at its tail-call site.
+    -- carries the recursion (directly, or via another already-deferred thunk);
+    -- it will be inlined at its tail-call site.
     if let some (declName, _) := (← get).tailLoop then
-      if codeHasSelfCall declName decl.value then
+      if codeHasRecursion declName (← get).inlineThunks decl.value then
         modify fun s => { s with inlineThunks := s.inlineThunks.insert decl.fvarId decl }
         emitCode k
         return
@@ -2459,7 +2486,7 @@ partial def emitLocalFun (decl : FunDecl) : EmitM Unit := do
   -- `continue`.  (Surfaced once the helper-scoping fix stopped mis-rendering
   -- such thunks as `_uniq_NNN` calls.)
   if let some (declName, _) := (← get).tailLoop then
-    if codeHasSelfCall declName decl.value then
+    if codeHasRecursion declName ((← get).inlineThunks) decl.value then
       modify fun s => { s with inlineThunks := s.inlineThunks.insert decl.fvarId decl }
       return
   -- Count non-unit params for arity tracking
@@ -2495,7 +2522,7 @@ partial def emitLocalFun (decl : FunDecl) : EmitM Unit := do
         -- gets emitted.  Such a lambda must fall through to a real nested `def`.
         if (← get).tailLoop.isSome then
           if let some (declName, _) := (← get).tailLoop then
-            if codeHasSelfCall declName decl.value then
+            if codeHasRecursion declName ((← get).inlineThunks) decl.value then
               modify fun s => { s with inlineThunks := s.inlineThunks.insert decl.fvarId decl }
               return
   let fnName ← registerVar decl.fvarId decl.binderName
