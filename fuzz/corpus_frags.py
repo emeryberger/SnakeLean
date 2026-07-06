@@ -16,6 +16,7 @@ can drive them).  A harvested function is referenced by its fully-qualified Lean
 name; `emitPythonForNames` pulls in its transitive dependencies automatically, so
 a one-line `insertionSort` fragment still drags in its `let rec insert`/`sort`.
 """
+import json
 import os
 import random
 import re
@@ -26,6 +27,13 @@ import gen
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 CORPUS_DIR = os.path.join(ROOT, "Corpus")
+
+# On-disk cache of the `TypeInfo.lean` dump.  Loading type info requires a full
+# Lean spawn (~5-8 s with the `import Corpus` olean load); with a large worker
+# pool that is 100+ concurrent Lean spawns just to bootstrap.  We cache the parse
+# to JSON, keyed by corpus freshness, so the parent computes it once and every
+# worker reads the file instead of re-spawning Lean.  (See `_load_type_info`.)
+_TYPEINFO_CACHE = os.path.join(HERE, ".typeinfo.json")
 
 
 # ---------------------------------------------------------------------------
@@ -49,13 +57,38 @@ _TYPE_INFO = None
 _CONSTRUCTIBLE = {}
 
 
-def _load_type_info():
-    """Run `fuzz/TypeInfo.lean` and parse its `### TYPE` lines into `_TYPE_INFO`
-    ({type: [(ctor, [fieldtypes])]}).  Cached after first call."""
-    global _TYPE_INFO
-    if _TYPE_INFO is not None:
-        return _TYPE_INFO
+def _typeinfo_sources_mtime():
+    """Newest mtime among the inputs that determine the type dump: every
+    `Corpus/*.lean` plus `TypeInfo.lean` itself.  The cache is stale iff it
+    predates this."""
+    newest = os.path.getmtime(os.path.join(HERE, "TypeInfo.lean"))
+    for fname in os.listdir(CORPUS_DIR):
+        if fname.endswith(".lean"):
+            newest = max(newest, os.path.getmtime(os.path.join(CORPUS_DIR, fname)))
+    return newest
+
+
+def _parse_type_info(stdout):
+    """Parse `### TYPE` lines from a TypeInfo.lean run into
+    {type: [(ctor, [fieldtypes])]}."""
     info = {}
+    for line in stdout.splitlines():
+        if not line.startswith("### TYPE\t"):
+            continue
+        _, tyname, ctors_str = line.split("\t", 2)
+        ctors = []
+        for cpart in ctors_str.split(" | "):
+            cname, _, fields_str = cpart.partition(";")
+            fields = [f for f in fields_str.split(",") if f]
+            ctors.append((cname, fields))
+        info[tyname] = ctors
+    return info
+
+
+def _run_type_info():
+    """Spawn `lean fuzz/TypeInfo.lean` and parse its output.  This is the
+    expensive path (a full Lean process + `import Corpus`); callers should prefer
+    the cached `_load_type_info`."""
     env = dict(os.environ)
     env["PATH"] = os.path.expanduser("~/.elan/bin") + ":" + env.get("PATH", "")
     lp = env.get("FUZZ_LEAN_PATH")
@@ -66,18 +99,45 @@ def _load_type_info():
     env["LEAN_PATH"] = lp
     proc = subprocess.run(["lean", os.path.join(HERE, "TypeInfo.lean")], cwd=ROOT,
                           capture_output=True, text=True, env=env)
-    for line in proc.stdout.splitlines():
-        if not line.startswith("### TYPE\t"):
-            continue
-        _, tyname, ctors_str = line.split("\t", 2)
-        ctors = []
-        for cpart in ctors_str.split(" | "):
-            cname, _, fields_str = cpart.partition(";")
-            fields = [f for f in fields_str.split(",") if f]
-            ctors.append((cname, fields))
-        info[tyname] = ctors
+    return _parse_type_info(proc.stdout)
+
+
+def build_type_info_cache():
+    """Compute the type dump (spawning Lean once) and write it to
+    `_TYPEINFO_CACHE`.  Call this ONCE in the parent before fanning out workers,
+    so each worker reads the JSON instead of re-spawning Lean.  Returns the info
+    dict (also priming this process's in-memory `_TYPE_INFO`)."""
+    global _TYPE_INFO
+    info = _run_type_info()
+    tmp = _TYPEINFO_CACHE + ".tmp"
+    with open(tmp, "w") as fh:
+        json.dump({"mtime": _typeinfo_sources_mtime(), "info": info}, fh)
+    os.replace(tmp, _TYPEINFO_CACHE)  # atomic; workers never see a half-written file
     _TYPE_INFO = info
     return info
+
+
+def _load_type_info():
+    """Return the corpus type dump ({type: [(ctor, [fieldtypes])]}), preferring
+    the on-disk cache written by `build_type_info_cache` and falling back to a
+    live Lean spawn if the cache is missing or stale.  Cached in-process after
+    the first call."""
+    global _TYPE_INFO
+    if _TYPE_INFO is not None:
+        return _TYPE_INFO
+    try:
+        with open(_TYPEINFO_CACHE) as fh:
+            cached = json.load(fh)
+        if cached.get("mtime", -1) >= _typeinfo_sources_mtime():
+            # JSON turns field lists into lists; restore the (ctor, [fields])
+            # tuple shape callers expect.
+            _TYPE_INFO = {ty: [(c, list(f)) for (c, f) in ctors]
+                          for ty, ctors in cached["info"].items()}
+            return _TYPE_INFO
+    except (OSError, ValueError, KeyError):
+        pass  # missing / corrupt / stale → recompute
+    _TYPE_INFO = _run_type_info()
+    return _TYPE_INFO
 
 
 _SHORT_TO_QUAL = None
@@ -471,17 +531,17 @@ def _emit_user_serializers(types):
     return "\n".join(lines)
 
 
-def emit_corpus_file(seed, nfuncs, ninputs, funcs=None):
-    """Emit a Lean file that transpiles `nfuncs` harvested corpus functions and
-    prints oracle rows for `ninputs` random inputs each.
+def _corpus_block(seed, nfuncs, ninputs, funcs, tag=""):
+    """Build one seed's `#eval` block (transpile its chosen functions, then emit
+    ORACLE rows over `ninputs` random inputs each).  `tag` (a seed id) is appended
+    to the `### PYTHON`/`### ORACLE` banners so a batched file's output splits back
+    apart per seed.  Returns (block_lines, chosen_qualified_names, used_types).
 
-    Pure function of `(seed, nfuncs, ninputs)` given a fixed corpus, so a failing
-    seed reproduces exactly (the harvest order is deterministic).  Returns
-    (lean_src, [chosen_qualified_names])."""
-    funcs = funcs if funcs is not None else harvest()
+    The rng is seeded from `seed` alone and consumed in a fixed order (selection,
+    then inputs per function), so a seed's rows are identical whether emitted
+    standalone or inside a batch — the property the shrinker relies on."""
     rng = random.Random(seed)
     chosen = funcs if nfuncs >= len(funcs) else rng.sample(funcs, nfuncs)
-
     names = ", ".join("`" + q for (q, _, _) in chosen)
     rows, used_types = [], set()
     for (qual, ptypes, ret) in chosen:
@@ -498,16 +558,55 @@ def emit_corpus_file(seed, nfuncs, ninputs, funcs=None):
             # to the transpiled `# Lean:` comment.  Escape json_args for embedding
             # in the Lean string literal (String/Char args carry quotes).
             rows.append(f'  IO.println ("ORACLE\\t{qual}\\t{gen._lean_str_escape(json_args)}\\t" ++ {ser})')
+    suffix = f" {tag}" if tag != "" else ""
+    block = ["#eval show CoreM Unit from do",
+             f'  IO.println "### PYTHON{suffix}"',
+             f"  IO.println (← emitPythonForNames `Fuzz [{names}])",
+             f'  IO.println "### ORACLE{suffix}"']
+    block += rows
+    return block, [q for (q, _, _) in chosen], used_types
 
+
+def emit_corpus_file(seed, nfuncs, ninputs, funcs=None):
+    """Emit a Lean file that transpiles `nfuncs` harvested corpus functions and
+    prints oracle rows for `ninputs` random inputs each.
+
+    Pure function of `(seed, nfuncs, ninputs)` given a fixed corpus, so a failing
+    seed reproduces exactly (the harvest order is deterministic).  Returns
+    (lean_src, [chosen_qualified_names])."""
+    funcs = funcs if funcs is not None else harvest()
+    block, chosen, used_types = _corpus_block(seed, nfuncs, ninputs, funcs)
     parts = [CORPUS_PRELUDE, ""]
     if used_types:
         parts.append(_emit_user_serializers(used_types))
-    parts.append("#eval show CoreM Unit from do")
-    parts.append('  IO.println "### PYTHON"')
-    parts.append(f"  IO.println (← emitPythonForNames `Fuzz [{names}])")
-    parts.append('  IO.println "### ORACLE"')
-    parts += rows
-    return "\n".join(parts) + "\n", [q for (q, _, _) in chosen]
+    parts += block
+    return "\n".join(parts) + "\n", chosen
+
+
+def emit_corpus_batch_file(seeds, nfuncs, ninputs, funcs=None):
+    """Pack several corpus seeds into ONE Lean file, amortizing Lean's startup +
+    `import Corpus` olean load (which dominate per-seed runtime, NOT the
+    transpilation) across many functions — the same ~5x win `--batch` gives
+    grammar mode.
+
+    Each seed gets its OWN `#eval` block (banners tagged with the seed id): a
+    non-terminating or otherwise failing oracle row aborts only that seed's block,
+    and the user-type JSON serializers are emitted ONCE (as the union over all
+    seeds' used types) since they are top-level defs shared across blocks.
+
+    Returns (lean_src, {seed: [chosen_qualified_names]})."""
+    funcs = funcs if funcs is not None else harvest()
+    blocks, chosen_by_seed, used_types = [], {}, set()
+    for seed in seeds:
+        block, chosen, used = _corpus_block(seed, nfuncs, ninputs, funcs, tag=str(seed))
+        blocks += block
+        chosen_by_seed[seed] = chosen
+        used_types |= used
+    parts = [CORPUS_PRELUDE, ""]
+    if used_types:
+        parts.append(_emit_user_serializers(used_types))
+    parts += blocks
+    return "\n".join(parts) + "\n", chosen_by_seed
 
 
 def emit_transpile_only(qual):
