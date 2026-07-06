@@ -101,6 +101,16 @@ def lastOf (xs : List Nat) : Option Nat := xs.getLast?
 def base : List Nat := [0]
 def prependBase (n : Nat) : List Nat := n :: base
 
+-- (11) Float support: literal (`OfScientific`), real division `/` (NOT integer
+-- `//`), `Float.sqrt` → `math.sqrt`, and Float comparison (`Float.decLt`).
+-- Pre-fix: the literal became a call to an undefined var, `/` emitted `//`,
+-- sqrt emitted an undefined `sqrt`, and `<` emitted an undefined `dec_lt`.
+-- Mirrors `Corpus.Geometry.circleArea`/`midpoint2D`/`dist2D`/`orientation`.
+def circAreaF (r : Float) : Float := 3.14159265358979 * r * r
+def halfF (x : Float) : Float := x / 2.0
+def hypotF (a b : Float) : Float := Float.sqrt (a * a + b * b)
+def signF (x : Float) : Nat := if x < 0.0 then 2 else if x == 0.0 then 0 else 1
+
 end RegressionFixes
 
 #eval show CoreM Unit from do
@@ -125,5 +135,9 @@ end RegressionFixes
       ``RegressionFixes.firstOf,
       ``RegressionFixes.lastOf,
       ``RegressionFixes.base,
-      ``RegressionFixes.prependBase ]
+      ``RegressionFixes.prependBase,
+      ``RegressionFixes.circAreaF,
+      ``RegressionFixes.halfF,
+      ``RegressionFixes.hypotF,
+      ``RegressionFixes.signF ]
   IO.println code

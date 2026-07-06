@@ -84,9 +84,19 @@ batched vs unbatched give identical verdict+coverage.
    REMAINING: nested `Option` (`(xs : List (Option α))[i]?` matching `some none`)
    collapses to Python `None` — `TicTacToe.validMoves` excluded via
    `_KNOWN_OPEN_FNS`; a faithful fix needs a sentinel Option representation.
-3. **Float support** (Geometry: Point2D/3D, distance/normalize). Needs a
-   tolerance-based oracle comparison (exact `==` will spuriously fail on
-   float rounding). Decide an ULP/relative-tolerance policy first.
+3. ✅ **DONE — Float support** (`float-support` branch). Float added to the
+   fuzzer VALUE universe (`gen.VALUE_TYPES`, distinct from the grammar's
+   `LEAN_TYPES`), serialized by EXACT IEEE-754 bits (`jFloat`/`Float.ofBits`/
+   `struct`) so the oracle uses **strict equality** (decision: transcendentals go
+   through libm on both sides and are bit-identical, so no tolerance needed; NaN
+   canonicalized to `NaN==NaN`). Harvest **178 → 209** (+31 Geometry). Fixed 4
+   transpiler bugs: Float literal (`OfScientific` via instance projection) was a
+   call to an undefined var; Float `/` emitted integer `//` (silent wrong value)
+   → `floatdiv` arithKind with IEEE `x/0` guard; `Float.sqrt/sin/cos/…` → `math.*`
+   (+ always `import math`); `Float.decLt/decLe/decEq` → `</<=/==`. Regression
+   case (11). VERIFIED AT SCALE (2026-07-06, cloudnew): 2000-seed sweep = **0
+   bugs, 209/209 functions**. (Grammar-side Float generation still not done — the
+   grammar doesn't invent Float functions; corpus fragments cover them.)
 4. **Grammar-side custom-type generation** — have `gen.py` *invent* small
    inductives + functions over them, not just harvest corpus ones. Reaches
    shapes the corpus doesn't contain.
