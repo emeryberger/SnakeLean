@@ -178,7 +178,7 @@ def main():
             failures.append((lean_fn, args, got, expected))
 
     total = passed + failed
-    print(f"Round-trip differential (Lean oracle vs transpiled Python)")
+    print("Round-trip differential (Lean oracle vs transpiled Python)")
     print(f"  functions covered: {len(fns_seen)}")
     print(f"  cases: {passed}/{total} agree")
     if failures:
