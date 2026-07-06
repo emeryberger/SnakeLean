@@ -348,7 +348,7 @@ def _is_constructible(ty, stack=()):
 
 
 # Constructor names the transpiler prefixes with their parent to avoid dataclass
-# collisions — MUST match `toPyTypeName`/`isCommonCtorName` in LeanToPython.lean.
+# collisions — MUST match `toPyTypeName`/`isCommonCtorName` in SnakeLean.lean.
 _COMMON_CTOR_NAMES = {"mk", "node", "empty", "nil", "cons", "some", "none"}
 
 
@@ -572,7 +572,7 @@ def harvest(corpus_dir=CORPUS_DIR, include_known_open=False):
 # The Lean prelude for a corpus-fragment file additionally imports `Corpus`
 # (so the harvested names resolve) and reuses gen.py's JSON serializers.
 CORPUS_PRELUDE = gen.PRELUDE.replace(
-    "import LeanToPython\n", "import LeanToPython\nimport Corpus\n", 1)
+    "import SnakeLean\n", "import SnakeLean\nimport Corpus\n", 1)
 
 # Some harvested functions are only fast on small inputs (e.g. `nthPrime n`
 # sieves up to the nth prime).  Clamp Nat inputs to a modest range so the oracle

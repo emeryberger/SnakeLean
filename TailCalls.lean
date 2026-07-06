@@ -1,10 +1,10 @@
 /-
-  Regression cases for tail-call elimination in LeanToPython.lean.
+  Regression cases for tail-call elimination in SnakeLean.lean.
 
   Lean performs TCO; Python does not. A Lean function whose self-recursive
   calls are all in tail position runs in constant stack, but a naive Python
   translation recurses and overflows the stack (`RecursionError`) on deep
-  inputs. LeanToPython detects such functions and rewrites the body into a
+  inputs. SnakeLean detects such functions and rewrites the body into a
   `while True:` loop (parallel parameter rebind + `continue`).
 
   These cover the structural shapes the rewrite must handle:
@@ -22,8 +22,8 @@
 
     lake env lean TailCalls.lean > TailCalls_out.py
 -/
-import LeanToPython
-open Lean LeanToPython
+import SnakeLean
+open Lean SnakeLean
 
 namespace TailCalls
 

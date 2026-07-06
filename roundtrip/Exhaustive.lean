@@ -7,12 +7,12 @@
   them.  Exhaustive agreement over the bounded domain is a stronger faithfulness
   statement than sampling: there is no untested input in range.
 -/
-import LeanToPython
+import SnakeLean
 import Corpus.Algorithms
 import Corpus.Math
 import Corpus.NumberTheory
 
-open Lean LeanToPython
+open Lean SnakeLean
 
 namespace RoundtripExhaustive
 

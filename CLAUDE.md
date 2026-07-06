@@ -1,12 +1,12 @@
-# LeanToPython
+# SnakeLean
 
 A Lean 4 library that generates runnable, idiomatic Python code from Lean definitions.
 
 ## Project Structure
 
 ```
-LeanToPython/
-├── LeanToPython.lean   # Main library (~1000 lines)
+SnakeLean/
+├── SnakeLean.lean   # Main library (~1000 lines)
 ├── Test.lean           # Basic usage example
 ├── TestSuite.lean      # Comprehensive test suite (~40 functions)
 ├── lakefile.toml       # Lake build configuration
@@ -46,9 +46,9 @@ print('Tests passed!')
 ## Usage
 
 ```lean
-import LeanToPython
+import SnakeLean
 
-open Lean LeanToPython
+open Lean SnakeLean
 
 def myFunction (x y : Nat) : Nat := x + y
 
@@ -76,7 +76,7 @@ The library works by:
 
 ### Key Files
 
-- `LeanToPython.lean` - Main library (~1000 lines)
+- `SnakeLean.lean` - Main library (~1000 lines)
 - `Test.lean` - Example usage with tests
 - `TestSuite.lean` - Comprehensive test suite
 
@@ -344,7 +344,7 @@ Adding Mathlib to the corpus would provide a much larger test suite:
 
 ## Development Process for High-Quality Extractors
 
-The LeanToPython extractor is developed using an iterative, feedback-driven process:
+The SnakeLean extractor is developed using an iterative, feedback-driven process:
 
 ### 1. Corpus-Based Development
 
@@ -474,7 +474,7 @@ To support a new builtin operation:
 To see what LCNF is generated for a function:
 
 ```lean
-import LeanToPython
+import SnakeLean
 open Lean Lean.Compiler.LCNF
 
 def myFn (x : Nat) : Nat := x + 1

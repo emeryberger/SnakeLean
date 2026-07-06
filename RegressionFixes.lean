@@ -1,5 +1,5 @@
 /-
-  Regression cases for three extraction bugs fixed in LeanToPython.lean:
+  Regression cases for three extraction bugs fixed in SnakeLean.lean:
 
   1. Bool-typed-parameter branch inversion: `if boolParam then a else b` lowered
      to a Decidable cases whose discriminant the name-heuristic didn't recognize,
@@ -14,8 +14,8 @@
 
     lake env lean RegressionFixes.lean > RegressionFixes_out.py
 -/
-import LeanToPython
-open Lean LeanToPython
+import SnakeLean
+open Lean SnakeLean
 
 namespace RegressionFixes
 

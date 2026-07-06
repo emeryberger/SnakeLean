@@ -1,4 +1,4 @@
-# LeanToPython fuzzing — forward plan (handoff for a fresh context)
+# SnakeLean fuzzing — forward plan (handoff for a fresh context)
 
 Goal: keep finding transpiler bugs at **massive scale**, and first make the
 harness **efficient enough** that a multi-thousand-seed corpus sweep actually
@@ -127,7 +127,7 @@ Merge in order; a later same-file branch just needs a trivial rebase. Ship each
 bug/feature as its own PR, CI green before merge.
 
 ## cloudnew (run massive sweeps HERE, not local mac)
-- 192 cores, Linux; repo at `~/git/LeanToPython`; elan+lean installed.
+- 192 cores, Linux; repo at `~/git/SnakeLean`; elan+lean installed.
 - **Use `python3.12`** (installed 2026-07-05 via `sudo dnf install python3.12
   python3.12-pip`, passwordless sudo). 3.12 enables `sys.monitoring` path
   coverage AND SlipCover branch coverage; `slipcover` installed for it via
@@ -143,7 +143,7 @@ bug/feature as its own PR, CI green before merge.
 - Shell cwd can reset between commands — use absolute paths.
 
 ## Key files
-- `LeanToPython.lean` — transpiler. Handler tables ~390–590; `emitLetValue`
+- `SnakeLean.lean` — transpiler. Handler tables ~390–590; `emitLetValue`
   ~1140 (the big `.const` dispatch); `.proj`/`emitCases` for structural handlers;
   `emitPythonForDecls` ~3055 (global name de-dup pre-pass, `### HANDLERS` dump);
   `knownHandlerTags` (self-coverage universe — add a tag when adding a handler).

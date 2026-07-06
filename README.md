@@ -1,10 +1,10 @@
-# LeanToPython
+# SnakeLean
 
 A Lean 4 to Python transpiler that extracts idiomatic Python code from Lean's LCNF (Lean Compiler Normal Form).
 
 ## Overview
 
-LeanToPython converts Lean 4 functions into readable Python code by working directly from the compiler's intermediate representation. Unlike runtime-based approaches, this produces standalone Python that:
+SnakeLean converts Lean 4 functions into readable Python code by working directly from the compiler's intermediate representation. Unlike runtime-based approaches, this produces standalone Python that:
 
 - Reads like hand-written Python
 - Uses native Python data structures (lists, dicts, tuples, dataclasses)
@@ -295,9 +295,9 @@ python3 evaluate_correctness.py        # unit suite (132 cases)
 ## Quick Start
 
 ```lean
-import LeanToPython
+import SnakeLean
 
-open Lean LeanToPython
+open Lean SnakeLean
 
 def factorial (n : Nat) : Nat :=
   match n with
@@ -351,8 +351,8 @@ def safe_div(x: int, y: int) -> int | None:
 ## Project Structure
 
 ```
-LeanToPython/
-├── LeanToPython.lean      # Main extraction logic
+SnakeLean/
+├── SnakeLean.lean      # Main extraction logic
 ├── Corpus/                # Lean source corpus (14 modules)
 │   ├── Algorithms.lean
 │   ├── Math.lean
@@ -400,7 +400,7 @@ LeanToPython/
 
 ## How It Works
 
-LeanToPython operates on LCNF (Lean Compiler Normal Form), an intermediate representation used by the Lean compiler. Key transformations:
+SnakeLean operates on LCNF (Lean Compiler Normal Form), an intermediate representation used by the Lean compiler. Key transformations:
 
 1. **Type class inlining**: Operations like `x + y` go through `HAdd.hAdd` in LCNF. We recognize these patterns and emit `x + y` directly.
 

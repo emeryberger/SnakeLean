@@ -2,7 +2,7 @@
 Main corpus test file - extracts all corpus functions to Python.
 -/
 
-import LeanToPython
+import SnakeLean
 import Corpus.Algorithms
 import Corpus.DataStructures
 import Corpus.Math
@@ -11,7 +11,7 @@ import Corpus.Strings
 import Corpus.Games
 import Corpus.Parsers
 
-open Lean LeanToPython
+open Lean SnakeLean
 
 -- Extract all algorithms
 #eval show CoreM Unit from do

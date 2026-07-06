@@ -2,7 +2,7 @@
 Combined corpus test file - extracts all corpus functions to Python in a single output.
 -/
 
-import LeanToPython
+import SnakeLean
 import Corpus.Algorithms
 import Corpus.DataStructures
 import Corpus.Math
@@ -18,7 +18,7 @@ import Corpus.Sequences
 import Corpus.Sorting
 import Corpus.Production
 
-open Lean LeanToPython
+open Lean SnakeLean
 
 -- Extract all functions in a single call
 #eval show CoreM Unit from do

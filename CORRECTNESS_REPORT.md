@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-| Metric | LeanToPython (LCNF) | LLM Translation |
+| Metric | SnakeLean (LCNF) | LLM Translation |
 |--------|---------------------|-----------------|
 | Test Pass Rate | **100.0% (132/132)** | 92.4% (122/132) |
 | Functions Correct | **27/27 (100%)** | 25/27 (92.6%) |
@@ -11,7 +11,7 @@
 
 ## Full Comparison Table
 
-| Function | Category | LeanToPython | LLM | Test Cases | Winner |
+| Function | Category | SnakeLean | LLM | Test Cases | Winner |
 |----------|----------|--------------|-----|------------|--------|
 | gcd | Numeric | 8/8 (100%) | 8/8 (100%) | 8 | Tie |
 | factorial | Numeric | 5/5 (100%) | 5/5 (100%) | 5 | Tie |
@@ -38,13 +38,13 @@
 | left_child | Heap | 4/4 (100%) | 4/4 (100%) | 4 | Tie |
 | right_child | Heap | 4/4 (100%) | 4/4 (100%) | 4 | Tie |
 | parent | Heap | 6/6 (100%) | 6/6 (100%) | 6 | Tie |
-| **is_even** | Math | **5/5 (100%)** | N/A (missing) | 5 | **LeanToPython** |
-| **is_odd** | Math | **5/5 (100%)** | N/A (missing) | 5 | **LeanToPython** |
-| **TOTAL** | | **132/132 (100%)** | **122/132 (92.4%)** | **132** | **LeanToPython** |
+| **is_even** | Math | **5/5 (100%)** | N/A (missing) | 5 | **SnakeLean** |
+| **is_odd** | Math | **5/5 (100%)** | N/A (missing) | 5 | **SnakeLean** |
+| **TOTAL** | | **132/132 (100%)** | **122/132 (92.4%)** | **132** | **SnakeLean** |
 
 ## Summary by Category
 
-| Category | Functions | LeanToPython | LLM |
+| Category | Functions | SnakeLean | LLM |
 |----------|-----------|--------------|-----|
 | Numeric Algorithms | 7 | 7/7 (100%) | 7/7 (100%) |
 | Sorting | 2 | 2/2 (100%) | 2/2 (100%) |
@@ -95,7 +95,7 @@ The Lean corpus includes functions from 14 modules:
 
 ## Code Quality Comparison
 
-### LeanToPython (LCNF Extraction)
+### SnakeLean (LCNF Extraction)
 ```python
 # Example: lcm (verbose but correct)
 def algorithms_lcm(a_196: int, b_197: int) -> int:
@@ -120,7 +120,7 @@ def lcm(a: int, b: int) -> int:
 
 ## Conclusions
 
-| Aspect | LeanToPython | LLM Translation |
+| Aspect | SnakeLean | LLM Translation |
 |--------|--------------|-----------------|
 | Accuracy | 100% | 92.4% |
 | Deterministic | Yes | No |
@@ -129,7 +129,7 @@ def lcm(a: int, b: int) -> int:
 | Coverage | 472 functions | ~50 functions |
 | Formal basis | Compiler IR | Training data |
 
-**Recommendation**: LeanToPython extraction is preferred for:
+**Recommendation**: SnakeLean extraction is preferred for:
 - Formal verification workflows
 - Deterministic, reproducible builds
 - Large-scale extraction (472+ functions)

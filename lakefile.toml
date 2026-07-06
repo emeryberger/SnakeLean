@@ -1,10 +1,10 @@
-name = "LeanToPython"
+name = "SnakeLean"
 version = "0.1.0"
-defaultTargets = ["LeanToPython"]
+defaultTargets = ["SnakeLean"]
 
 
 [[lean_lib]]
-name = "LeanToPython"
+name = "SnakeLean"
 
 [[lean_lib]]
 name = "Corpus"

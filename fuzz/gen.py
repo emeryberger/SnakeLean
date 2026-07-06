@@ -739,8 +739,8 @@ def serializer_call(ty, expr):
     raise ValueError(ty)
 
 
-PRELUDE = r"""import LeanToPython
-open Lean LeanToPython
+PRELUDE = r"""import SnakeLean
+open Lean SnakeLean
 
 -- Batched files pack many functions + hundreds of oracle-row statements into one
 -- `#eval do` block, which overflows the default elaborator recursion limit.

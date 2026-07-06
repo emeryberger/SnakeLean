@@ -56,7 +56,7 @@ denotation. E-graphs/extraction themselves apply only if the transpiler explored
 
 ### How existing (unverified) extractors are validated [10, 11, 12, 13]
 
-The closest analogues to LeanToPython are the extraction back-ends of proof
+The closest analogues to SnakeLean are the extraction back-ends of proof
 assistants. **How was Coq's extraction validated? Not by fuzzing.** Letouzey's
 extraction [10, 11] was validated two ways: (1) a **pen-and-paper correctness
 proof** in his 2004 thesis — two theorems (via the untyped intermediate calculus
@@ -66,7 +66,7 @@ and running / unit-testing them against reference interpreters. The
 *implementation* was part of the trusted code base — never machine-verified —
 and drifted from the thesis's theory over time. No random/differential testing
 appears in that lineage, which is notable because differential testing is
-exactly LeanToPython's approach.
+exactly SnakeLean's approach.
 
 That trust gap is precisely what Forster, Sozeau & Tabareau close in **Verified
 Extraction from Coq to OCaml** [12] (PLDI 2024): a new extraction pipeline
@@ -75,7 +75,7 @@ Coq's kernel) with the OCaml side specified through Malfunction. A striking
 finding relevant to any extractor: they prove first-order data extracts and
 interoperates safely, but **higher-order interoperation with unverified code can
 misbehave and even segfault** — a caveat about the limits of "extract and trust."
-CertiCoq [13] is a separately *verified* compiler for Gallina. LeanToPython sits
+CertiCoq [13] is a separately *verified* compiler for Gallina. SnakeLean sits
 at the empirical/trusted end of this spectrum: differential testing is the
 pragmatic validation, exactly as for classic Coq extraction, with the round-trip
 harness and fuzzer standing in for "extract and run large developments" — and,

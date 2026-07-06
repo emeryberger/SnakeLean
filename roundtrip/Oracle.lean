@@ -12,13 +12,13 @@
   evidence that the Lean->Python transpilation is faithful (it computes what the
   original Lean definition computes).
 -/
-import LeanToPython
+import SnakeLean
 import Corpus.Algorithms
 import Corpus.Math
 import Corpus.NumberTheory
 import Corpus.Sequences
 
-open Lean LeanToPython
+open Lean SnakeLean
 
 namespace Roundtrip
 

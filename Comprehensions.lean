@@ -1,5 +1,5 @@
 /-
-  Regression cases for list/set comprehension emission in LeanToPython.lean.
+  Regression cases for list/set comprehension emission in SnakeLean.lean.
 
   These pin down the lambda-inlining + set-comprehension behavior:
 
@@ -19,8 +19,8 @@
 
     lake env lean Comprehensions.lean > Comprehensions_out.py
 -/
-import LeanToPython
-open Lean LeanToPython
+import SnakeLean
+open Lean SnakeLean
 
 namespace Comprehensions
 

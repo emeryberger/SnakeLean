@@ -10,12 +10,12 @@ import Lean.Compiler.NameMangling
 import Lean.Compiler.ExternAttr
 
 /-!
-# LeanToPython: Idiomatic Python Code Generation
+# SnakeLean: Idiomatic Python Code Generation
 
 This library emits idiomatic, readable Python code from Lean LCNF declarations.
 -/
 
-namespace LeanToPython
+namespace SnakeLean
 
 open Lean Lean.Compiler.LCNF
 
@@ -3397,4 +3397,4 @@ def emitPythonForNames (modName : Name) (names : List Name) : CoreM String := do
     return decls
   CompilerM.run (emitPythonForDecls modName decls)
 
-end LeanToPython
+end SnakeLean

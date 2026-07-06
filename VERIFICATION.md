@@ -1,13 +1,13 @@
 # Verification & Bugs Found
 
-This document records how the LeanToPython transpiler is verified and every
+This document records how the SnakeLean transpiler is verified and every
 transpilation bug that verification has caught and fixed. It complements the
 [Correctness](README.md#correctness) section of the README, which describes the
 standing test layers; this file is the historical bug ledger and a description
 of the two *bug-finding* techniques (differential round-tripping and
 grammar-based fuzzing) that produced most of the fixes.
 
-All bugs below are in `LeanToPython.lean` (the transpiler) unless noted. Each
+All bugs below are in `SnakeLean.lean` (the transpiler) unless noted. Each
 was reduced to a minimal Lean input, fixed, and covered by a regression check.
 
 ## Bug-finding techniques

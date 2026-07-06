@@ -3,7 +3,7 @@
 LLM-translated Python code for the Lean corpus.
 
 This file contains idiomatic Python translations of all functions
-in the LeanToPython corpus, as translated by Claude.
+in the SnakeLean corpus, as translated by Claude.
 
 Total: ~100 functions covering algorithms, math, strings, data structures, games
 """
