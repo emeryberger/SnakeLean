@@ -45,10 +45,10 @@ _TYPEINFO_CACHE = os.path.join(HERE, ".typeinfo.json")
 # *constructible* from the fuzzer's value universe (all fields base-harvestable
 # or themselves constructible user types), so we can generate values, emit them
 # as Lean literals, and compare a transpiled dataclass instance against the Lean
-# oracle.  We deliberately start with the tractable slice — enums (nullary
-# constructors) and non-recursive structs over constructible fields — leaving
-# recursive types (Expr/Trie/JsonValue) and Float-bearing ones out (recursion
-# needs depth bounds; Float isn't in the value universe).
+# oracle.  This now covers enums, structs, container types over user elements,
+# depth-bounded recursive types (Expr/Trie/JsonValue), AND Float-bearing types
+# (Geometry's Point2D/3D) — Float is in the value universe (`gen.VALUE_TYPES`),
+# serialized by exact IEEE-754 bits for the strict-equality oracle.
 # ---------------------------------------------------------------------------
 
 # type name -> list of (ctor_full_name, [field_type_str, ...]); loaded lazily.
@@ -190,7 +190,7 @@ _UNSAFE_TO_CONSTRUCT = ("UnionFind",)
 
 # ---------------------------------------------------------------------------
 # Type-string structure.  A field / signature type is one of: a base type in
-# `gen.LEAN_TYPES` (drives gen.py's value/serializer machinery directly); a
+# `gen.VALUE_TYPES` (drives gen.py's value/serializer machinery directly); a
 # container `List T` / `Array T` / `Option T`; a binary product `T₁ × T₂`; or a
 # (fully-qualified, in `_TYPE_INFO`) user type.  These small parsers decompose a
 # type string so the value generator, Lean-literal emitter, JSON emitter, and
@@ -278,7 +278,7 @@ def _md_field(ty, md):
     type map `md`.  Containers/options are 0 (empty/none); products max their
     components; bare user types read `md` (default ∞ until computed)."""
     ty = ty.strip()
-    if ty in gen.LEAN_TYPES or ty in _HARVESTABLE:
+    if ty in gen.VALUE_TYPES or ty in _HARVESTABLE:
         return 0
     if _container(ty):
         return 0               # empty list / `none` — a finite value at any budget
@@ -323,7 +323,7 @@ def _is_constructible(ty, stack=()):
     bounded generator — so recursive types (`Expr`, `Trie`, `JsonValue`) are now
     constructible, unlike before."""
     ty = ty.strip()
-    if ty in _HARVESTABLE or ty in gen.LEAN_TYPES:
+    if ty in _HARVESTABLE or ty in gen.VALUE_TYPES:
         return True
     c = _container(ty)
     if c:
@@ -401,11 +401,11 @@ def _user_lean_lit(ty, v):
                     for ft, fv in zip(field_types, v["fields"]))
     return f"({ctor} {args})" if args else f"{ctor}"
 
-# The types the fuzzer can generate values for (must match gen.LEAN_TYPES).  A
+# The types the fuzzer can generate values for (must match gen.VALUE_TYPES).  A
 # def is harvestable iff every parameter type and the return type is one of these.
 _HARVESTABLE = {"Nat", "Bool", "Int", "List Nat", "Option Nat", "Nat × Nat",
                 "String", "Char", "Array Nat",
-                "List Int", "List Bool", "List (List Nat)"}
+                "List Int", "List Bool", "List (List Nat)", "Float"}
 
 # `(a b : T)` binds two params of type T; `(x : T)` binds one.  We only accept
 # a param group whose type is harvestable.
@@ -596,7 +596,7 @@ def _rand_input(rng, ty, depth=_MAX_DEPTH):
         return rng.randint(0, _MAX_NAT)
     if ty == gen.PAIR:
         return [rng.randint(0, _MAX_NAT), rng.randint(0, _MAX_NAT)]
-    if ty in gen.LEAN_TYPES:
+    if ty in gen.VALUE_TYPES:
         # Reuse gen.py's generators (a Gen wraps the same rng contract).
         g = gen.Gen.__new__(gen.Gen)
         g.rng = rng
@@ -622,7 +622,7 @@ def _lean_lit(ty, v):
     `gen.lean_lit`, compound-with-user types (containers / products) structurally,
     and user types to `_user_lean_lit`."""
     ty = ty.strip()
-    if ty in gen.LEAN_TYPES:
+    if ty in gen.VALUE_TYPES:
         return gen.lean_lit(ty, v)
     c = _container(ty)
     if c:
@@ -648,7 +648,7 @@ def _json(ty, v):
     containers as JSON arrays (`Option` as value-or-null), products as 2-element
     arrays, user-type values as `{"c":"<pyctor>","f":[<field json>...]}`."""
     ty = ty.strip()
-    if ty in gen.LEAN_TYPES:
+    if ty in gen.VALUE_TYPES:
         return gen.json_lit(ty, v)
     c = _container(ty)
     if c:
@@ -678,7 +678,7 @@ def _serializer_call(ty, expr):
     incl. compounds like `Option (List Nat)` or `List Card`) reuses the inline
     structural serializer so no per-shape named helper is needed."""
     ty = ty.strip()
-    if ty in gen.LEAN_TYPES:
+    if ty in gen.VALUE_TYPES:
         return gen.serializer_call(ty, expr)
     return _field_serializer_expr(ty, f"({expr})")
 
@@ -688,7 +688,7 @@ _BASE_SERIALIZER = {gen.NAT: "jNat", gen.BOOL: "jBool", gen.INT: "jInt",
                     gen.STRING: "jString", gen.CHAR: "jChar",
                     gen.ARRAYNAT: "jArrayNat", gen.LISTINT: "jListInt",
                     gen.LISTBOOL: "jListBool", gen.LISTLISTNAT: "jListListNat",
-                    gen.PAIR: "jPair"}
+                    gen.PAIR: "jPair", gen.FLOAT: "jFloat"}
 
 
 def _field_serializer_expr(ty, var, depth=0):
@@ -727,7 +727,7 @@ def _referenced_user_types(ty, acc):
     """Add to `acc` every user type reachable from type string `ty` (through
     containers and products, not just bare positions)."""
     ty = ty.strip()
-    if ty in gen.LEAN_TYPES:
+    if ty in gen.VALUE_TYPES:
         return
     c = _container(ty)
     if c:
@@ -842,7 +842,7 @@ def _corpus_block(seed, nfuncs, ninputs, funcs, tag=""):
     rows, used_types = [], set()
     for (qual, ptypes, ret) in chosen:
         for t in ptypes + [ret]:
-            if t not in gen.LEAN_TYPES:
+            if t not in gen.VALUE_TYPES:
                 used_types.add(t)
         for _ in range(ninputs):
             vals = [_rand_input(rng, t) for t in ptypes]
@@ -922,7 +922,7 @@ def emit_oracle_over(qual, ptypes, ret, input_rows):
     hand its discovered covering inputs back to the Lean oracle for differential
     validation.  Returns lean_src."""
     rows = []
-    used_types = {t for t in ptypes + [ret] if t not in gen.LEAN_TYPES}
+    used_types = {t for t in ptypes + [ret] if t not in gen.VALUE_TYPES}
     for vals in input_rows:
         lean_args = " ".join(f"({_lean_lit(t, v)})" for (t, v) in zip(ptypes, vals))
         json_args = "[" + ",".join(_json(t, v) for (t, v) in zip(ptypes, vals)) + "]"

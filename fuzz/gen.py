@@ -36,8 +36,17 @@ STRING, CHAR, ARRAYNAT = ("String", "Char", "Array Nat")
 # Phase 2 types: list element-type variety — exercise the list combinators
 # (map/filter/foldr/append/reverse) over non-Nat elements and one nesting level.
 LISTINT, LISTBOOL, LISTLISTNAT = ("List Int", "List Bool", "List (List Nat)")
+FLOAT = "Float"
+# `LEAN_TYPES` is the GRAMMAR's production universe — types the generator can both
+# pick as a signature type AND synthesize expressions of.  Float is deliberately
+# NOT here (the grammar doesn't invent Float functions).
 LEAN_TYPES = [NAT, BOOL, LISTNAT, PAIR, INT, OPTNAT, STRING, CHAR, ARRAYNAT,
               LISTINT, LISTBOOL, LISTLISTNAT]
+# `VALUE_TYPES` is the broader set the fuzzer can generate/serialize VALUES for
+# (used by `corpus_frags` to decide if a base type is drivable).  Adds Float,
+# which corpus fragments (Geometry's Point2D/3D etc.) need but the grammar can't
+# synthesize.  Serialized by exact IEEE-754 bits (see `jFloat`/`float_bits`).
+VALUE_TYPES = LEAN_TYPES + [FLOAT]
 
 # Every production label the grammar can emit — the coverage universe.  Kept in
 # sync with the `choose(...)` labels below; `fuzz.py` reports coverage against
@@ -629,6 +638,14 @@ class Gen:
         if ty == LISTLISTNAT:
             return [[self.rng.randint(0, 9) for _ in range(self.rng.randint(0, 3))]
                     for _ in range(self.rng.randint(0, 3))]
+        if ty == FLOAT:
+            # Values that are EXACTLY representable in binary float64 (integers
+            # and dyadic fractions), so the decimal literal we emit round-trips
+            # bit-for-bit through both Lean and Python.  Include negatives and a
+            # zero; avoid huge magnitudes that overflow to inf.
+            num = self.rng.randint(-64, 64)
+            den = self.rng.choice([1, 2, 4, 8])   # power-of-two denominator
+            return num / den
         raise ValueError(ty)
 
 
@@ -671,11 +688,24 @@ def lean_lit(ty, v):
     if ty == LISTLISTNAT:
         inner = ", ".join("[" + ", ".join(str(x) for x in row) + "]" for row in v)
         return f"([{inner}] : List (List Nat))"
+    if ty == FLOAT:
+        # Emit via the exact bit pattern (`Float.ofBits`), so the literal is
+        # bit-identical regardless of how Lean's decimal float parser rounds.
+        return f"(Float.ofBits {float_bits(v)})"
     raise ValueError(ty)
+
+
+def float_bits(v):
+    """The IEEE-754 float64 bit pattern of `v` as an unsigned 64-bit int."""
+    import struct
+    return struct.unpack("<Q", struct.pack("<d", float(v)))[0]
 
 
 def json_lit(_ty, v):
     import json
+    if _ty == FLOAT:
+        # Tagged bit pattern; `run_oracle` reconstructs the exact float.
+        return f'{{"__f__":{float_bits(v)}}}'
     return json.dumps(v)
 
 
@@ -704,6 +734,8 @@ def serializer_call(ty, expr):
         return f"jListBool ({expr})"
     if ty == LISTLISTNAT:
         return f"jListListNat ({expr})"
+    if ty == FLOAT:
+        return f"jFloat ({expr})"
     raise ValueError(ty)
 
 
@@ -752,6 +784,11 @@ def jListBool (xs : List Bool) : String :=
   "[" ++ String.intercalate "," (xs.map (fun b => if b then "true" else "false")) ++ "]"
 def jListListNat (xss : List (List Nat)) : String :=
   "[" ++ String.intercalate "," (xss.map jListNat) ++ "]"
+-- Float is serialized by its exact IEEE-754 bit pattern (Lean's `toString`
+-- truncates to ~6 digits, useless for the exact-equality oracle).  The Python
+-- side reconstructs the float via `struct` and compares bit-for-bit.  A tagged
+-- object `{"__f__": <bits>}` so it round-trips through JSON unambiguously.
+def jFloat (x : Float) : String := "{\"__f__\":" ++ toString x.toBits ++ "}"
 """
 
 
