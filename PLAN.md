@@ -66,10 +66,24 @@ batched vs unbatched give identical verdict+coverage.
    sequence of `union` ops) instead of raw `.mk`. Unlocks path-compression code —
    a classic source of compiler/transpiler bugs. Same idea for any struct with a
    well-formedness precondition.
-2. **Recursive user types with depth bounds** (`Expr`, `Trie`, `JsonValue`,
-   `RBTree`). Currently excluded (`_is_constructible` bails on recursion). Add a
-   depth-bounded generator. `RBTree.balance` and the parser `Expr` evaluator are
-   exactly the tricky recursive-`match` code transpilers mishandle.
+2. ✅ **DONE — Recursive & container user types** (`recursive-container-types`
+   branch). A recursive type-string interpreter (in `corpus_frags.py`) shared by
+   value-gen / Lean-literal / JSON / serializer emission unlocked BOTH container
+   types over user elements (`List Card`, `Option (List Nat)`, `List (Char ×
+   Trie)`) AND depth-bounded recursive types (`Expr`, `JsonValue`, `Trie`) via
+   minimal-term-depth analysis (always cappable with a base case → terminates).
+   Harvest **139 → 178** functions. Found & fixed **9 transpiler bugs**: loop-mode
+   `find?` predicate → `_uniq_NNN`; `Option.isSome/isNone` point-free; `Option.map`;
+   `List.setTR`; point-free USER fn emitted `fn()` not `fn`; applied `List.head?/
+   getLast?/…` over erased type arg; `List.zip`; nullary user value point-free
+   must be CALLED not referenced (`Trie.empty`); transitive loop-recursion
+   detection (`splitOn` → `_uniq_NNN`). Regression cases (6)-(10) in
+   `RegressionFixes.lean/_test.py`. VERIFIED AT SCALE (2026-07-06, cloudnew): a
+   2000-seed `--corpus --batch 25` sweep = **0 bugs, 177/177 functions, 74/119
+   handlers fired** (up from 65/118 — recursive types reach new handlers).
+   REMAINING: nested `Option` (`(xs : List (Option α))[i]?` matching `some none`)
+   collapses to Python `None` — `TicTacToe.validMoves` excluded via
+   `_KNOWN_OPEN_FNS`; a faithful fix needs a sentinel Option representation.
 3. **Float support** (Geometry: Point2D/3D, distance/normalize). Needs a
    tolerance-based oracle comparison (exact `==` will spuriously fail on
    float rounding). Decide an ULP/relative-tolerance policy first.

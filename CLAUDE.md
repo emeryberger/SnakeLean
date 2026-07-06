@@ -286,6 +286,12 @@ To add support for more builtin operations, modify:
    recursive (Lean overflows it too, so this matches Lean); mutual tail
    recursion is not yet optimized. Deep cases of these can still overflow the
    Python stack.
+8. **Nested `Option`** (`Option (Option α)`, or `(xs : List (Option α))[i]?`)
+   is unfaithful: Python models `Option` as `None`, so `some none` and `none`
+   collapse to the same `None` and a `match` that distinguishes them diverges
+   from Lean (e.g. `TicTacToe.validMoves`, excluded from the fuzz corpus via
+   `corpus_frags._KNOWN_OPEN_FNS`). A faithful fix needs a sentinel-based Option
+   representation (e.g. a `Nothing`/`Just` wrapper) rather than bare `None`.
 
 ## Future Work: Mathlib Integration
 
