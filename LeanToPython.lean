@@ -126,6 +126,11 @@ structure State where
       generative grammar never reached). Populated via `markHandler`; dumped by
       `emitPythonForDecls` as a `### HANDLERS` stderr line. -/
   firedHandlers : Std.HashSet String := {}
+  /-- Fvars that are the projected `OfScientific.ofScientific` operator of a
+      Float-literal instance (`instOfScientificFloat`).  When such an fvar is
+      applied to `(mantissa, sign, exponent)`, the call is emitted as the exact
+      decimal float literal rather than a call to an undefined name. -/
+  ofScientificOps : Std.HashSet FVarId := {}
   /-- Global de-duplicated Python names for top-level (and helper) declarations,
       keyed by the full Lean `Name`.  `toPyFnName` maps some distinct Lean
       functions to the SAME short Python name (e.g. `Corpus.Sorting.mode.count`
@@ -482,6 +487,23 @@ def stdlibFnToPython? (name : Name) : Option String :=
   | ``Char.toNat => some "ord"
   | ``Char.ofNat => some "chr"
 
+  -- Float operations -> Python `math` (bit-identical: both are IEEE-754 float64
+  -- and both route transcendentals through the platform libm).
+  | ``Float.sqrt => some "math.sqrt"
+  | ``Float.sin => some "math.sin"
+  | ``Float.cos => some "math.cos"
+  | ``Float.tan => some "math.tan"
+  | ``Float.asin => some "math.asin"
+  | ``Float.acos => some "math.acos"
+  | ``Float.atan => some "math.atan"
+  | ``Float.atan2 => some "math.atan2"
+  | ``Float.exp => some "math.exp"
+  | ``Float.log => some "math.log"
+  | ``Float.abs => some "abs"
+  | ``Float.floor => some "math.floor"
+  | ``Float.ceil => some "math.ceil"
+  | ``Float.round => some "(lambda x: float(round(x)))"
+
   -- Option operations
   | ``Option.isSome => some "(lambda x: x is not None)"
   | ``Option.isNone => some "(lambda x: x is None)"
@@ -557,9 +579,11 @@ def isStringAppend (name : Name) : Bool :=
 /-- Check if this is a decidable comparison -/
 def isDecidableCompare (name : Name) : Option String :=
   let s := name.toString
-  if s.startsWith "Nat.decLt" || s.startsWith "Int.decLt" then some "<"
-  else if s.startsWith "Nat.decLe" || s.startsWith "Int.decLe" then some "<="
-  else if s.startsWith "Nat.decEq" || s.startsWith "Int.decEq" || name == ``instDecidableEqNat then some "=="
+  -- Float `<`/`<=` follow IEEE (NaN comparisons are false), which Python's
+  -- `<`/`<=` also honor — a direct, exact mapping.
+  if s.startsWith "Nat.decLt" || s.startsWith "Int.decLt" || s.startsWith "Float.decLt" then some "<"
+  else if s.startsWith "Nat.decLe" || s.startsWith "Int.decLe" || s.startsWith "Float.decLe" then some "<="
+  else if s.startsWith "Nat.decEq" || s.startsWith "Int.decEq" || s.startsWith "Float.decEq" || name == ``instDecidableEqNat then some "=="
   -- Any derived / user `DecidableEq T` decision procedure is an equality test.
   -- `deriving DecidableEq` produces `T.decEq` and the instance `instDecidableEqT`
   -- (also `.decEq` as a trailing component for namespaced types); the LCNF call
@@ -759,6 +783,11 @@ def emitArithBinary (kind a b : String) : String :=
   | "intdiv" =>
     if isNonzeroLiteral b then s!"(({a} - {a} % abs({b})) // {b})"
     else s!"(({a} - {a} % abs({b})) // {b} if {b} != 0 else 0)"  -- Euclidean Int division (total)
+  | "floatdiv" =>
+    -- Real division.  Lean Float `x/0` is `±inf` (`nan` for `0/0`), where Python
+    -- raises ZeroDivisionError, so guard: reproduce the IEEE result via math.
+    if isNonzeroLiteral b then s!"({a} / {b})"
+    else s!"({a} / {b} if {b} != 0.0 else math.copysign(math.inf, {a}) if {a} != 0.0 else math.nan)"
   | _        => s!"({a} - {b})"
 
 /-! ## Expression Emission -/
@@ -770,6 +799,26 @@ def recordLiteral (lit : LitValue) : EmitM Unit :=
 /-- Mark a variable as holding a literal value -/
 def markAsLiteralVar (fvarId : FVarId) (lit : LitValue) : EmitM Unit :=
   modify fun s => { s with literalVars := s.literalVars.insert fvarId lit }
+
+/-- Extract `(mantissa, expIsNegative, exponent)` from the value args of an
+    `OfScientific.ofScientific m sign e` application (a Float literal).  The value
+    args are the mantissa (`Nat` literal), the sign (`Bool`, true = negative
+    exponent), and the exponent (`Nat` literal); type/instance args are skipped.
+    Returns none if the shape isn't the expected literal-args form. -/
+def ofScientificArgs? (args : Array Arg) : EmitM (Option (Nat × Bool × Nat)) := do
+  let mut nats : Array Nat := #[]
+  let mut bools : Array Bool := #[]
+  for a in args do
+    if let .fvar fv := a then
+      let fv ← resolveAlias fv
+      match (← get).literalVars[fv]? with
+      | some (.nat n) => nats := nats.push n
+      | _ => match (← get).boolVars[fv]? with
+             | some b => bools := bools.push b
+             | none => pure ()
+  if nats.size == 2 && bools.size == 1 then
+    return some (nats[0]!, bools[0]!, nats[1]!)
+  return none
 
 /-- Check if this is an instance construction we should skip -/
 def shouldSkipLetDecl (decl : LetDecl) : EmitM Bool := do
@@ -864,11 +913,18 @@ def shouldSkipLetDecl (decl : LetDecl) : EmitM Bool := do
       -- concrete instance (`instSubNat` / `Int.instDiv` / `Int.instMod`) fixes
       -- the kind; the generic `instH*` wrapper built from it carries that fvar
       -- among its args, so propagate the tag through it.
+      -- Concrete numeric instances whose Python operator differs from the naive
+      -- one: Nat truncated sub, Euclidean Int div/mod, and Float `/` (which is
+      -- REAL division `/`, not the integer `//` that `instHDiv` maps to — and
+      -- Float `x/0` is `±inf`/`nan`, not a Python `ZeroDivisionError`).
       let concreteKind : Option String :=
         if name == ``instSubNat then some "natsub"
         else if name == ``Int.instDiv then some "intdiv"
         else if name == ``Int.instMod then some "intmod"
-        else none
+        else
+          let s := name.toString
+          if s == "instDivFloat" || s == "Float.instDiv" || containsSubstr s "DivFloat"
+          then some "floatdiv" else none
       match concreteKind with
       | some k => markArith decl.fvarId k
       | none =>
@@ -881,8 +937,14 @@ def shouldSkipLetDecl (decl : LetDecl) : EmitM Bool := do
   | .proj _ idx fvarId =>
     -- Check if projecting from an instance
     if let some instName := (← get).instanceVars[fvarId]? then
-      -- Special case: projecting from OfNat gives us the literal value
       let instStr := instName.toString
+      -- Projecting the `ofScientific` op from an OfScientific instance (Float
+      -- literal): mark the result so its application `(m, sign, e)` becomes the
+      -- literal.  (Analogous to OfNat below, but the op is APPLIED to args.)
+      if containsSubstr instStr "OfScientific" then
+        modify fun s => { s with ofScientificOps := s.ofScientificOps.insert decl.fvarId }
+        return true
+      -- Special case: projecting from OfNat gives us the literal value
       if instName == ``instOfNatNat || instStr.startsWith "instOfNat" || containsSubstr instStr ".instOfNat" then
         -- Prefer the literal captured against this specific OfNat instance;
         -- fall back to `lastLiteral` only if we didn't capture one.
@@ -1220,6 +1282,16 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
       emitIndent
       emit s!"{varName} = 1\n"
       return
+    -- Float literal: `OfScientific.ofScientific m sign e` = `m * 10^±e`.  LCNF
+    -- lowers a source float like `3.14159` to this, with `m`/`e` as Nat literal
+    -- args and `sign` a Bool.  Emit the exact same decimal (`314159e-5`) — Python
+    -- and Lean both round it correctly to the same IEEE-754 double.  Without this
+    -- the args were mis-read as a function call to an undefined var.
+    if declName == ``OfScientific.ofScientific then
+      if let some (m, neg, e) ← ofScientificArgs? args then
+        emitIndent
+        emit s!"{varName} = {m}e{if neg then "-" else ""}{e}\n"
+        return
     -- Check for Nat.succ (n + 1)
     if declName == ``Nat.succ || declName.toString == "Nat.succ" then
       if args.size >= 1 then
@@ -2065,6 +2137,14 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
       else
         emit s!"{varName} = {← pyFnName declName}()\n"
   | .fvar fnVar args =>
+    -- A Float literal: the projected `OfScientific.ofScientific` op applied to
+    -- `(mantissa, sign, exponent)`.  Emit the exact decimal (`314159e-5`) — both
+    -- Lean and Python round it to the same IEEE-754 double.
+    if (← get).ofScientificOps.contains (← resolveAlias fnVar) then
+      if let some (m, neg, e) ← ofScientificArgs? args then
+        emitIndent
+        emit s!"{varName} = {m}e{if neg then "-" else ""}{e}\n"
+        return
     -- Try to inline instance operations
     if ← tryEmitInlinedOp varName fnVar args then
       return
@@ -2987,6 +3067,7 @@ def emitFileHeader : EmitM Unit := do
   emitLn "from __future__ import annotations"
   emitLn "from dataclasses import dataclass"
   emitLn "import functools"
+  emitLn "import math"
   emitLn "from typing import Any, Callable"
   emitBlankLine
 

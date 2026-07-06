@@ -49,10 +49,33 @@ def load(path):
     return py_src, lean_to_py, rows
 
 
+def _float_from_bits(n):
+    """Reconstruct the exact IEEE-754 float64 from its 64-bit pattern."""
+    import struct
+    return struct.unpack("<d", struct.pack("<Q", n & 0xFFFFFFFFFFFFFFFF))[0]
+
+
+def _canon_float(x):
+    """Canonicalize a float for EXACT-equality comparison: map every NaN to one
+    representative (so NaN == NaN, which bare `==` denies) and pass all finite
+    values, signed zeros, and infinities through unchanged (they compare exactly).
+    Returned in a `("__float__", x)` wrapper so a float never accidentally equals
+    a structurally-similar non-float during the `==` compare."""
+    import math
+    return ("__float__", "nan" if math.isnan(x) else x)
+
+
 def normalize(v):
     # Lean `List Nat` <-> Python list; Bool <-> bool; Option Nat: None or int.
     # JSON already gives us list/bool/int/None, so compare structurally, but
     # coerce Python tuples (from Prod) to lists.
+    # A tagged float `{"__f__": bits}` (from the oracle) reconstructs to the exact
+    # float; a bare Python float (a transpiled result) canonicalizes NaN so the
+    # exact-equality compare treats NaN == NaN (all NaN payloads agree).
+    if isinstance(v, dict) and "__f__" in v and len(v) == 1:
+        return _canon_float(_float_from_bits(v["__f__"]))
+    if isinstance(v, float):
+        return _canon_float(v)
     if isinstance(v, tuple):
         return [normalize(x) for x in v]
     if isinstance(v, list):
@@ -65,6 +88,13 @@ def normalize(v):
     if _is_transpiled_dataclass(v):
         fields = _dataclass_fields_in_order(v)
         return {"c": type(v).__name__, "f": [normalize(f) for f in fields]}
+    # The oracle's EXPECTED value for a custom-inductive result is already a
+    # `{"c": ctor, "f": [...]}` dict — recurse into its fields so tagged floats
+    # (and nested ctors) reduce to the same canonical form as the transpiled
+    # dataclass above (otherwise a `{"__f__": bits}` field stays unparsed and
+    # never equals the Python side's `("__float__", x)`).
+    if isinstance(v, dict) and "c" in v and "f" in v:
+        return {"c": v["c"], "f": [normalize(f) for f in v["f"]]}
     return v
 
 
@@ -89,6 +119,8 @@ def materialize(v, ns):
     A custom-inductive value arrives as `{"c": DataclassName, "f": [fields]}`
     (see `corpus_frags._json`); build the actual `@dataclass` instance from `ns`
     (fields recursively materialized).  Lists recurse; scalars pass through."""
+    if isinstance(v, dict) and "__f__" in v and len(v) == 1:
+        return _float_from_bits(v["__f__"])   # tagged float arg -> exact float
     if isinstance(v, dict) and "c" in v and "f" in v:
         cls = ns.get(v["c"])
         fields = [materialize(f, ns) for f in v["f"]]
@@ -146,7 +178,7 @@ def main():
             failures.append((lean_fn, args, got, expected))
 
     total = passed + failed
-    print(f"Round-trip differential (Lean oracle vs transpiled Python)")
+    print("Round-trip differential (Lean oracle vs transpiled Python)")
     print(f"  functions covered: {len(fns_seen)}")
     print(f"  cases: {passed}/{total} agree")
     if failures:

@@ -88,6 +88,19 @@ check("last_of([7,8,9])", last_of([7, 8, 9]), 9)
 prepend_base = ns["prepend_base"]
 check("prepend_base(5)", prepend_base(5), [5, 0])
 
+# (11) Float: literal, real division (/ not //), sqrt (math.sqrt), comparison.
+circ_area_f = ns["circ_area_f"]
+half_f = ns["half_f"]
+hypot_f = ns["hypot_f"]
+sign_f = ns["sign_f"]
+check("circ_area_f(2.0)", circ_area_f(2.0), 3.14159265358979 * 2.0 * 2.0)
+check("half_f(5.0)", half_f(5.0), 2.5)          # 5.0/2 == 2.5, NOT 2 (// would give 2)
+check("half_f(3.0)", half_f(3.0), 1.5)
+check("hypot_f(3.0,4.0)", hypot_f(3.0, 4.0), 5.0)
+check("sign_f(-2.0)", sign_f(-2.0), 2)
+check("sign_f(0.0)", sign_f(0.0), 0)
+check("sign_f(7.5)", sign_f(7.5), 1)
+
 if failures:
     print("FAIL:")
     for f in failures:

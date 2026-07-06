@@ -91,12 +91,27 @@ Type class instances (like `instHAdd`, `instHMul`, `instBEq`) are recognized and
 - `instHAdd` / `instAddNat` → `+`
 - `instHSub` / `instSubNat` → `-`
 - `instHMul` / `instMulNat` → `*`
-- `instHDiv` → `//`
+- `instHDiv` → `//` (integer), but **Float `/` → `/`** real division (the concrete
+  Float `Div` instance is tagged `floatdiv`; `x/0` yields IEEE `±inf`/`nan` to
+  match Lean, not a Python `ZeroDivisionError`)
 - `instHMod` → `%`
 - `instHPow` → `**`
 - `instBEq*` → `==`
 - `instNeg*` → `-` (unary)
 - `instHAppend*` / `instAppend*` → `+` (string concatenation)
+
+### Float Support
+
+Floats are IEEE-754 float64 on both sides (bit-identical, incl. transcendentals
+via libm), so the differential oracle uses **strict equality** (values serialized
+by exact bit pattern, not truncating `toString`). Handled:
+- **Literals** (`3.14…`): Lean's `OfScientific.ofScientific m sign e` (reached via
+  an `instOfScientific` projection) → the exact decimal `<m>e±<e>`.
+- **`/`**: real division (see above), NOT integer `//`.
+- **Methods** → `math.*`: `Float.sqrt/sin/cos/tan/asin/acos/atan/atan2/exp/log/
+  floor/ceil` and `Float.abs` → `abs`. `import math` is always emitted.
+- **Comparisons**: `Float.decLt/decLe/decEq` → `< / <= / ==` (IEEE NaN semantics
+  match Python).
 
 The pattern recognition:
 1. `const instHAdd` → tracked as instance, not emitted
