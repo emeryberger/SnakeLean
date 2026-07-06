@@ -2039,11 +2039,13 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
     -- regress a handler unnoticed.  (A user function legitimately falling through
     -- to a real Python def is fine — the report only alarms on core namespaces.)
     markHandler s!"fallthrough.{declName.toString (escape := false)}"
-    -- If every argument is erased (a type/instance), this is a POINT-FREE
-    -- function reference (e.g. `xs.filter Card.isAce` — a user predicate passed
-    -- unapplied), not a call.  Emit the bare name (`= is_ace`), not `is_ace()`,
-    -- which would call it with no args and then fail when the combinator applies
-    -- the (already-evaluated) result to an element.
+    -- With no value args, disambiguate two very different point-free consts:
+    --   * a FUNCTION-typed const passed unapplied (e.g. `xs.filter Card.isAce`):
+    --     emit the bare name (`= is_ace`), a reference the combinator will call.
+    --   * a NULLARY value const (e.g. `Trie.empty : Trie`, which transpiles to a
+    --     `def trie_empty()`): CALL it (`= trie_empty()`) — a bare name would bind
+    --     the function object, not its value, silently corrupting downstream use.
+    -- The discriminator is whether the const's Lean type is a function (pi) type.
     let mut anyVal := false
     for a in args do
       match a with
@@ -2055,7 +2057,13 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
       emitArgs args
       emit ")\n"
     else
-      emit s!"{varName} = {← pyFnName declName}\n"
+      let isFnTyped := match env.find? declName with
+        | some ci => ci.type.isForall
+        | none => false
+      if isFnTyped then
+        emit s!"{varName} = {← pyFnName declName}\n"
+      else
+        emit s!"{varName} = {← pyFnName declName}()\n"
   | .fvar fnVar args =>
     -- Try to inline instance operations
     if ← tryEmitInlinedOp varName fnVar args then
