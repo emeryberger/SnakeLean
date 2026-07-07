@@ -815,6 +815,16 @@ def emitArithBinary (kind a b : String) : String :=
   | "intdiv" =>
     if isNonzeroLiteral b then s!"(({a} - {a} % abs({b})) // {b})"
     else s!"(({a} - {a} % abs({b})) // {b} if {b} != 0 else 0)"  -- Euclidean Int division (total)
+  | "inttmod" =>
+    -- Truncated Int modulo (`Int.tmod`): result takes the sign of the dividend,
+    -- matching `math.fmod`.  Lean's `tmod _ 0 = _`, so guard zero.
+    if isNonzeroLiteral b then s!"int(math.fmod({a}, {b}))"
+    else s!"(int(math.fmod({a}, {b})) if {b} != 0 else {a})"
+  | "inttdiv" =>
+    -- Truncated Int division (`Int.tdiv`): rounds toward zero.  Lean's
+    -- `tdiv _ 0 = 0`, so guard zero.
+    if isNonzeroLiteral b then s!"int({a} / {b})"
+    else s!"(int({a} / {b}) if {b} != 0 else 0)"
   | "floatdiv" =>
     -- Real division.  Lean Float `x/0` is `±inf` (`nan` for `0/0`), where Python
     -- raises ZeroDivisionError, so guard: reproduce the IEEE result via math.
@@ -1115,6 +1125,16 @@ partial def renderLetValueExpr (decl : LetDecl) : EmitM (Option String) := do
     if isUIntToNat declName then
       if args.size >= 1 then
         return some (← renderArg args[args.size - 1]!)
+    -- Named Int div/mod (Euclidean `emod`/`ediv`, truncated `tmod`/`tdiv`):
+    -- differ from Python's operators on negatives; use the correct total form.
+    if let some kind :=
+        (if declName == ``Int.emod then some "intmod"
+         else if declName == ``Int.ediv then some "intdiv"
+         else if declName == ``Int.tmod then some "inttmod"
+         else if declName == ``Int.tdiv then some "inttdiv"
+         else none) then
+      if args.size == 2 then
+        return some (emitArithBinary kind (← renderArg args[0]!) (← renderArg args[1]!))
     if let some op := natBinOp? declName then
       if args.size == 2 then
         -- `Nat.sub` is truncated subtraction (saturates at 0).
@@ -1353,6 +1373,24 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
         emit s!"{varName} = "
         emitArg args[args.size - 1]!
         emit "\n"
+        return
+    -- Named Int division/modulo called DIRECTLY (`a.emod b`, `Int.tdiv a b`)
+    -- rather than via the `/`/`%` operator: these differ from Python's operators
+    -- for negative operands, so route them through the correct total formula.
+    -- `emod`/`ediv` are Euclidean (result in `[0,|b|)`); `tmod`/`tdiv` truncate
+    -- toward zero.  (The operator forms go through the `instMod`/`instDiv`
+    -- arithKind path; this covers the by-name calls the corpus exposed.)
+    if let some kind :=
+        (if declName == ``Int.emod then some "intmod"
+         else if declName == ``Int.ediv then some "intdiv"
+         else if declName == ``Int.tmod then some "inttmod"
+         else if declName == ``Int.tdiv then some "inttdiv"
+         else none) then
+      if args.size == 2 then
+        let a ← captureEmit (emitArg args[0]!)
+        let b ← captureEmit (emitArg args[1]!)
+        emitIndent
+        emit s!"{varName} = {emitArithBinary kind a b}\n"
         return
     -- Check for direct Nat/Int binary operations
     if let some op := natBinOp? declName then
@@ -1873,13 +1911,27 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
         return
     -- List.contains / List.elem - check membership
     if declName == ``List.contains || declName == ``List.elem then
-      if args.size >= 2 then
+      -- Count real value args (skip the erased type + `[BEq]` instance args, which
+      -- render as `None`).  Applied (`xs.contains a`, 2 value args) → `a in xs`;
+      -- point-free (`s.all s₂.contains`, only the list supplied) → a membership
+      -- predicate lambda, so the combinator gets a real callable — not the garbage
+      -- `elt in None` the old 2-arg-assuming code produced.
+      let st ← get
+      let valArgs := args.filter (fun a => match a with
+        | .fvar fv => !st.instanceVars.contains fv && !st.unitVars.contains fv
+        | _ => false)
+      if valArgs.size >= 2 then
         emitIndent
         emit s!"{varName} = "
-        emitArg args[args.size - 1]!  -- element
+        emitArg valArgs[valArgs.size - 1]!  -- element
         emit " in "
-        emitArg args[args.size - 2]!  -- list
+        emitArg valArgs[valArgs.size - 2]!  -- list
         emit "\n"
+        return
+      else if valArgs.size == 1 then
+        let xs ← captureEmit (emitArg valArgs[0]!)  -- the list (point-free)
+        emitIndent
+        emit s!"{varName} = (lambda _x: _x in {xs})\n"
         return
     -- List.isEmpty / String.isEmpty
     if declName == ``List.isEmpty then
@@ -1943,15 +1995,18 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
         emitIndent
         emit s!"{varName} = {setComp}\n"
         return
-    -- List.qsort / List.mergeSort / Array.qsort - sort
-    if declName == ``List.mergeSort then
+    -- List.qsort / List.mergeSort / Array.qsort - sort.  Lean 4.31 lowers
+    -- `List.mergeSort le` to `List.MergeSort.Internal.mergeSortTR₂ (xs) (le)`,
+    -- where `le : α → α → Bool` is a `≤`-style preorder (true ⇒ first arg comes
+    -- first).  Python's `cmp_to_key` needs a 3-way comparator, so convert:
+    -- `-1 if le(a,b) else 1` (stable sort keeps ties in order).
+    if declName == ``List.mergeSort
+        || declName.toString == "List.MergeSort.Internal.mergeSortTR₂" then
       if args.size >= 2 then
+        let xs ← captureEmit (emitArg args[args.size - 2]!)   -- list
+        let le ← captureEmit (emitArg args[args.size - 1]!)   -- comparator
         emitIndent
-        emit s!"{varName} = sorted("
-        emitArg args[args.size - 1]!  -- list
-        emit ", key=functools.cmp_to_key("
-        emitArg args[args.size - 2]!  -- comparator
-        emit "))\n"
+        emit s!"{varName} = sorted({xs}, key=functools.cmp_to_key(lambda a, b: -1 if {le}(a, b) else 1))\n"
         return
     if declName == ``Array.qsort || declName.toString == "Array.qsort" then
       -- `Array.qsort (as) (lt) (low := 0) (high := as.size - 1)`.  Recent Lean

@@ -14,3 +14,4 @@ import Corpus.Sorting
 import Corpus.Advanced
 import Corpus.Production
 import Corpus.RustModels
+import Corpus.Cedar

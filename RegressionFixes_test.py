@@ -138,6 +138,32 @@ check("get_default([1,2,3], 1)", get_default([1, 2, 3], 1), 2)
 check("get_default([1,2,3], 9)", get_default([1, 2, 3], 9), 99)
 check("flatten_lists([[1,2],[3]])", flatten_lists([[1, 2], [3]]), [1, 2, 3])
 
+# (15) cedar-lean: Int emod/tmod/ediv/tdiv by name (negative-operand semantics),
+# mergeSort comparator, point-free List.contains.
+emod_by_name = ns["emod_by_name"]
+tmod_by_name = ns["tmod_by_name"]
+edise_by_name = ns["edise_by_name"]
+tdiv_by_name = ns["tdiv_by_name"]
+sort_le = ns["sort_le"]
+all_contains = ns["all_contains"]
+# Euclidean emod: result in [0, |b|); truncated tmod: sign of dividend.
+check("emod_by_name(5,-8)", emod_by_name(5, -8), 5)
+check("emod_by_name(-5,8)", emod_by_name(-5, 8), 3)
+check("emod_by_name(-5,-8)", emod_by_name(-5, -8), 3)
+check("tmod_by_name(5,-8)", tmod_by_name(5, -8), 5)
+check("tmod_by_name(-5,8)", tmod_by_name(-5, 8), -5)
+check("tmod_by_name(-7,-3)", tmod_by_name(-7, -3), -1)
+check("edise_by_name(-5,8)", edise_by_name(-5, 8), -1)
+check("edise_by_name(7,-3)", edise_by_name(7, -3), -2)
+check("tdiv_by_name(-7,-3)", tdiv_by_name(-7, -3), 2)
+check("tdiv_by_name(7,-3)", tdiv_by_name(7, -3), -2)
+# division by zero is total in Lean (n/0=0, n%0=n)
+check("emod_by_name(5,0)", emod_by_name(5, 0), 5)
+check("tdiv_by_name(5,0)", tdiv_by_name(5, 0), 0)
+check("sort_le([3,1,2,1])", sort_le([3, 1, 2, 1]), [1, 1, 2, 3])
+check("all_contains([1,2],[1,2,3])", all_contains([1, 2], [1, 2, 3]), True)
+check("all_contains([1,4],[1,2,3])", all_contains([1, 4], [1, 2, 3]), False)
+
 if failures:
     print("FAIL:")
     for f in failures:
