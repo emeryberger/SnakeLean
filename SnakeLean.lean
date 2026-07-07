@@ -1960,6 +1960,15 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
         emitArg args[args.size - 1]!
         emit ")\n"
         return
+    -- Char.utf8Size c -> number of bytes in the char's UTF-8 encoding (1..4).
+    -- Without this it fell through to an undefined `utf8size(...)`.
+    if declName == ``Char.utf8Size then
+      if args.size >= 1 then
+        emitIndent
+        emit s!"{varName} = len("
+        emitArg args[args.size - 1]!
+        emit ".encode('utf-8'))\n"
+        return
     -- Char.toUpper / Char.toLower — method-call form `c.toUpper` lowers to a
     -- `.const Char.toUpper` here (NOT the stdlibFnToPython lambda entry, which
     -- only fires when used as a bare function value), so it needs its own case;
@@ -2071,6 +2080,7 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
            else if declName == ``Char.isWhitespace then some "(lambda c: c.isspace())"
            else if declName == ``Char.toUpper then some "(lambda c: c.upper())"
            else if declName == ``Char.toLower then some "(lambda c: c.lower())"
+           else if declName == ``Char.utf8Size then some "(lambda c: len(c.encode('utf-8')))"
            else none) then
         emitIndent
         emit s!"{varName} = {lam}\n"
@@ -2078,6 +2088,13 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
       if declName == ``Nat.xor then
         emitIndent
         emit s!"{varName} = (lambda a, b: a ^ b)\n"
+        return
+      -- A Nat/Int binary op passed point-free (e.g. `List.foldl Nat.add 0 xs`):
+      -- without this it fell through to a snake-cased undefined name (`add`).
+      -- Emit the matching 2-arg lambda so the combinator can call it.
+      if let some op := natBinOp? declName then
+        emitIndent
+        emit s!"{varName} = (lambda a, b: a {op} b)\n"
         return
     -- Option.isSome / isNone.  These map (in `stdlibFnToPython?`) to a `(lambda …)`
     -- value, which the bare-callable path above skips (it has parens/spaces), so
@@ -3221,6 +3238,7 @@ def knownHandlerTags : List String := [
   "const.Char.isAlpha", "const.Char.isDigit", "const.Char.isAlphanum",
   "const.Char.isLower", "const.Char.isUpper", "const.Char.isWhitespace",
   "const.Char.toUpper", "const.Char.toLower", "const.Char.toNat", "const.Char.ofNat",
+  "const.Char.utf8Size",
   "const.String.push",
   -- Array (the qsort family — F13 lived here)
   "const.Array.size", "const.Array.toList", "const.Array.qsort",

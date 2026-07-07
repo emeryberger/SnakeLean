@@ -111,6 +111,16 @@ def halfF (x : Float) : Float := x / 2.0
 def hypotF (a b : Float) : Float := Float.sqrt (a * a + b * b)
 def signF (x : Float) : Nat := if x < 0.0 then 2 else if x == 0.0 then 0 else 1
 
+-- (12) rust-lean-models corpus bugs.
+--   (a) A Nat/Int binary op passed POINT-FREE to a combinator (`List.foldl
+--       Nat.add …`) emitted a bare snake name (`add`) — an undefined name.
+--       Now a 2-arg lambda.  Mirrors `RustModels.sum_list_Nat`.
+--   (b) `Char.utf8Size c` had no handler and emitted `utf8size(c)` — undefined.
+--       Now `len(c.encode('utf-8'))`.  Mirrors `RustModels.byteSize`.
+def sumFold (l : List Nat) : Nat := List.foldl Nat.add 0 l
+def utf8Len (c : Char) : Nat := c.utf8Size
+def byteSizeR (s : List Char) : Nat := s.foldl (fun acc c => acc + c.utf8Size) 0
+
 end RegressionFixes
 
 #eval show CoreM Unit from do
@@ -139,5 +149,8 @@ end RegressionFixes
       ``RegressionFixes.circAreaF,
       ``RegressionFixes.halfF,
       ``RegressionFixes.hypotF,
-      ``RegressionFixes.signF ]
+      ``RegressionFixes.signF,
+      ``RegressionFixes.sumFold,
+      ``RegressionFixes.utf8Len,
+      ``RegressionFixes.byteSizeR ]
   IO.println code
