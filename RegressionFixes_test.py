@@ -196,6 +196,16 @@ count_matching = ns["count_matching"]
 check("count_matching(>2, [1,3,2,5])", count_matching(lambda n: n > 2, [1, 3, 2, 5]), 2)
 check("count_matching(even, [1,2,3,4])", count_matching(lambda n: n % 2 == 0, [1, 2, 3, 4]), 2)
 
+# (19) whole-number Float literal must be a float, not int (F34).
+float_zero_branch = ns["float_zero_branch"]
+float_lit_const = ns["float_lit_const"]
+check("float_zero_branch(0.0) is float", isinstance(float_zero_branch(0.0), float), True)
+check("float_zero_branch(0.0)", float_zero_branch(0.0), 0.0)
+check("float_zero_branch(3.5)", float_zero_branch(3.5), 3.5)
+# floatLitConst is a nullary def -> a Python function returning the value; call it.
+check("float_lit_const() is float", isinstance(float_lit_const(), float), True)
+check("float_lit_const()", float_lit_const(), 5.0)
+
 if failures:
     print("FAIL:")
     for f in failures:

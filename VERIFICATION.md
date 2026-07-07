@@ -488,6 +488,23 @@ returns the `Inhabited` default, Python raises), unstable `Array.qsort` tie orde
 (intervalScheduling), and Int-vs-Float zero (polygonArea) — all in
 `corpus_frags._KNOWN_OPEN_FNS`.
 
+### F34. Whole-number `Float` literal emitted as a Python `int`
+
+- **Found by:** a 3000-seed cloudnew corpus sweep (`Geometry.angleBetween` on a
+  zero-magnitude vector: `python=0 lean=0.0`), while verifying the `Int → Bool`
+  predicate feature.
+  · **Kind:** mismatch (silent — a Python `int` where Lean has a `Float`)
+- **Root cause:** a whole-number `Float` literal (`(0 : Float)` in
+  `if m1 == 0 || m2 == 0 then 0 else …`) lowers to `instOfNatFloat` → `proj
+  OfNat.0`, and the literal-inlining recorded the value `0` but not that its type
+  was `Float`, so it emitted the Python `int` `0` — failing the exact-bits Float
+  oracle (`0 != 0.0` under bit-equality).
+- **Fix:** when the `OfNat` instance is `instOfNatFloat` (or the projection's
+  type is `Float`), record the fvar in `floatLiteralVars`; every literal-emission
+  site (`emitArg`, `.return`, expression render) runs the value through
+  `floatize`, appending `.0` to a bare integer literal.  All 44 Geometry
+  functions now differentially agree.
+
 ### Custom inductive / structure types (Phase 3 fragment-reuse expansion)
 
 The fragment-reuse harvester now handles corpus functions whose parameters or

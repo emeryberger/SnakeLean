@@ -217,8 +217,15 @@ def usesMaxParam (max : Nat) : Nat := max - 1     -- binder named `max` shadows 
 -- apply.  `countMatching p xs` filters `xs` by predicate `p`.
 def countMatching (p : Int → Bool) (xs : List Int) : Nat := (xs.filter p).length
 
-end RegressionFixes
+-- (19) F34: a whole-number Float LITERAL (`(0 : Float)`, via `instOfNatFloat` →
+-- `proj OfNat.0`) emitted the Python int `0`, so a Float-returning `if … then 0
+-- else …` yielded an `int` where Lean has `0.0` — failing the exact-bits Float
+-- oracle.  Now emitted as `0.0`.  Mirrors `Geometry.angleBetween` (returns `0`
+-- for a zero-magnitude vector).
+def floatZeroBranch (x : Float) : Float := if x == 0.0 then 0 else x
+def floatLitConst : Float := 5
 
+end RegressionFixes
 #eval show CoreM Unit from do
   let code ← emitPythonForNames `RegressionFixes
     [ ``RegressionFixes.signedIf,
@@ -273,5 +280,7 @@ end RegressionFixes
       ``RegressionFixes.zipIdxList,
       ``RegressionFixes.flatMapRange,
       ``RegressionFixes.usesMaxParam,
-      ``RegressionFixes.countMatching ]
+      ``RegressionFixes.countMatching,
+      ``RegressionFixes.floatZeroBranch,
+      ``RegressionFixes.floatLitConst ]
   IO.println code

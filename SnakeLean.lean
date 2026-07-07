@@ -81,6 +81,11 @@ structure State where
   lastLiteral : Option LitValue := none
   /-- Track variables that are just literals (from OfNat projections) -/
   literalVars : Std.HashMap FVarId LitValue := {}
+  /-- Literal fvars whose OfNat instance is `Float` (`instOfNatFloat`): a
+      whole-number Float literal like `(0 : Float)` must emit as `0.0`, not the
+      int `0` — otherwise a Float-returning `if … then 0 else …` yields a Python
+      `int` where Lean has `0.0`, failing the exact-bits Float oracle. -/
+  floatLiteralVars : Std.HashSet FVarId := {}
   /-- Track variables that hold Bool values -/
   boolVars : Std.HashMap FVarId Bool := {}
   /-- Track fvars whose LCNF type is `Bool` (params / let-bindings). Used to
@@ -739,6 +744,11 @@ def litValueStr (lit : LitValue) : String :=
   | .uint64 v => toString v.toNat
   | .usize v => toString v.toNat
 
+/-- A `Nat` literal that is actually a whole-number `Float` (via `instOfNatFloat`)
+    renders as `<n>.0` so it stays a Python `float`; other literals are unchanged. -/
+def floatize (isFloat : Bool) (s : String) : String :=
+  if isFloat && s.all (fun c => c.isDigit) then s ++ ".0" else s
+
 /-! ## Argument Emission -/
 
 def emitArg (arg : Arg) : EmitM Unit := do
@@ -747,7 +757,7 @@ def emitArg (arg : Arg) : EmitM Unit := do
     let fvarId ← resolveAlias fvarId
     -- Check if this is a known literal
     if let some lit := (← get).literalVars[fvarId]? then
-      emitLitValue lit
+      emit (floatize ((← get).floatLiteralVars.contains fvarId) (litValueStr lit))
     else if let some b := (← get).boolVars[fvarId]? then
       emit (if b then "True" else "False")
     else if let some e := (← get).exprVars[fvarId]? then
@@ -1029,6 +1039,13 @@ def shouldSkipLetDecl (decl : LetDecl) : EmitM Bool := do
         return true
       -- Special case: projecting from OfNat gives us the literal value
       if instName == ``instOfNatNat || instStr.startsWith "instOfNat" || containsSubstr instStr ".instOfNat" then
+        -- A Float OfNat (`instOfNatFloat`) means a whole-number Float literal
+        -- (`(0 : Float)`): record it so emission renders `0.0`, not int `0`.
+        let isFloatLit := instName == ``instOfNatFloat
+          || containsSubstr instStr "OfNatFloat"
+          || (match decl.type with | .const ``Float _ => true | _ => false)
+        if isFloatLit then
+          modify fun s => { s with floatLiteralVars := s.floatLiteralVars.insert decl.fvarId }
         -- Prefer the literal captured against this specific OfNat instance;
         -- fall back to `lastLiteral` only if we didn't capture one.
         if let some lit := (← get).literalVars[fvarId]? then
@@ -1103,7 +1120,7 @@ def renderArg (arg : Arg) : EmitM String := do
     let fvarId ← resolveAlias fvarId
     let st ← get
     if let some lit := st.literalVars[fvarId]? then
-      return litValueStr lit
+      return floatize (st.floatLiteralVars.contains fvarId) (litValueStr lit)
     else if let some b := st.boolVars[fvarId]? then
       return (if b then "True" else "False")
     else if let some e := st.exprVars[fvarId]? then
@@ -2882,9 +2899,7 @@ partial def emitCode (code : Code) : EmitM Unit := do
     let rfv ← resolveAlias fvarId
     -- Check if returning a known literal
     if let some lit := (← get).literalVars[rfv]? then
-      emit "return "
-      emitLitValue lit
-      emit "\n"
+      emit s!"return {floatize ((← get).floatLiteralVars.contains rfv) (litValueStr lit)}\n"
     else if let some b := (← get).boolVars[rfv]? then
       emit s!"return {if b then "True" else "False"}\n"
     else if let some (0, _) := (← get).localFnArities[rfv]? then
