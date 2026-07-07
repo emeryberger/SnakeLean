@@ -4,6 +4,63 @@ Goal: keep finding transpiler bugs at **massive scale**, and first make the
 harness **efficient enough** that a multi-thousand-seed corpus sweep actually
 finishes on cloudnew's 192 cores.
 
+## ⏳ IN-PROGRESS SESSION — rust-lean-models corpus (RESTART HERE)
+
+Goal this session: add [`model-checking/rust-lean-models`](https://github.com/model-checking/rust-lean-models)
+(Kani's Lean models of the Rust stdlib string API, dual Apache-2.0/MIT) as a new
+fuzzing corpus, and mine it for transpiler bugs.
+
+**DONE & merged:**
+- PR #25 (merged): fixed red CI — the `LeanToPython→SnakeLean` rename left the CI
+  workflow's `build-args: "LeanToPython"`; now `"SnakeLean"`.
+- PR #26 (merged): **F19** point-free Nat/Int binop (`List.foldl Nat.add`) →
+  undefined `add`, now a 2-arg lambda via `natBinOp?`. **F20** `Char.utf8Size` →
+  undefined `utf8size`, now `len(c.encode('utf-8'))` (applied + point-free).
+  Regression case (12) in `RegressionFixes.lean/_test.py`; F19/F20 in `VERIFICATION.md`.
+
+**DONE this session (branch `rust-models-charval-uint`, off `main`, ready to PR):**
+- `Corpus/RustModels.lean` (NEW, 565 lines): **143 functions** ported from
+  rust-lean-models under `namespace Corpus.RustModels`, `abbrev Str := List Char`,
+  the `Pattern` inductive, + 3 helpers (`list_nat_zero_to*`, `flatten`). Builds
+  clean (`lake build Corpus`). 28 skipped (Prop/spec `_def`/`_sound`/`is_*` defs,
+  1 proof-arg def); 10 made `partial def` (termination lemmas not ported). Adjusted
+  for 4.11→4.31: `x = c`→`x == c`, `x ∈ l`→`l.contains x`, `c.val ≤ 127`→`decide (…)`.
+- `Corpus/RustModels_NOTICE.md` (NEW): attribution.
+- `Corpus.lean` (MOD): `import Corpus.RustModels`.
+- `SnakeLean.lean` (MOD): **3 bug fixes found via the port:**
+  - **F21** `Char.val` (proj 0 of the `Char` struct) emitted `c.field_0` →
+    `AttributeError` (Char is a Python `str`). Fixed: `.proj Char 0` → `ord(c)`
+    (`markHandler "proj.Char.val"`, added to `knownHandlerTags`).
+  - **F22** `UInt32.decLe` (from `Char.val ≤ 127`) fell through to undefined
+    `dec_le`. Fixed: added `UInt{8,16,32,64}/USize .decLt/.decLe` → `< / <=` in
+    `natBinOp?` (comparisons only — UInt *arithmetic* wraps mod 2^n, deliberately
+    left out); added the 10 `const.UInt*.dec*` tags to `knownHandlerTags`.
+  - **F23** `UInt32.toNat` (from `c.val.toNat`, surfaced by the F21/F22
+    regression case) → undefined `to_nat`. Fixed: `UInt*/USize .toNat` is
+    identity (value is already a non-negative Python `int`) via `isUIntToNat`
+    (emit + render paths); 5 `const.UInt*.toNat` tags added.
+  - Regression case (13) added to `RegressionFixes.lean/_test.py` (charCode /
+    isAsciiC / isDigitC); all 13 cases pass. F21/F22/F23 in `VERIFICATION.md`
+    (summary bumped 23 → 28 bugs). Motivating RustModels fns
+    (`is_whitespace`/`Char_is_ascii`/`sum_list_Nat`/`byteSize`) verified at
+    runtime. `lake build` + `lake build Corpus` green.
+
+**NEXT STEPS (in order):**
+1. ✅ Landed F21+F22 (+F23) + RustModels corpus on branch
+   `rust-models-charval-uint`. Bundled corpus + fixes into one PR (repo
+   precedent: PRs #23/#24). Push + open PR, CI green before merge.
+2. Task #2: teach the fuzzer to generate `List Char` / `Char→Bool` predicates /
+   `Pattern` values (`fuzz/gen.py` VALUE_TYPES + serializers; `fuzz/corpus_frags.py`
+   harvest). Without this the 143 new fns aren't auto-harvested/fuzzed — most take
+   `Str = List Char`, `Char→Bool`, or `Pattern`, none currently in the value universe.
+3. Task #5: run a large `--corpus --batch` sweep on cloudnew (192 cores,
+   python3.12), catalogue + fix bugs, each with a regression test.
+
+**Note (infra):** registered Lean's own language server (`lake serve`) as a
+Claude Code LSP plugin (`~/.claude/lean-lsp-marketplace/`, enabled in
+`~/.claude/settings.json`); active after a Claude Code restart. See memory
+`lean-lsp-plugin`.
+
 ## Status (all merged to `main`)
 The full bug-hunting roadmap is DONE. **23 transpiler bugs fixed** (F1–F18,
 R1–R4, upgrade-era), each with a regression test in `RegressionFixes.lean` /

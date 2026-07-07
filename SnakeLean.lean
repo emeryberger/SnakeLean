@@ -432,6 +432,13 @@ def isInstanceCtor (name : Name) : Bool :=
   s.startsWith "inst" || s.startsWith "Inst" ||
   containsSubstr s ".inst" || containsSubstr s ".Inst"
 
+/-- `UInt*.toNat` / `USize.toNat`: the source value already maps to a
+    non-negative Python `int`, so the conversion is identity.  (Most common via
+    `Char.val.toNat`.) -/
+def isUIntToNat (name : Name) : Bool :=
+  name == ``UInt8.toNat || name == ``UInt16.toNat || name == ``UInt32.toNat
+    || name == ``UInt64.toNat || name == ``USize.toNat
+
 /-- Get the Python operator for a Nat/Int binary operation -/
 def natBinOp? (name : Name) : Option String :=
   match name with
@@ -453,6 +460,14 @@ def natBinOp? (name : Name) : Option String :=
   | ``Int.tmod | ``Int.emod => some "%"
   | ``Int.decLt => some "<"
   | ``Int.decLe => some "<="
+  -- UInt comparisons (e.g. `Char.val ≤ 127` uses `UInt32.decLe`).  UInt*
+  -- values map to Python `int` and are always in range, so the comparison is
+  -- exact.  Only comparisons here — UInt *arithmetic* wraps mod 2^n and must
+  -- NOT be emitted as plain Python operators.
+  | ``UInt8.decLt | ``UInt16.decLt | ``UInt32.decLt | ``UInt64.decLt
+  | ``USize.decLt => some "<"
+  | ``UInt8.decLe | ``UInt16.decLe | ``UInt32.decLe | ``UInt64.decLe
+  | ``USize.decLe => some "<="
   | ``BEq.beq => some "=="
   | _ => none
 
@@ -1078,6 +1093,11 @@ partial def renderLetValueExpr (decl : LetDecl) : EmitM (Option String) := do
     if declName == ``Int.toNat then
       if args.size >= 1 then
         return some s!"max(0, {← renderArg args[args.size - 1]!})"
+    -- `UInt*.toNat` / `USize.toNat` are identity: the value already maps to a
+    -- non-negative Python `int`.  (`Char.val.toNat` is the common source.)
+    if isUIntToNat declName then
+      if args.size >= 1 then
+        return some (← renderArg args[args.size - 1]!)
     if let some op := natBinOp? declName then
       if args.size == 2 then
         -- `Nat.sub` is truncated subtraction (saturates at 0).
@@ -1307,6 +1327,15 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
         emit s!"{varName} = max(0, "
         emitArg args[args.size - 1]!
         emit ")\n"
+        return
+    -- `UInt*.toNat` / `USize.toNat` are identity: the value already maps to a
+    -- non-negative Python `int`.  (`Char.val.toNat` is the common source.)
+    if isUIntToNat declName then
+      if args.size >= 1 then
+        emitIndent
+        emit s!"{varName} = "
+        emitArg args[args.size - 1]!
+        emit "\n"
         return
     -- Check for direct Nat/Int binary operations
     if let some op := natBinOp? declName then
@@ -2251,6 +2280,15 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
       markHandler "proj.Min"
       emitIndent
       emit s!"{varName} = min\n"
+      return
+    -- `Char.val` (the UInt32 codepoint field, projection 0 of the `Char`
+    -- structure): a Char is modelled as a Python `str`, which has no
+    -- `.field_0` — so the struct-field path below would emit `c.field_0` and
+    -- crash with AttributeError.  The codepoint is `ord(c)`.
+    if typeName == ``Char && idx == 0 then
+      markHandler "proj.Char.val"
+      emitIndent
+      emit s!"{varName} = ord({← getVarName structFvar})\n"
       return
     emitIndent
     emit s!"{varName} = "
@@ -3231,6 +3269,12 @@ def knownHandlerTags : List String := [
   "const.Nat.max", "const.Nat.sqrt", "const.Nat.sub",
   "const.Int.tdiv", "const.Int.tmod", "const.Int.neg", "const.Int.toNat",
   "const.Int.natAbs", "const.Int.decLt", "const.Int.decLe",
+  "const.UInt8.decLt", "const.UInt16.decLt", "const.UInt32.decLt",
+  "const.UInt64.decLt", "const.USize.decLt",
+  "const.UInt8.decLe", "const.UInt16.decLe", "const.UInt32.decLe",
+  "const.UInt64.decLe", "const.USize.decLe",
+  "const.UInt8.toNat", "const.UInt16.toNat", "const.UInt32.toNat",
+  "const.UInt64.toNat", "const.USize.toNat",
   -- String / Char (barely tested today — a Phase-1 target)
   "const.String.length", "const.String.mk", "const.String.toList",
   "const.String.push", "const.String.isEmpty", "const.String.append",
@@ -3267,7 +3311,7 @@ def knownHandlerTags : List String := [
   "const.bne", "const.xor",
   -- Structural (proj / cases / whole-decl) handlers
   "proj.GetElem?", "proj.GetElem.valid", "proj.GetElem!", "proj.Max", "proj.Min",
-  "proj.Prod", "proj.field",
+  "proj.Char.val", "proj.Prod", "proj.field",
   "cases.Bool", "cases.Nat", "cases.Decidable", "cases.Option", "cases.List",
   "struct.inductive", "struct.tailLoop"
 ]
