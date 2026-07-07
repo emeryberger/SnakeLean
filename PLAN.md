@@ -195,9 +195,18 @@ batched vs unbatched give identical verdict+coverage.
    case (11). VERIFIED AT SCALE (2026-07-06, cloudnew): 2000-seed sweep = **0
    bugs, 209/209 functions**. (Grammar-side Float generation still not done — the
    grammar doesn't invent Float functions; corpus fragments cover them.)
-4. **Grammar-side custom-type generation** — have `gen.py` *invent* small
-   inductives + functions over them, not just harvest corpus ones. Reaches
-   shapes the corpus doesn't contain.
+4. ✅ **DONE — Grammar-side custom-type generation** (`gen.py`). Each generated
+   file now INVENTS 1–3 custom `inductive` types (1–3 constructors, 0–3 base or
+   strictly-earlier-user-type fields → a DAG, so every value is finite and
+   generation terminates), picks them as param/return types, and generates
+   construction (`user.mk`/`user.var`/`user.if`) + `match` (`nat/bool/int.
+   usermatch`) over them. The invented type + a `jU_*` JSON serializer are
+   emitted per file (per-seed-prefixed in `--batch`); values/Lean-literals/JSON
+   reuse the corpus's `{"c":ctor,"f":[…]}` convention so `run_oracle` compares
+   the transpiled `@dataclass` unchanged. 7 new production labels; batch per-seed
+   rows + shrinker byte-identity preserved. VERIFIED: 300–400-seed local sweeps
+   clean, **100% grammar production coverage**. 0 bugs (inductive emission was
+   already sound — Phase 3 corpus types found none either). No transpiler change.
 5. **Mathlib corpus** (see README "Future Work"): a far larger fragment source.
    Heavy: toolchain bump, noncomputable defs, universe polymorphism, long import
    graph. High potential yield.
