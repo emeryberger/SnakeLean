@@ -61,6 +61,11 @@ structure State where
   instanceVars : Std.HashMap FVarId Name := {}
   /-- Track variables that hold extracted operations from instances -/
   extractedOps : Std.HashMap FVarId (Name × Nat) := {}
+  /-- Fvars that hold the `Bind.bind` operation for the `Option` monad, reached
+      via a `do`-block's `instMonadOption` → `proj Monad.toBind` → `proj
+      Bind.bind` chain.  When such an fvar is *called* with `(opt, f)` it must
+      emit the `Option.bind` guard, not `_inst.field_1.field_0(...)`. -/
+  optionBindOps : Std.HashSet FVarId := {}
   /-- Instance / op fvars whose arithmetic differs from the naive Python
       operator, tagged by kind:
         "natsub" — truncated `Nat` subtraction (saturates at 0): `max(0, a-b)`
@@ -181,11 +186,21 @@ def isPyKeyword : String → Bool
   | "while" | "with" | "yield" | "match" | "case" | "type" => true
   | _ => false
 
+/-- Python builtins the transpiler emits CALLS to.  A Lean binder named after one
+    (e.g. a parameter `max`, as in `integerPartitions.go`) would shadow the
+    builtin, so a later emitted `max(0, …)` (from `Nat.sub`) calls the *variable*
+    → `'int' object is not callable`.  Such binders are renamed (`max` → `max_`). -/
+def isPyBuiltinWeEmit : String → Bool
+  | "max" | "min" | "len" | "abs" | "sum" | "list" | "map" | "filter"
+  | "range" | "sorted" | "enumerate" | "reversed" | "zip" | "all" | "any"
+  | "ord" | "chr" | "int" | "float" | "str" | "bool" | "next" | "set" => true
+  | _ => false
+
 def sanitizeName (s : String) : String :=
   let s := s.map fun c => if c.isAlphanum || c == '_' then c else '_'
   if s.isEmpty then "_v"
   else if s.get? 0 |>.map (·.isDigit) |>.getD false then "_" ++ s
-  else if isPyKeyword s then s ++ "_"
+  else if isPyKeyword s || isPyBuiltinWeEmit s then s ++ "_"
   else s
 
 def toSnakeCase (s : String) : String := Id.run do
@@ -891,6 +906,13 @@ def shouldSkipLetDecl (decl : LetDecl) : EmitM Bool := do
       | .fvar _ => true | _ => false)).size
     if (isDecidableCompare name).isSome && valArgCount >= 2 then
       return false
+    -- `List.instDecidableEqNil xs` decides `xs = []` — a comparison with only
+    -- ONE value operand (the other, `[]`, is baked into the instance name).  It
+    -- must be emitted (not elided) or a dependent `if _h : xs = [] then …` loses
+    -- its discriminant (`if <undefined>:`).  Renders `len(xs) == 0` in the const
+    -- path.  Recognized by its `...EqNil` name with exactly one value arg.
+    if containsSubstr name.toString "instDecidableEqNil" && valArgCount == 1 then
+      return false
     -- Identity equality casts (`Eq.ndrec`, `Eq.mpr`, …): alias to the carried
     -- value and skip, so the cast disappears at runtime.  These consts take
     -- their type/motive arguments first, then the data value, then (erased)
@@ -976,7 +998,26 @@ def shouldSkipLetDecl (decl : LetDecl) : EmitM Bool := do
               if let some k := ← arithOf fv then markArith decl.fvarId k
       return true
     return false
-  | .proj _ idx fvarId =>
+  | .proj typeName idx fvarId =>
+    -- `do`-block monad bind for `Option`: the desugaring extracts `Bind.bind`
+    -- through `instMonadOption` → `proj Monad.toBind` (idx 1) → `proj Bind.bind`
+    -- (idx 0).  Track the chain so the eventual CALL emits the `Option.bind`
+    -- guard rather than `_inst.field_1.field_0(opt, f)` (undefined names).
+    if let some instName := (← get).instanceVars[fvarId]? then
+      let s := instName.toString
+      if (containsSubstr s "MonadOption" || containsSubstr s "Option") &&
+         (typeName == ``Monad && idx == 1) then
+        -- `Monad.toBind` for Option → still instance-like (its `Bind.bind`
+        -- projection is handled next).  Reuse `instanceVars` so the chain
+        -- continues; carry a synthetic name marking it as an Option bind source.
+        markAsInstance decl.fvarId `instMonadOption
+        return true
+    if typeName == ``Bind && idx == 0 then
+      if let some instName := (← get).instanceVars[fvarId]? then
+        if containsSubstr instName.toString "MonadOption"
+           || containsSubstr instName.toString "Option" then
+          modify fun st => { st with optionBindOps := st.optionBindOps.insert decl.fvarId }
+          return true
     -- Check if projecting from an instance
     if let some instName := (← get).instanceVars[fvarId]? then
       let instStr := instName.toString
@@ -1161,6 +1202,12 @@ partial def renderLetValueExpr (decl : LetDecl) : EmitM (Option String) := do
       if args.size >= 2 then
         modify fun s => { s with lastCompareVar := some decl.fvarId }
         return some s!"({← renderArg args[args.size - 2]!} != {← renderArg args[args.size - 1]!})"
+    -- `List.instDecidableEqNil xs` decides `xs = []` → `len(xs) == 0`.
+    if containsSubstr declName.toString "instDecidableEqNil" then
+      if let some lastArg := args.back? then
+        if let .fvar _ := lastArg then
+          modify fun s => { s with lastCompareVar := some decl.fvarId }
+          return some s!"(len({← renderArg lastArg}) == 0)"
     if let some op := isDecidableCompare declName then
       if args.size >= 2 then
         modify fun s => { s with lastCompareVar := some decl.fvarId }
@@ -1467,6 +1514,16 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
         emit "\n"
         modify fun s => { s with lastCompareVar := some decl.fvarId }
         return
+    -- `List.instDecidableEqNil xs` decides `xs = []`: emit `len(xs) == 0`
+    -- (only the list operand is present; `[]` is implicit in the name).
+    if containsSubstr declName.toString "instDecidableEqNil" then
+      if let some lastArg := args.back? then
+        if let .fvar _ := lastArg then
+          let xs ← captureEmit (emitArg lastArg)
+          emitIndent
+          emit s!"{varName} = (len({xs}) == 0)\n"
+          modify fun s => { s with lastCompareVar := some decl.fvarId }
+          return
     -- Check for decidable comparisons
     if let some op := isDecidableCompare declName then
       if args.size >= 2 then
@@ -1714,12 +1771,14 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
         emitIndent
         emit s!"{varName} = [_y for {binder} in {xs} if (_y := {body}) is not None]\n"
         return
-    -- List.bind (flatMap): [y for x in xs for y in f(x)]
+    -- List.flatMap f xs: `[y for x in xs for y in f(x)]`.  Lean's arg order is
+    -- `(f) (xs)` — the FUNCTION first, the list LAST — so `f = args[-2]`,
+    -- `xs = args[-1]` (after the two erased type args).  (Emitting these swapped
+    -- iterated over the function value: `for x in f`.)
     if declName == ``List.flatMap || declName == ``List.flatMapTR then
       if args.size >= 2 then
-        -- bind's function returns a sublist; inline it as the inner iterable.
-        let (binder, body) ← fnCompParts args[args.size - 1]! "x"
-        let xs ← renderArg args[args.size - 2]!
+        let (binder, body) ← fnCompParts args[args.size - 2]! "x"   -- f
+        let xs ← renderArg args[args.size - 1]!                     -- xs
         emitIndent
         emit s!"{varName} = [_y for {binder} in {xs} for _y in {body}]\n"
         return
@@ -1744,6 +1803,19 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
         emit ", "
         emitArg args[args.size - 2]!  -- init
         emit ")\n"
+        return
+    -- Array.foldl f init as (start := 0) (stop := as.size): same as List.foldl
+    -- over the Python list.  f/init/as are the FIRST three value args (recent
+    -- Lean materializes the trailing start/stop optParams, so counting from the
+    -- end would grab those).
+    if declName == ``Array.foldl then
+      let valArgs := args.filter (fun a => match a with | .fvar _ => true | _ => false)
+      if valArgs.size >= 3 then
+        let f ← captureEmit (emitArg valArgs[0]!)
+        let init ← captureEmit (emitArg valArgs[1]!)
+        let as ← captureEmit (emitArg valArgs[2]!)
+        emitIndent
+        emit s!"{varName} = functools.reduce({f}, {as}, {init})\n"
         return
     -- List.foldr - foldl with reversed list and swapped function args
     -- (Lean 4.31 lowers `foldr` to the tail-recursive `List.foldrTR`.)
@@ -1875,16 +1947,24 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
     -- List.zipIdx / zipIdxTR - pairs each element with its index.  Lean yields
     -- `(element, index)` pairs (NOT Python `enumerate`'s `(index, element)`), so
     -- swap: `[(x, _i) for _i, x in enumerate(xs)]`.
+    -- (`zipIdx (xs) (start := 0)` has a trailing optParam that recent Lean
+    -- materializes to `0`, so the list is the FIRST value arg, not the last —
+    -- counting from the end would grab the `start` index and `enumerate(0)`.)
     if declName == ``List.zipIdx || declName == ``List.zipIdxTR then
-      if args.size >= 1 then
-        let xs ← renderArg args[args.size - 1]!
+      let valArgs := args.filter (fun a => match a with | .fvar _ => true | _ => false)
+      if valArgs.size >= 1 then
+        let xs ← renderArg valArgs[0]!
         emitIndent
         emit s!"{varName} = [(_x, _i) for _i, _x in enumerate({xs})]\n"
         return
     -- List.set - update element at index.  Lean 4.31 lowers `List.set` to its
     -- tail-recursive `List.setTR` in LCNF (same `(…, xs, i, v)` value-arg shape),
     -- so recognize both spellings.
-    if declName == ``List.set || declName == ``List.setTR then
+    -- List/Array functional index update.  `Array.set!`/`setIfInBounds` update
+    -- an `Array` (a Python list) at an index, returning a new list — same
+    -- non-mutating slice form as `List.set` (Arrays map to lists).
+    if declName == ``List.set || declName == ``List.setTR
+        || declName == ``Array.set! || declName == ``Array.setIfInBounds then
       if args.size >= 3 then
         emitIndent
         emit s!"{varName} = "
@@ -1899,15 +1979,29 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
         emitArg args[args.size - 2]!
         emit "+1:]\n"
         return
-    -- List.getD xs i d - element at index i, or default d if out of bounds.
-    -- args: [type, xs, i, d].
-    if declName == ``List.getD then
+    -- List.getD / Array.getD xs i d - element at index i, or default d if out of
+    -- bounds.  args: [type, xs, i, d].
+    if declName == ``List.getD || declName == ``Array.getD then
       if args.size >= 3 then
         let xs ← renderArg args[args.size - 3]!
         let i ← renderArg args[args.size - 2]!
         let d ← renderArg args[args.size - 1]!
         emitIndent
         emit s!"{varName} = ({xs}[{i}] if 0 <= {i} < len({xs}) else {d})\n"
+        return
+    -- Array.modify xs i f - apply `f` to the element at `i`, returning a new list
+    -- (out-of-bounds returns the list unchanged, matching Lean).  args:
+    -- [type, xs, i, f].
+    if declName == ``Array.modify then
+      if args.size >= 3 then
+        let xs ← renderArg args[args.size - 3]!
+        let i ← renderArg args[args.size - 2]!
+        let (binder, body) ← fnCompParts args[args.size - 1]! "_e"
+        -- Apply the modifier via an inline lambda at index `i`; other positions
+        -- pass through.  `fnCompParts` gives `(binder, body)` where `body` is an
+        -- expression in `binder`.
+        emitIndent
+        emit s!"{varName} = ([(lambda {binder}: {body})({xs}[_j]) if _j == {i} else {xs}[_j] for _j in range(len({xs}))] if 0 <= {i} < len({xs}) else {xs})\n"
         return
     -- List.contains / List.elem - check membership
     if declName == ``List.contains || declName == ``List.elem then
@@ -2319,6 +2413,21 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
       if let some (m, neg, e) ← ofScientificArgs? args then
         emitIndent
         emit s!"{varName} = {m}e{if neg then "-" else ""}{e}\n"
+        return
+    -- `Option` monad bind extracted from a `do`-block (`instMonadOption` →
+    -- `Bind.bind`): called as `bind(opt, f)`.  Emit the None-guard, matching the
+    -- direct `Option.bind` handler.  The two value args are the last two (a
+    -- leading erased type/instance arg may precede them).
+    if (← get).optionBindOps.contains (← resolveAlias fnVar) then
+      let s0 ← get
+      let valArgs := args.filter (fun a => match a with
+        | .fvar fv => !s0.instanceVars.contains fv && !s0.unitVars.contains fv
+        | _ => false)
+      if valArgs.size >= 2 then
+        let opt ← captureEmit (emitArg valArgs[valArgs.size - 2]!)
+        let f ← captureEmit (emitArg valArgs[valArgs.size - 1]!)
+        emitIndent
+        emit s!"{varName} = (None if {opt} is None else {f}({opt}))\n"
         return
     -- Try to inline instance operations
     if ← tryEmitInlinedOp varName fnVar args then
@@ -3468,6 +3577,8 @@ def knownHandlerTags : List String := [
   "const.List.find?", "const.List.findSome?", "const.List.eraseDups",
   "const.List.zipIdx", "const.List.zipIdxTR", "const.List.set",
   "const.List.contains", "const.List.elem", "const.List.getD",
+  "const.Array.set!", "const.Array.setIfInBounds", "const.Array.getD",
+  "const.Array.modify",
   "const.List.isEmpty", "const.List.mergeSort", "const.List.head?",
   "const.List.tail?", "const.List.getLast?", "const.List.dropLast",
   "const.List.dropLastTR", "const.List.replicateTR", "const.Array.replicate",

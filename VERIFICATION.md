@@ -446,6 +446,48 @@ fixes benefit the whole corpus (correct `Int.emod`/`tmod`, comparator sort,
 point-free membership) with no regressions across the 506 differentially-checked
 functions.
 
+### F28–F33. Follow-up corpus bug batch (dependent-if / Array mutation / arg-order)
+
+Clearing the known-open corpus tail (dependent-`if` and the Production DP
+algorithms) exposed and fixed six more bugs; regression cases (16)/(17):
+
+- **F28 — `Option` `do`-block bind.**  A `do`-block over `Option` desugars to
+  `Bind.bind` via `instMonadOption` → `proj Monad.toBind` → `proj Bind.bind`; the
+  elided-instance projections emitted `_inst.field_1.field_0(opt, f)` (undefined
+  names).  Now tracked (`optionBindOps`) so the call emits the `Option.bind`
+  None-guard.  Mirrors `RustModels.string_slice`.
+- **F29 — dependent `if _h : xs = []`.**  `List.instDecidableEqNil xs` decides
+  `xs = []` with only ONE value operand (the `[]` is baked into the name), so it
+  failed the `≥ 2 operands` comparison test, was elided as instance machinery,
+  and the `if` referenced an undefined discriminant.  Now emits `len(xs) == 0`.
+  Mirrors `RustModels.matches_substring`.
+- **F30 — `Array` mutation/fold builtins.**  `Array.set!`/`setIfInBounds`,
+  `Array.getD`, `Array.modify`, `Array.foldl` emitted undefined snake names.  Now
+  functional slice-update / bounds-default / modify-comprehension /
+  `functools.reduce` (Arrays are Python lists).  Exposed by the Production DP
+  algorithms (editDistance/lcs/knapsack/…).
+- **F31 — `List.zipIdx` trailing optParam.**  `zipIdx (xs) (start := 0)` — recent
+  Lean materializes `start`, so the handler grabbed the last arg (`0`) as the
+  list → `enumerate(0)`.  Now uses the first value arg.  Mirrors
+  `Advanced.Matrix.set` (silent-then-crash; found by a corpus sweep).
+- **F32 — `List.flatMap` arg order.**  Lean's `flatMap (f) (xs)` puts the
+  function FIRST; the handler read them swapped and iterated the function value
+  (`for x in f`).  Now `f = args[-2]`, `xs = args[-1]`.  Mirrors
+  `Games.isValidSudokuGrid`.
+- **F33 — binder shadowing a Python builtin.**  A binder named after a builtin
+  the transpiler emits calls to (e.g. a parameter `max`, in
+  `integerPartitions.go`) shadowed it, so an emitted `max(0, …)` (from `Nat.sub`)
+  called the int variable (`'int' object is not callable`).  Such binders are
+  now renamed (`max` → `max_`) via `isPyBuiltinWeEmit` in `sanitizeName`.
+
+After this batch a 150-seed `--corpus` sweep is clean (0 transpiler bugs, 524/539
+functions differentially agree).  The remaining excluded functions are genuine
+faithfulness edge-cases, not transpiler defects: precondition-violating
+`getElem!` panics (knapsack01/lomutoPartition — Lean's `partial def` panic
+returns the `Inhabited` default, Python raises), unstable `Array.qsort` tie order
+(intervalScheduling), and Int-vs-Float zero (polygonArea) — all in
+`corpus_frags._KNOWN_OPEN_FNS`.
+
 ### Custom inductive / structure types (Phase 3 fragment-reuse expansion)
 
 The fragment-reuse harvester now handles corpus functions whose parameters or
