@@ -101,6 +101,17 @@ check("sign_f(-2.0)", sign_f(-2.0), 2)
 check("sign_f(0.0)", sign_f(0.0), 0)
 check("sign_f(7.5)", sign_f(7.5), 1)
 
+# (12) rust-lean-models: point-free Nat binop in foldl; Char.utf8Size.
+sum_fold = ns["sum_fold"]
+utf8_len = ns["utf8len"]
+byte_size_r = ns["byte_size_r"]
+check("sum_fold([1,2,3,4])", sum_fold([1, 2, 3, 4]), 10)
+check("sum_fold([])", sum_fold([]), 0)
+check("utf8_len('a')", utf8_len("a"), 1)      # ASCII -> 1 byte
+check("utf8_len('é')", utf8_len("é"), 2)   # é -> 2 bytes
+check("utf8_len('€')", utf8_len("€"), 3)   # € -> 3 bytes
+check("byte_size_r(['a','€','b'])", byte_size_r(["a", "€", "b"]), 5)
+
 if failures:
     print("FAIL:")
     for f in failures:

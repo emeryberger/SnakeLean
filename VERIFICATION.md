@@ -319,6 +319,35 @@ NOT a batched-emission name collision, as first suspected.
 - **Impact:** all 128 harvestable corpus functions now transpile and agree with
   the oracle, **batched** as well as alone; `_KNOWN_OPEN_NS` is empty.
 
+### F19. Nat/Int binary op passed point-free emitted an undefined name
+
+- **Found by:** the **rust-lean-models corpus** (`RustLeanModels.RustString.
+  sum_list_Nat := List.foldl Nat.add 0 l`); a 6-function feasibility spike.
+  · **Kind:** runtime (`NameError: name 'add' is not defined`)
+- **Root cause:** a Nat/Int arithmetic op is normally inlined as a Python
+  operator when *applied* (`natBinOp?` in the `hop`/`const` paths).  Passed
+  **point-free** as a higher-order argument (`List.foldl Nat.add`), it reaches
+  the zero-value-args const path, which had a hand-written lambda only for
+  `Nat.xor`; every other op fell through to `pyFnName`, snake-casing `Nat.add`
+  → a call to an undefined `add`.  (`Nat`/`Int` `add`/`sub`/`mul`/`div`/`mod`/
+  `pow`/`beq`/`ble`/`blt`/`decLt`/`decLe` all affected.)
+- **Fix:** in the point-free const path, look the op up in `natBinOp?` and emit
+  the matching 2-arg lambda (`(lambda a, b: a + b)`), mirroring the existing
+  `Nat.xor` case, so the combinator receives a real callable.
+
+### F20. `Char.utf8Size` had no handler and emitted an undefined name
+
+- **Found by:** the **rust-lean-models corpus** (`RustString.byteSize` sums
+  `Char.utf8Size` over a `List Char`; the library is built on `Str = List
+  Char` and threads UTF-8 byte offsets everywhere).
+  · **Kind:** runtime (`NameError: name 'utf8size' is not defined`)
+- **Root cause:** no emission handler for `Char.utf8Size` (the UTF-8 encoded
+  byte length of a char, 1–4); both applied (`c.utf8Size`) and point-free
+  (`xs.map Char.utf8Size`) forms fell through to the snake-cased `utf8size`.
+- **Fix:** dedicated handlers — applied → `len(c.encode('utf-8'))`, point-free
+  → `(lambda c: len(c.encode('utf-8')))` — and added to `knownHandlerTags`.
+  Verified equal to Lean's `Char.utf8Size` across the 1/2/3/4-byte ranges.
+
 ### Custom inductive / structure types (Phase 3 fragment-reuse expansion)
 
 The fragment-reuse harvester now handles corpus functions whose parameters or
