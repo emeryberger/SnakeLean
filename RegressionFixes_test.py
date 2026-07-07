@@ -191,6 +191,11 @@ check("zip_idx_list([7,8,9])", zip_idx_list([7, 8, 9]), [(7, 0), (8, 1), (9, 2)]
 check("flat_map_range(3)", flat_map_range(3), [0, 0, 1, 1, 2, 2])
 check("uses_max_param(5)", uses_max_param(5), 4)
 
+# (18) Int -> Bool predicate parameter: pass a real Python predicate.
+count_matching = ns["count_matching"]
+check("count_matching(>2, [1,3,2,5])", count_matching(lambda n: n > 2, [1, 3, 2, 5]), 2)
+check("count_matching(even, [1,2,3,4])", count_matching(lambda n: n % 2 == 0, [1, 2, 3, 4]), 2)
+
 if failures:
     print("FAIL:")
     for f in failures:

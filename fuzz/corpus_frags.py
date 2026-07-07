@@ -227,39 +227,64 @@ _UNSAFE_TO_CONSTRUCT = ("UnionFind",)
 
 
 # ---------------------------------------------------------------------------
-# `Char → Bool` predicates.  rust-lean-models threads character predicates
-# (`is_whitespace`, `is_alphanumeric`, …) through most of its string API as a
-# first-class `Char → Bool` argument, and wraps one in the `Pattern` inductive.
-# The fuzzer represents a predicate value as a SUBSET of gen.py's char alphabet:
-# the predicate is "is this char in the subset?".  That has identical semantics
-# in a Lean lambda and a Python lambda, and is finite/serializable — so it can be
-# generated, emitted as a Lean literal, and materialized Python-side.  A
-# predicate is a legal PARAMETER type but never a RETURN type (a function value
-# can't be compared as an oracle result), which `harvest` enforces.
+# `α → Bool` predicates (`Char → Bool`, `Int → Bool`).  rust-lean-models threads
+# character predicates (`is_whitespace`, …) through its string API and wraps one
+# in the `Pattern` inductive; cedar-lean's `Set` API takes `Int → Bool`
+# (`setAll`/`setAny`/`setFilter`).  The fuzzer represents a predicate value as a
+# finite SUBSET of a fixed element universe — the predicate is "is this element
+# in the subset?".  That has identical semantics in a Lean lambda and a Python
+# lambda, and is finite/serializable, so it can be generated, emitted as a Lean
+# literal, and materialized Python-side.  A predicate is a legal PARAMETER type
+# but never a RETURN type (a function value can't be compared as an oracle
+# result), which `harvest` enforces.
+#
+# The tag records the element type so the Lean literal / Python lambda rebuild
+# the right membership test: `{"__pred__": [elems], "ety": "Char"|"Int"}`.
 # ---------------------------------------------------------------------------
-_PRED_TYPE = "Char → Bool"
+# element type -> the fixed candidate universe the predicate subset is drawn from.
+_PRED_UNIVERSE = {
+    "Char": None,                     # filled from gen.Gen._ALPHABET below
+    "Int": list(range(-4, 9)),        # small signed range (matches gen's Int-ish values)
+}
+
+
+def _pred_elem_type(ty):
+    """If `ty` (whitespace-normalized) is a supported `α → Bool` predicate type,
+    return its element type (`"Char"` / `"Int"`); else None."""
+    t = _norm_type(ty).replace(" ", "")
+    for ety in _PRED_UNIVERSE:
+        if t == f"{ety}→Bool":
+            return ety
+    return None
 
 
 def _is_pred_type(ty):
-    """Is `ty` (whitespace-normalized) the char-predicate type `Char → Bool`?"""
-    return _norm_type(ty).replace(" ", "") == _PRED_TYPE.replace(" ", "")
+    """Is `ty` a supported predicate type (`Char → Bool` / `Int → Bool`)?"""
+    return _pred_elem_type(ty) is not None
 
 
-def _rand_pred(rng):
-    """A random `Char → Bool` predicate value: a sorted subset of gen.py's char
-    alphabet (the chars for which the predicate is true).  Serialized/materialized
-    as a `{"__pred__": [chars]}` tagged dict."""
-    alpha = gen.Gen._ALPHABET
-    chosen = sorted(c for c in alpha if rng.random() < 0.5)
-    return {"__pred__": chosen}
+def _pred_universe(ety):
+    return list(gen.Gen._ALPHABET) if ety == "Char" else _PRED_UNIVERSE[ety]
+
+
+def _rand_pred(rng, ety):
+    """A random `α → Bool` predicate value: a subset of the element universe (the
+    elements for which the predicate is true).  Tagged with the element type."""
+    chosen = [e for e in _pred_universe(ety) if rng.random() < 0.5]
+    return {"__pred__": chosen, "ety": ety}
 
 
 def _pred_lean_lit(v):
-    """Lean literal for a predicate value: `(fun c => [chars].contains c)` — a
-    membership test over the char subset (`List Char`)."""
-    chars = "".join(v["__pred__"])
-    lst = "[" + ", ".join(f"'{c}'" for c in chars) + "]"
-    return f"(fun c => ({lst} : List Char).contains c)"
+    """Lean literal for a predicate value: `(fun x => [elems].contains x)` — a
+    membership test over the chosen subset."""
+    ety = v.get("ety", "Char")
+    if ety == "Char":
+        elems = ", ".join(f"'{c}'" for c in v["__pred__"])
+        lst = f"([{elems}] : List Char)"
+    else:  # Int
+        elems = ", ".join(f"({n} : Int)" for n in v["__pred__"])
+        lst = f"([{elems}] : List Int)"
+    return f"(fun x => {lst}.contains x)"
 
 
 def _pred_json(v):
@@ -626,8 +651,8 @@ _MAX_USER_LIST = 3
 
 def _rand_input(rng, ty, depth=_MAX_DEPTH):
     ty = _deabbrev(ty)
-    if _is_pred_type(ty):
-        return _rand_pred(rng)
+    if let := _pred_elem_type(ty):
+        return _rand_pred(rng, let)
     if ty == gen.NAT:
         return rng.randint(0, _MAX_NAT)
     if ty == gen.PAIR:

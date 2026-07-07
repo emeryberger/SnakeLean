@@ -2345,6 +2345,25 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
       | some a => emit s!"{varName} = ({a} {cmp})\n"
       | none   => emit s!"{varName} = (lambda x: x {cmp})\n"
       return
+    -- A binary op / append passed POINT-FREE (only a type arg present, so the
+    -- `args.size == 0` block above was skipped, e.g. `List.foldl List.appendTR []`):
+    -- emit the 2-arg lambda.  Handled BEFORE the fallthrough tag below so the
+    -- self-coverage report doesn't falsely flag it as a broken core handler.
+    let stFT ← get
+    let noValueArgs := args.all (fun a => match a with
+      | .fvar fv => stFT.unitVars.contains fv | _ => true)
+    if noValueArgs then
+      if let some op := natBinOp? declName then
+        markHandler s!"const.{declName.toString (escape := false)}"
+        emitIndent
+        emit s!"{varName} = (lambda a, b: a {op} b)\n"
+        return
+      if declName == ``List.append || declName == ``List.appendTR
+          || declName == ``HAppend.hAppend || isStringAppend declName then
+        markHandler s!"const.{declName.toString (escape := false)}"
+        emitIndent
+        emit s!"{varName} = (lambda a, b: a + b)\n"
+        return
     -- Regular function call — the generic fallback for any const not handled by
     -- a special case above.  Self-coverage: tag it `fallthrough.<declName>`.  A
     -- *core-namespace* construct (List/Nat/Int/String/Char/Array/Option/…) that
@@ -2387,17 +2406,9 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
       emitArgs args
       emit ")\n"
     else
-      -- Point-free binary op / append passed to a combinator with only a type
-      -- arg present (so the `args.size == 0` block above was skipped): emit the
-      -- 2-arg lambda, else it falls through to an undefined snake name
-      -- (`add`/`append_tr`).  Mirrors the zero-arg handling above.
-      if let some op := natBinOp? declName then
-        emit s!"{varName} = (lambda a, b: a {op} b)\n"
-        return
-      if declName == ``List.append || declName == ``List.appendTR
-          || declName == ``HAppend.hAppend || isStringAppend declName then
-        emit s!"{varName} = (lambda a, b: a + b)\n"
-        return
+      -- (Point-free binary op / append are handled above, before the fallthrough
+      -- tag.)  Remaining no-value-arg consts: a FUNCTION-typed const passed
+      -- unapplied → bare reference; a NULLARY value const → call it.
       let isFnTyped := match env.find? declName with
         | some ci => ci.type.isForall
         | none => false

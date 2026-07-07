@@ -211,6 +211,12 @@ def zipIdxList (xs : List Nat) : List (Nat × Nat) := xs.zipIdx
 def flatMapRange (n : Nat) : List Nat := (List.range n).flatMap (fun i => [i, i])
 def usesMaxParam (max : Nat) : Nat := max - 1     -- binder named `max` shadows builtin
 
+-- (18) `Int → Bool` predicate parameter (mirrors Cedar's `setFilter`/`setAll`).
+-- The fuzzer now generates predicate values for `Int → Bool` too (not just
+-- `Char → Bool`); this checks the transpiler emits a callable the combinator can
+-- apply.  `countMatching p xs` filters `xs` by predicate `p`.
+def countMatching (p : Int → Bool) (xs : List Int) : Nat := (xs.filter p).length
+
 end RegressionFixes
 
 #eval show CoreM Unit from do
@@ -266,5 +272,6 @@ end RegressionFixes
       ``RegressionFixes.arrFold,
       ``RegressionFixes.zipIdxList,
       ``RegressionFixes.flatMapRange,
-      ``RegressionFixes.usesMaxParam ]
+      ``RegressionFixes.usesMaxParam,
+      ``RegressionFixes.countMatching ]
   IO.println code
