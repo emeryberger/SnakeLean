@@ -58,25 +58,37 @@ fuzzing corpus, and mine it for transpiler bugs.
    dependent `match _h`/`if _h` erased-proof params via `isErasedType`; zipIdx
    element order; builtins isSuffixOf/getD/Array.replicate/flatMapTR/appendTR/
    point-free append). Regression case (14). RustModels 6 → 128/134 ok.
-3. ✅ **PR #29 (open, CI green):** **cedar-lean corpus** (`cedar-policy/cedar-spec`,
+3. ✅ **PR #29 (merged):** **cedar-lean corpus** (`cedar-policy/cedar-spec`,
    Apache-2.0) — Int64 checked arithmetic + Set-over-Int (18 fns). Fixed **F25**
    (named `Int.emod/ediv/tmod/tdiv` wrong on negatives — silent), **F26**
    (`List.mergeSort` comparator → `mergeSortTR₂` + 3-way cmp), **F27** (point-free
-   `List.contains` → membership lambda). Regression case (15). 18/18 Cedar ok,
-   506 corpus fns checked, no regressions. See memory `cedar-corpus`.
+   `List.contains` → membership lambda). Regression case (15). See `cedar-corpus`.
+4. ✅ **PR #30 (merged):** cleared the known-open tail — **F28** (`Option` `do`-block
+   bind via `instMonadOption`→`Monad.toBind`→`Bind.bind`), **F29** (dependent
+   `if _h : xs = []` via `instDecidableEqNil` → `len(xs)==0`), **F30** (`Array.set!/
+   setIfInBounds/getD/modify/foldl`), **F31** (`List.zipIdx` trailing optParam →
+   `enumerate(0)`), **F32** (`List.flatMap` arg order swapped), **F33** (binder
+   shadowing a Python builtin like `max`). Regression cases (16)/(17).
 
-**REMAINING FOLLOW-UPS (known-open corpus bugs):**
-- **Dependent-`if` Decidable discriminant dropped** (`if _x_NNN:` undefined) — ~5
-  RustModels fns (matches_indices/rmatches/rust_matches/string_slice/
-  matches_indices_substring). The `if _h : c` where `c` is a Decidable prop
-  loses the discriminant computation in a dependent context.
-- **Array-mutation family** — `Array.set!`→`set_`, `Array.getD`→`get_d`,
-  `Array.modify`→`modify` undefined (Production DP algorithms: lcs/knapsack/
-  editDistance/coinChange/countingSort/radixSort/matrixChainOrder).
+**✅ CAMPAIGN DONE (Task #3, 2026-07-07, cloudnew @ main ebbeb98):** two 5000-seed
+`--batch 25 --defs 14 --inputs 6 --jobs 180` sweeps, both **CLEAN (0 transpiler
+bugs)**:
+- `--corpus`: 4409 checked, **535/535 functions**, 91/146 handlers.
+- grammar `--emi 0.3`: 4855 checked (145 ill-typed skipped), **100% production
+  coverage, 86% k-path**, 50/146 handlers.
+33 transpiler bugs fixed total (F1–F33). See memory `campaign-clean-10k`.
+
+**REMAINING FOLLOW-UPS (all lower-priority / deferred):**
 - **`Int → Bool` predicate gen** — would unlock Cedar's `setAll/setAny/setFilter`
   (mirror the `Char→Bool` support with an Int subset/threshold predicate).
-- **Large cloudnew sweep** (Task #3) — run a big `--corpus --batch` sweep with
-  all three new corpora to mine for more bugs at scale.
+- **Nested-Option faithfulness** (the one real gap) — `some none`/`none` collapse
+  to Python `None`. Needs a sentinel `Some`/`Nothing` representation (`returns`
+  lib or internal dataclasses). User deferred 2026-07-07 ("forget it for now").
+- **Cosmetic:** point-free `List.appendTR` shows a false "core-namespace
+  fallthrough" in the self-coverage report (correct code emitted in the else
+  branch after `markHandler`). Give it a proper handler tag to silence.
+- **Grammar-side custom-type generation / Mathlib corpus** — bigger fragment
+  sources (see "New bug-finding directions" below).
 
 **Note (infra):** registered Lean's own language server (`lake serve`) as a
 Claude Code LSP plugin (`~/.claude/lean-lsp-marketplace/`, enabled in
