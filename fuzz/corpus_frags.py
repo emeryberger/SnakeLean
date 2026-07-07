@@ -522,16 +522,37 @@ def _harvestable_type(ty, ns_prefixes=()):
 # point-free user fns, nullary-const call, transitive loop recursion).
 _KNOWN_OPEN_NS = ()
 
-# Individual functions with a KNOWN, DEFERRED transpiler limitation, excluded by
-# exact qualified name (a signature-level exclusion can't reach them — the issue
-# is in the body, not the types).
+# Individual functions with a KNOWN, DEFERRED faithfulness limitation, excluded
+# by exact qualified name (a signature-level exclusion can't reach them — the
+# issue is in the body / preconditions, not the types).
 #   * TicTacToe.validMoves indexes a `List (Option Player)` with `[i]?` and
 #     matches `some none`.  Python models `Option` as `None`, so the outer
 #     `some none` (empty cell) and the out-of-bounds `none` COLLAPSE to the same
 #     `None` — the classic nested-Option faithfulness gap.  A faithful fix needs
 #     a sentinel-based Option representation (a large redesign); deferred.  See
 #     CLAUDE.md "Known Limitations".
-_KNOWN_OPEN_FNS = ("Corpus.Games.TicTacToe.validMoves",)
+#   * The DP / partition functions below panic on `getElem!` when called with
+#     inputs violating an INTER-ARGUMENT precondition the monomorphic fuzzer
+#     can't respect — e.g. `knapsack01 cap weights values` needs
+#     `weights.length == values.length`; `lomutoPartition xs lo hi` needs `lo`,
+#     `hi` in bounds.  In compiled/`#eval` Lean a `partial def`'s `getElem!`
+#     panic returns the `Inhabited` default (0) rather than aborting, so the
+#     oracle yields a bogus value that Python (which raises IndexError) can't
+#     match.  Not a transpiler bug — the transpilation is faithful for in-domain
+#     inputs; these need precondition-respecting value generation (a future
+#     "invariant-respecting user-value generation" item in PLAN.md).
+#   * intervalScheduling sorts by `qsort (a.2 < b.2)` with TIES; Lean's
+#     `Array.qsort` is not stable and orders equal-key elements differently from
+#     Python's stable `sorted`, so tie-broken outputs diverge (unspecified order).
+#   * polygonArea on a degenerate 1-point polygon returns `0` where the Float
+#     shoelace formula's `0.0` is expected (Int/Float zero representation).
+_KNOWN_OPEN_FNS = (
+    "Corpus.Games.TicTacToe.validMoves",
+    "Corpus.Production.knapsack01",
+    "Corpus.Production.lomutoPartition",
+    "Corpus.Production.intervalScheduling",
+    "Corpus.Geometry.polygonArea",
+)
 
 
 def _is_known_open(qual):

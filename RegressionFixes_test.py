@@ -164,6 +164,33 @@ check("sort_le([3,1,2,1])", sort_le([3, 1, 2, 1]), [1, 1, 2, 3])
 check("all_contains([1,2],[1,2,3])", all_contains([1, 2], [1, 2, 3]), True)
 check("all_contains([1,4],[1,2,3])", all_contains([1, 4], [1, 2, 3]), False)
 
+# (16) Option do-block bind, dependent `if _h : xs = []`.
+opt_do = ns["opt_do"]
+is_nil_dep = ns["is_nil_dep"]
+check("opt_do(2,3)", opt_do(2, 3), 5)
+check("opt_do(2,None)", opt_do(2, None), None)
+check("opt_do(None,3)", opt_do(None, 3), None)
+check("is_nil_dep([])", is_nil_dep([]), 0)
+check("is_nil_dep([1,2,3])", is_nil_dep([1, 2, 3]), 3)
+
+# (17) Array mutation, zipIdx optparam, flatMap arg order, builtin-shadow.
+arr_set = ns["arr_set"]
+arr_get_d = ns["arr_get_d"]
+arr_modify = ns["arr_modify"]
+arr_fold = ns["arr_fold"]
+zip_idx_list = ns["zip_idx_list"]
+flat_map_range = ns["flat_map_range"]
+uses_max_param = ns["uses_max_param"]
+check("arr_set([1,2,3],1,9)", arr_set([1, 2, 3], 1, 9), [1, 9, 3])
+check("arr_get_d([1,2,3],1,0)", arr_get_d([1, 2, 3], 1, 0), 2)
+check("arr_get_d([1,2,3],9,0)", arr_get_d([1, 2, 3], 9, 0), 0)
+check("arr_modify([1,2,3],1)", arr_modify([1, 2, 3], 1), [1, 12, 3])
+check("arr_modify([1,2,3],9)", arr_modify([1, 2, 3], 9), [1, 2, 3])
+check("arr_fold([1,2,3,4])", arr_fold([1, 2, 3, 4]), 10)
+check("zip_idx_list([7,8,9])", zip_idx_list([7, 8, 9]), [(7, 0), (8, 1), (9, 2)])
+check("flat_map_range(3)", flat_map_range(3), [0, 0, 1, 1, 2, 2])
+check("uses_max_param(5)", uses_max_param(5), 4)
+
 if failures:
     print("FAIL:")
     for f in failures:

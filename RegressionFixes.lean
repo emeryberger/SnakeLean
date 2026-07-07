@@ -172,6 +172,45 @@ def tdivByName (a b : Int) : Int := a.tdiv b
 def sortLe (xs : List Int) : List Int := xs.mergeSort (· ≤ ·)
 def allContains (xs ys : List Int) : Bool := xs.all ys.contains
 
+-- (16) rust-lean-models corpus bugs, part 4 (dependent-if / do-block).
+--   (a) F28: a `do`-block over the `Option` monad desugars to `Bind.bind` via
+--       `instMonadOption` → `proj Monad.toBind` → `proj Bind.bind`.  The
+--       elided-instance projections emitted `_inst.field_1.field_0(opt, f)`
+--       (undefined names); now the `Option.bind` None-guard.  Mirrors
+--       `RustModels.string_slice`.
+--   (b) F29: `if _h : xs = [] then …` (a dependent `if` on `DecidableEq`'s
+--       `List.instDecidableEqNil xs`, ONE value operand) dropped the
+--       discriminant → `if <undefined>:`.  Now `len(xs) == 0`.  Mirrors
+--       `RustModels.matches_substring`.
+def optDo (o1 o2 : Option Nat) : Option Nat := do
+  let a ← o1
+  let b ← o2
+  some (a + b)
+def isNilDep (xs : List Nat) : Nat := if _h : xs = [] then 0 else xs.length
+
+-- (17) Array-mutation + combinator arg-order + builtin-shadow bugs (found via a
+-- corpus sweep over the Production DP algorithms).
+--   (a) F30: `Array.set!`/`getD`/`modify`/`foldl` emitted undefined snake names
+--       (`set_`/`get_d`/`modify`/`array_foldl`).  Now list slice-update / bounds
+--       default / modify comprehension / `functools.reduce`.
+--   (b) F31: `List.zipIdx` has a trailing `start := 0` optParam that recent Lean
+--       materializes; the handler grabbed the last arg (`0`) as the list →
+--       `enumerate(0)`.  Now uses the first value arg.  Mirrors `Matrix.set`.
+--   (c) F32: `List.flatMap f xs` — Lean's arg order is `(f) (xs)`, but the
+--       handler read them swapped and iterated the function (`for x in f`).
+--       Mirrors `Games.isValidSudokuGrid`.
+--   (d) F33: a binder named after a Python builtin the transpiler emits calls to
+--       (`max`, as in `integerPartitions.go`) shadowed it, so an emitted
+--       `max(0, …)` (from `Nat.sub`) called the int variable.  Now renamed
+--       (`max_`).
+def arrSet (xs : Array Nat) (i v : Nat) : Array Nat := xs.set! i v
+def arrGetD (xs : Array Nat) (i d : Nat) : Nat := xs.getD i d
+def arrModify (xs : Array Nat) (i : Nat) : Array Nat := xs.modify i (· + 10)
+def arrFold (xs : Array Nat) : Nat := xs.foldl (· + ·) 0
+def zipIdxList (xs : List Nat) : List (Nat × Nat) := xs.zipIdx
+def flatMapRange (n : Nat) : List Nat := (List.range n).flatMap (fun i => [i, i])
+def usesMaxParam (max : Nat) : Nat := max - 1     -- binder named `max` shadows builtin
+
 end RegressionFixes
 
 #eval show CoreM Unit from do
@@ -218,5 +257,14 @@ end RegressionFixes
       ``RegressionFixes.ediseByName,
       ``RegressionFixes.tdivByName,
       ``RegressionFixes.sortLe,
-      ``RegressionFixes.allContains ]
+      ``RegressionFixes.allContains,
+      ``RegressionFixes.optDo,
+      ``RegressionFixes.isNilDep,
+      ``RegressionFixes.arrSet,
+      ``RegressionFixes.arrGetD,
+      ``RegressionFixes.arrModify,
+      ``RegressionFixes.arrFold,
+      ``RegressionFixes.zipIdxList,
+      ``RegressionFixes.flatMapRange,
+      ``RegressionFixes.usesMaxParam ]
   IO.println code
