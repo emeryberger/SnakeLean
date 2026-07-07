@@ -123,6 +123,21 @@ check("is_ascii_c('€')", is_ascii_c("€"), False)
 check("is_digit_c('5')", is_digit_c("5"), True)
 check("is_digit_c('A')", is_digit_c("A"), False)
 
+# (14) partial-app to combinator, dependent match, isSuffixOf/getD/append-fold.
+map_add_to = ns["map_add_to"]
+dep_opt_match = ns["dep_opt_match"]
+suffix_check = ns["suffix_check"]
+get_default = ns["get_default"]
+flatten_lists = ns["flatten_lists"]
+check("map_add_to(10, [1,2,3])", map_add_to(10, [1, 2, 3]), [11, 12, 13])
+check("dep_opt_match(None)", dep_opt_match(None), 7)
+check("dep_opt_match(5)", dep_opt_match(5), 10)
+check("suffix_check([2,3],[1,2,3])", suffix_check([2, 3], [1, 2, 3]), True)
+check("suffix_check([1,2],[1,2,3])", suffix_check([1, 2], [1, 2, 3]), False)
+check("get_default([1,2,3], 1)", get_default([1, 2, 3], 1), 2)
+check("get_default([1,2,3], 9)", get_default([1, 2, 3], 9), 99)
+check("flatten_lists([[1,2],[3]])", flatten_lists([[1, 2], [3]]), [1, 2, 3])
+
 if failures:
     print("FAIL:")
     for f in failures:

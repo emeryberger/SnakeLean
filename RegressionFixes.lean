@@ -131,6 +131,28 @@ def charCode (c : Char) : Nat := c.val.toNat
 def isAsciiC (c : Char) : Bool := c.val ≤ 127
 def isDigitC (c : Char) : Bool := c.val ≥ 48 && c.val ≤ 57
 
+-- (14) rust-lean-models corpus bugs, part 3 (found via elaborated-signature
+-- harvest + Char→Bool/Pattern value generation).
+--   (a) F23b: a USER function PARTIALLY applied and passed to a combinator
+--       (`List.map (addTo n) xs`) emitted `add_to(n)` — a call missing the last
+--       arg.  Now `(lambda _p0: add_to(n, _p0))`.  Mirrors
+--       `RustModels.list_substring_pos_def`'s `List.map (charIndex_to_pos s)`.
+--   (b) F24: a dependent `match _h : e with` / `if _h : c` introduces an
+--       LCNF-erased proof param.  It was emitted as a spurious `def` param and
+--       an extra `None` call arg (arity mismatch), and a nullary `none`-arm thunk
+--       was returned uncalled.  Mirrors `RustModels`' Option-returning matchers.
+--   (c) missing builtins: `List.isSuffixOf`, `List.getD`, point-free
+--       `List.append` in a fold (`flatten`).
+def addTo (n x : Nat) : Nat := n + x
+def mapAddTo (n : Nat) (xs : List Nat) : List Nat := xs.map (addTo n)
+def depOptMatch (o : Option Nat) : Nat :=
+  match _h : o with
+  | none => 7
+  | some x => x * 2
+def suffixCheck (p xs : List Nat) : Bool := p.isSuffixOf xs
+def getDefault (xs : List Nat) (i : Nat) : Nat := xs.getD i 99
+def flattenLists (xss : List (List Nat)) : List Nat := List.foldl List.append [] xss
+
 end RegressionFixes
 
 #eval show CoreM Unit from do
@@ -165,5 +187,11 @@ end RegressionFixes
       ``RegressionFixes.byteSizeR,
       ``RegressionFixes.charCode,
       ``RegressionFixes.isAsciiC,
-      ``RegressionFixes.isDigitC ]
+      ``RegressionFixes.isDigitC,
+      ``RegressionFixes.addTo,
+      ``RegressionFixes.mapAddTo,
+      ``RegressionFixes.depOptMatch,
+      ``RegressionFixes.suffixCheck,
+      ``RegressionFixes.getDefault,
+      ``RegressionFixes.flattenLists ]
   IO.println code
