@@ -414,6 +414,38 @@ bugs, all fixed with regression case (14):
   fold (`List.foldl List.append []`, i.e. `flatten`) — all previously fell
   through to undefined snake-cased names.
 
+### F25–F27. cedar-lean corpus (bug batch)
+
+Adding the **cedar-lean** corpus (`Corpus/Cedar.lean`, from
+`cedar-policy/cedar-spec` — Cedar's `Int64` checked arithmetic + `Set` over
+`Int`) exposed three more bugs, all fixed with regression case (15):
+
+- **F25 — named `Int` division/modulo semantics (silent wrong value).**
+  `Int.emod`/`Int.ediv` (Euclidean) and `Int.tmod`/`Int.tdiv` (truncated) called
+  **by name** (e.g. `a.emod b`, as in Cedar's `smod`) emitted Python's `%`/`//`,
+  which disagree with Lean for negative operands (`(5).emod (-8) = 5` in Lean but
+  `5 % -8 == -3` in Python).  Fixed to the correct total formula per op:
+  `emod → a % abs(b)`, `ediv → (a - a%abs(b)) // b`, `tmod → int(math.fmod(a,b))`,
+  `tdiv → int(a/b)`, each zero-guarded (Lean division is total).  (The `%`/`/`
+  *operator* forms already used the Euclidean `intmod`/`intdiv` arithKind; this
+  covers the by-name calls, which no prior corpus exercised.)
+- **F26 — `List.mergeSort` with a comparator.**  `xs.mergeSort (· ≤ ·)` lowers to
+  `List.MergeSort.Internal.mergeSortTR₂`, which had no handler (undefined
+  `merge_sort_tr_`) and, in the plain-`mergeSort` handler, fed the `≤`-preorder
+  Bool comparator straight to `functools.cmp_to_key` (which needs a 3-way cmp).
+  Fixed: match the lowered name and convert the comparator —
+  `sorted(xs, key=cmp_to_key(lambda a, b: -1 if le(a, b) else 1))`.
+- **F27 — point-free `List.contains`.**  `s₁.all s₂.contains` passed
+  `List.contains s₂` (list supplied, element missing) and emitted the garbage
+  `elt in None`.  Fixed by counting real value args (skipping the erased type +
+  `[BEq]` instance): the point-free form now emits a membership lambda
+  `(lambda _x: _x in s₂)`.  Mirrors `Cedar.setSubset`/`setIntersects`.
+
+All 18 harvestable Cedar functions transpile and agree with the oracle; the
+fixes benefit the whole corpus (correct `Int.emod`/`tmod`, comparator sort,
+point-free membership) with no regressions across the 506 differentially-checked
+functions.
+
 ### Custom inductive / structure types (Phase 3 fragment-reuse expansion)
 
 The fragment-reuse harvester now handles corpus functions whose parameters or

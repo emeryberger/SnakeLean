@@ -45,16 +45,38 @@ fuzzing corpus, and mine it for transpiler bugs.
     (`is_whitespace`/`Char_is_ascii`/`sum_list_Nat`/`byteSize`) verified at
     runtime. `lake build` + `lake build Corpus` green.
 
-**NEXT STEPS (in order):**
-1. ✅ Landed F21+F22 (+F23) + RustModels corpus on branch
-   `rust-models-charval-uint`. Bundled corpus + fixes into one PR (repo
-   precedent: PRs #23/#24). Push + open PR, CI green before merge.
-2. Task #2: teach the fuzzer to generate `List Char` / `Char→Bool` predicates /
-   `Pattern` values (`fuzz/gen.py` VALUE_TYPES + serializers; `fuzz/corpus_frags.py`
-   harvest). Without this the 143 new fns aren't auto-harvested/fuzzed — most take
-   `Str = List Char`, `Char→Bool`, or `Pattern`, none currently in the value universe.
-3. Task #5: run a large `--corpus --batch` sweep on cloudnew (192 cores,
-   python3.12), catalogue + fix bugs, each with a regression test.
+**ALL DONE & shipped (PRs #27–#29):**
+1. ✅ **PR #27 (merged):** RustModels corpus + F21/F22/F23 (`Char.val`→`ord`,
+   UInt comparisons, `UInt*.toNat` identity). Regression case (13).
+2. ✅ **PR #28 (merged):** Task #2 done AND rebuilt on a better foundation —
+   the harvester now reads Lean's **elaborated signatures** (`TypeInfo.lean`
+   `### SIG`, gated by `isValueType` + `findDeclarationRanges?`) instead of regex
+   source-parsing, so it handles unannotated defs and is version-robust; dead
+   regex helpers removed. Added `Char→Bool` predicate + `Pattern` values (params
+   only; only return types get serializers). Harvest **215 → 521** (RustModels
+   6 → 134). Fixed **F24 batch** (partial-app-to-combinator via `constValueArity`;
+   dependent `match _h`/`if _h` erased-proof params via `isErasedType`; zipIdx
+   element order; builtins isSuffixOf/getD/Array.replicate/flatMapTR/appendTR/
+   point-free append). Regression case (14). RustModels 6 → 128/134 ok.
+3. ✅ **PR #29 (open, CI green):** **cedar-lean corpus** (`cedar-policy/cedar-spec`,
+   Apache-2.0) — Int64 checked arithmetic + Set-over-Int (18 fns). Fixed **F25**
+   (named `Int.emod/ediv/tmod/tdiv` wrong on negatives — silent), **F26**
+   (`List.mergeSort` comparator → `mergeSortTR₂` + 3-way cmp), **F27** (point-free
+   `List.contains` → membership lambda). Regression case (15). 18/18 Cedar ok,
+   506 corpus fns checked, no regressions. See memory `cedar-corpus`.
+
+**REMAINING FOLLOW-UPS (known-open corpus bugs):**
+- **Dependent-`if` Decidable discriminant dropped** (`if _x_NNN:` undefined) — ~5
+  RustModels fns (matches_indices/rmatches/rust_matches/string_slice/
+  matches_indices_substring). The `if _h : c` where `c` is a Decidable prop
+  loses the discriminant computation in a dependent context.
+- **Array-mutation family** — `Array.set!`→`set_`, `Array.getD`→`get_d`,
+  `Array.modify`→`modify` undefined (Production DP algorithms: lcs/knapsack/
+  editDistance/coinChange/countingSort/radixSort/matrixChainOrder).
+- **`Int → Bool` predicate gen** — would unlock Cedar's `setAll/setAny/setFilter`
+  (mirror the `Char→Bool` support with an Int subset/threshold predicate).
+- **Large cloudnew sweep** (Task #3) — run a big `--corpus --batch` sweep with
+  all three new corpora to mine for more bugs at scale.
 
 **Note (infra):** registered Lean's own language server (`lake serve`) as a
 Claude Code LSP plugin (`~/.claude/lean-lsp-marketplace/`, enabled in

@@ -153,6 +153,25 @@ def suffixCheck (p xs : List Nat) : Bool := p.isSuffixOf xs
 def getDefault (xs : List Nat) (i : Nat) : Nat := xs.getD i 99
 def flattenLists (xss : List (List Nat)) : List Nat := List.foldl List.append [] xss
 
+-- (15) cedar-lean corpus bugs.
+--   (a) F25: `Int.emod`/`Int.ediv` (Euclidean) and `Int.tmod`/`Int.tdiv`
+--       (truncated) called BY NAME emitted Python's `%`/`//`, which disagree
+--       with Lean for negative operands (a SILENT wrong-value bug).  Now the
+--       correct total formula each.  Mirrors `Cedar.smod` (`Int.emod`).
+--   (b) F26: `List.mergeSort le` (lowered to `mergeSortTR₂`) referenced an
+--       undefined name and mis-converted the `≤` comparator.  Now
+--       `sorted(xs, key=cmp_to_key(lambda a,b: -1 if le(a,b) else 1))`.
+--       Mirrors `Cedar.setMake`.
+--   (c) F27: `List.contains` passed POINT-FREE (`s₁.all s₂.contains`) emitted
+--       garbage (`elt in None`).  Now a membership lambda.  Mirrors
+--       `Cedar.setSubset`/`setIntersects`.
+def emodByName (a b : Int) : Int := a.emod b
+def tmodByName (a b : Int) : Int := a.tmod b
+def ediseByName (a b : Int) : Int := a.ediv b
+def tdivByName (a b : Int) : Int := a.tdiv b
+def sortLe (xs : List Int) : List Int := xs.mergeSort (· ≤ ·)
+def allContains (xs ys : List Int) : Bool := xs.all ys.contains
+
 end RegressionFixes
 
 #eval show CoreM Unit from do
@@ -193,5 +212,11 @@ end RegressionFixes
       ``RegressionFixes.depOptMatch,
       ``RegressionFixes.suffixCheck,
       ``RegressionFixes.getDefault,
-      ``RegressionFixes.flattenLists ]
+      ``RegressionFixes.flattenLists,
+      ``RegressionFixes.emodByName,
+      ``RegressionFixes.tmodByName,
+      ``RegressionFixes.ediseByName,
+      ``RegressionFixes.tdivByName,
+      ``RegressionFixes.sortLe,
+      ``RegressionFixes.allContains ]
   IO.println code
