@@ -112,6 +112,17 @@ check("utf8_len('é')", utf8_len("é"), 2)   # é -> 2 bytes
 check("utf8_len('€')", utf8_len("€"), 3)   # € -> 3 bytes
 check("byte_size_r(['a','€','b'])", byte_size_r(["a", "€", "b"]), 5)
 
+# (13) Char.val -> ord (F21), UInt32 comparison (F22).
+char_code = ns["char_code"]
+is_ascii_c = ns["is_ascii_c"]
+is_digit_c = ns["is_digit_c"]
+check("char_code('A')", char_code("A"), 65)
+check("char_code('€')", char_code("€"), 8364)
+check("is_ascii_c('A')", is_ascii_c("A"), True)
+check("is_ascii_c('€')", is_ascii_c("€"), False)
+check("is_digit_c('5')", is_digit_c("5"), True)
+check("is_digit_c('A')", is_digit_c("A"), False)
+
 if failures:
     print("FAIL:")
     for f in failures:

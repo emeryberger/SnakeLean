@@ -121,6 +121,16 @@ def sumFold (l : List Nat) : Nat := List.foldl Nat.add 0 l
 def utf8Len (c : Char) : Nat := c.utf8Size
 def byteSizeR (s : List Char) : Nat := s.foldl (fun acc c => acc + c.utf8Size) 0
 
+-- (13) rust-lean-models corpus bugs, part 2.
+--   (a) F21: `Char.val` (projection 0 of the `Char` struct) emitted `c.field_0`
+--       (AttributeError — a Char is a Python `str`).  Now `ord(c)`.  Mirrors
+--       `RustModels.is_whitespace` (`c.val ≤ 127`).
+--   (b) F22: `UInt32.decLe` (from a `Char.val ≤ 127` comparison) fell through to
+--       an undefined `dec_le`.  Now `<=`.  Mirrors `RustModels.Char_is_ascii`.
+def charCode (c : Char) : Nat := c.val.toNat
+def isAsciiC (c : Char) : Bool := c.val ≤ 127
+def isDigitC (c : Char) : Bool := c.val ≥ 48 && c.val ≤ 57
+
 end RegressionFixes
 
 #eval show CoreM Unit from do
@@ -152,5 +162,8 @@ end RegressionFixes
       ``RegressionFixes.signF,
       ``RegressionFixes.sumFold,
       ``RegressionFixes.utf8Len,
-      ``RegressionFixes.byteSizeR ]
+      ``RegressionFixes.byteSizeR,
+      ``RegressionFixes.charCode,
+      ``RegressionFixes.isAsciiC,
+      ``RegressionFixes.isDigitC ]
   IO.println code

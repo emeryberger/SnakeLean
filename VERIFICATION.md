@@ -348,6 +348,42 @@ NOT a batched-emission name collision, as first suspected.
   → `(lambda c: len(c.encode('utf-8')))` — and added to `knownHandlerTags`.
   Verified equal to Lean's `Char.utf8Size` across the 1/2/3/4-byte ranges.
 
+### F21. `Char.val` (projection 0 of the `Char` struct) emitted `c.field_0`
+
+- **Found by:** the **rust-lean-models corpus** (`RustString.is_whitespace`
+  tests `c.val ≤ 127`; the library inspects codepoints directly all over).
+  · **Kind:** runtime (`AttributeError: 'str' object has no attribute 'field_0'`)
+- **Root cause:** a `Char` is modelled as a Python `str`, but `Char.val` (the
+  `UInt32` codepoint field) is projection 0 of the `Char` structure, so the
+  generic struct-field projection path emitted `c.field_0` — a valid identifier
+  the linter accepts but that crashes at runtime on a `str`.
+- **Fix:** special-case `.proj Char 0` → `ord(c)` (tag `proj.Char.val`, added to
+  `knownHandlerTags`).  Verified `ord` agrees with Lean's `Char.val` on ASCII
+  and multi-byte codepoints.
+
+### F22. `UInt32.decLe` (from `c.val ≤ 127`) emitted an undefined name
+
+- **Found by:** the **rust-lean-models corpus** (`Char_is_ascii := decide
+  (c.val ≤ 127)`).
+  · **Kind:** runtime (`NameError: name 'dec_le' is not defined`)
+- **Root cause:** comparing two `UInt32` codepoints uses `UInt32.decLe`, which
+  had no entry in `natBinOp?` and fell through to the snake-cased `dec_le`.
+- **Fix:** added `UInt{8,16,32,64}`/`USize` `.decLt`/`.decLe` → `< / <=` in
+  `natBinOp?` (**comparisons only** — `UInt` *arithmetic* wraps mod 2^n and must
+  NOT become a plain Python operator), plus the 10 tags to `knownHandlerTags`.
+
+### F23. `UInt32.toNat` (from `c.val.toNat`) emitted an undefined name
+
+- **Found by:** the F21/F22 regression case (`charCode c := c.val.toNat`), which
+  first exercised the `Char.val` → `UInt32` → `Nat` conversion end-to-end.
+  · **Kind:** runtime (`NameError: name 'to_nat' is not defined`)
+- **Root cause:** after F21 emits `ord(c)` for `c.val`, the surrounding
+  `UInt32.toNat` had no handler and fell through to the snake-cased `to_nat`.
+- **Fix:** `UInt{8,16,32,64}`/`USize` `.toNat` is **identity** — the source
+  value already maps to a non-negative Python `int` — so it emits its argument
+  unchanged (`isUIntToNat`, both the emit and render paths); 5 tags added to
+  `knownHandlerTags`.
+
 ### Custom inductive / structure types (Phase 3 fragment-reuse expansion)
 
 The fragment-reuse harvester now handles corpus functions whose parameters or
@@ -463,12 +499,14 @@ After every fix the full matrix is re-run green:
 
 ## Summary
 
-23 transpiler bugs found and fixed across this work — 4 by the round-trip
+28 transpiler bugs found and fixed across this work — 4 by the round-trip
 differential harness (R1–R4), 11 by the grammar-based fuzzer (F1–F11), 7 by
-fragment-reuse + Phase-1 type expansion (F12–F18), plus the upgrade-era set
-— of which **six were silent wrong-value / total-operation bugs** (truncated
-`Nat` subtraction, Euclidean `Int` division and modulo, two `OfNat` literal
-collisions, and `Nat`/`Int` division-by-zero) that no crash-based check catches
-on its own. The differential oracle (Lean's `#eval`) is what makes those
-catchable. After F14–F17, all 128 harvestable corpus functions transpile
-correctly (up from 78 before the String/Char/Array expansion).
+fragment-reuse + Phase-1 type expansion (F12–F18), 5 by the **rust-lean-models
+corpus** (F19–F23: point-free Nat/Int binop, `Char.utf8Size`, `Char.val`,
+`UInt*` comparisons, `UInt*.toNat`), plus the upgrade-era set — of which **six
+were silent wrong-value / total-operation bugs** (truncated `Nat` subtraction,
+Euclidean `Int` division and modulo, two `OfNat` literal collisions, and
+`Nat`/`Int` division-by-zero) that no crash-based check catches on its own. The
+differential oracle (Lean's `#eval`) is what makes those catchable. After
+F14–F17, all 128 harvestable corpus functions transpile correctly (up from 78
+before the String/Char/Array expansion).
