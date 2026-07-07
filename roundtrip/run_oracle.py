@@ -121,6 +121,12 @@ def materialize(v, ns):
     (fields recursively materialized).  Lists recurse; scalars pass through."""
     if isinstance(v, dict) and "__f__" in v and len(v) == 1:
         return _float_from_bits(v["__f__"])   # tagged float arg -> exact float
+    if isinstance(v, dict) and "__pred__" in v and len(v) == 1:
+        # A `Char → Bool` predicate arg: the char subset for which it is true.
+        # Rebuild the same membership lambda the transpiled call expects (the
+        # Lean side emits `fun c => [chars].contains c`).
+        chars = set(v["__pred__"])
+        return lambda c: c in chars
     if isinstance(v, dict) and "c" in v and "f" in v:
         cls = ns.get(v["c"])
         fields = [materialize(f, ns) for f in v["f"]]

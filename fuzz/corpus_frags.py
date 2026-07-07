@@ -53,6 +53,13 @@ _TYPEINFO_CACHE = os.path.join(HERE, ".typeinfo.json")
 
 # type name -> list of (ctor_full_name, [field_type_str, ...]); loaded lazily.
 _TYPE_INFO = None
+# abbrev name (`Corpus.RustModels.Str`) -> expansion (`List Char`); loaded with
+# the type dump.  Abbrevs are transparent, so a signature type `Str` is really
+# its expansion — expanding it lets the fuzzer drive `Str`-typed params.
+_ABBREVS = None
+# def name -> ([param_type_str, ...], ret_type_str); the elaborated signatures
+# of every user-written corpus function (from TypeInfo.lean's `### SIG` lines).
+_SIGS = None
 # type name -> True/False constructibility (memoized during analysis).
 _CONSTRUCTIBLE = {}
 
@@ -69,20 +76,30 @@ def _typeinfo_sources_mtime():
 
 
 def _parse_type_info(stdout):
-    """Parse `### TYPE` lines from a TypeInfo.lean run into
-    {type: [(ctor, [fieldtypes])]}."""
-    info = {}
+    """Parse `### TYPE` / `### ABBREV` / `### SIG` lines from a TypeInfo.lean run
+    into ({type: [(ctor, [fieldtypes])]}, {abbrev: expansion},
+    {defname: ([paramtypes], rettype)}).  The SIG lines are the ELABORATED
+    signatures of every user-written corpus function — the harvester reads them
+    instead of regex-parsing source, so it handles unannotated defs
+    (`def f s := …`) and is robust to formatting/Lean-version drift."""
+    info, abbrevs, sigs = {}, {}, {}
     for line in stdout.splitlines():
-        if not line.startswith("### TYPE\t"):
-            continue
-        _, tyname, ctors_str = line.split("\t", 2)
-        ctors = []
-        for cpart in ctors_str.split(" | "):
-            cname, _, fields_str = cpart.partition(";")
-            fields = [f for f in fields_str.split(",") if f]
-            ctors.append((cname, fields))
-        info[tyname] = ctors
-    return info
+        if line.startswith("### TYPE\t"):
+            _, tyname, ctors_str = line.split("\t", 2)
+            ctors = []
+            for cpart in ctors_str.split(" | "):
+                cname, _, fields_str = cpart.partition(";")
+                fields = [f for f in fields_str.split(",") if f]
+                ctors.append((cname, fields))
+            info[tyname] = ctors
+        elif line.startswith("### ABBREV\t"):
+            _, name, expansion = line.split("\t", 2)
+            abbrevs[name] = expansion.strip()
+        elif line.startswith("### SIG\t"):
+            _, name, ptys_str, ret = line.split("\t", 3)
+            ptys = [p.strip() for p in ptys_str.split(",") if p.strip()]
+            sigs[name] = (ptys, ret.strip())
+    return info, abbrevs, sigs
 
 
 def _run_type_info():
@@ -107,13 +124,14 @@ def build_type_info_cache():
     `_TYPEINFO_CACHE`.  Call this ONCE in the parent before fanning out workers,
     so each worker reads the JSON instead of re-spawning Lean.  Returns the info
     dict (also priming this process's in-memory `_TYPE_INFO`)."""
-    global _TYPE_INFO
-    info = _run_type_info()
+    global _TYPE_INFO, _ABBREVS, _SIGS
+    info, abbrevs, sigs = _run_type_info()
     tmp = _TYPEINFO_CACHE + ".tmp"
     with open(tmp, "w") as fh:
-        json.dump({"mtime": _typeinfo_sources_mtime(), "info": info}, fh)
+        json.dump({"mtime": _typeinfo_sources_mtime(),
+                   "info": info, "abbrevs": abbrevs, "sigs": sigs}, fh)
     os.replace(tmp, _TYPEINFO_CACHE)  # atomic; workers never see a half-written file
-    _TYPE_INFO = info
+    _TYPE_INFO, _ABBREVS, _SIGS = info, abbrevs, sigs
     return info
 
 
@@ -121,8 +139,8 @@ def _load_type_info():
     """Return the corpus type dump ({type: [(ctor, [fieldtypes])]}), preferring
     the on-disk cache written by `build_type_info_cache` and falling back to a
     live Lean spawn if the cache is missing or stale.  Cached in-process after
-    the first call."""
-    global _TYPE_INFO
+    the first call (along with the abbrev map)."""
+    global _TYPE_INFO, _ABBREVS, _SIGS
     if _TYPE_INFO is not None:
         return _TYPE_INFO
     try:
@@ -133,51 +151,71 @@ def _load_type_info():
             # tuple shape callers expect.
             _TYPE_INFO = {ty: [(c, list(f)) for (c, f) in ctors]
                           for ty, ctors in cached["info"].items()}
+            _ABBREVS = dict(cached.get("abbrevs", {}))
+            _SIGS = {n: (list(p), r) for n, (p, r) in cached.get("sigs", {}).items()}
             return _TYPE_INFO
     except (OSError, ValueError, KeyError):
         pass  # missing / corrupt / stale → recompute
-    _TYPE_INFO = _run_type_info()
+    _TYPE_INFO, _ABBREVS, _SIGS = _run_type_info()
     return _TYPE_INFO
+
+
+def _load_abbrevs():
+    """The corpus abbrev map ({abbrev_qual: expansion}); loads the type dump if
+    needed (abbrevs are cached alongside it)."""
+    if _ABBREVS is None:
+        _load_type_info()
+    return _ABBREVS or {}
+
+
+def _load_sigs():
+    """The elaborated corpus function signatures ({defname: ([ptys], ret)});
+    loads the type dump if needed (sigs are cached alongside it)."""
+    if _SIGS is None:
+        _load_type_info()
+    return _SIGS or {}
+
+
+def _deabbrev(ty):
+    """Expand a bare type-abbreviation name (`Corpus.RustModels.Str` ->
+    `List Char`) to its definition; leave anything else unchanged.  Applied at
+    the entry of the structural type functions so an abbrev is transparent
+    everywhere — as a signature type, a constructor field, or a container
+    element (nested `List Str` is handled because decomposition recurses onto
+    the element, which is then de-abbreved in turn)."""
+    ty = ty.strip()
+    return _load_abbrevs().get(ty, ty)
 
 
 _SHORT_TO_QUAL = None
 
 
-def _ns_prefixes(ns, defname):
-    """Namespace prefixes to try when resolving a short type name in a def's
-    signature: every suffix of the `namespace` stack, plus (for a dotted def name
-    like `Card.value`) the def's own leading component joined onto each."""
-    joined = ".".join(ns)
-    prefixes = []
-    if joined:
-        prefixes.append(joined)
-    # a dotted def name (`Card.value`) — the `Card` part is likely a type in scope
-    if "." in defname:
-        head = defname.rsplit(".", 1)[0]
-        prefixes.append(f"{joined}.{head}" if joined else head)
-        prefixes.append(head)
-    return tuple(prefixes)
-
-
 def _resolve_type(ty, ns_prefixes=()):
     """Resolve a type name as written in a signature to a fully-qualified corpus
-    type name if it is one.  Signatures use either the qualified name
-    (`Corpus.Games.RPS`) or the short name (`RPS`) when in-namespace; try the
-    given namespace prefixes then a unique short-name match.  Returns `ty`
-    unchanged if it's not a (unique) corpus type."""
+    type name if it is one, expanding type abbreviations (`Str` -> `List Char`)
+    transparently.  Signatures use either the qualified name (`Corpus.Games.RPS`)
+    or the short name (`RPS`) when in-namespace; try the given namespace prefixes
+    then a unique short-name match.  Returns `ty` unchanged if it's not a
+    (unique) corpus type or abbrev."""
     global _SHORT_TO_QUAL
     info = _load_type_info()
+    abbrevs = _load_abbrevs()
     if ty in info:
         return ty
+    if ty in abbrevs:
+        return abbrevs[ty]
     for p in ns_prefixes:
         if f"{p}.{ty}" in info:
             return f"{p}.{ty}"
+        if f"{p}.{ty}" in abbrevs:
+            return abbrevs[f"{p}.{ty}"]
     if _SHORT_TO_QUAL is None:
         short = {}
-        for q in info:
+        for q in list(info) + list(abbrevs):
             short.setdefault(q.rsplit(".", 1)[-1], []).append(q)
         _SHORT_TO_QUAL = {s: qs[0] for s, qs in short.items() if len(qs) == 1}
-    return _SHORT_TO_QUAL.get(ty, ty)
+    resolved = _SHORT_TO_QUAL.get(ty, ty)
+    return abbrevs.get(resolved, resolved)
 
 
 # Types with internal INVARIANTS that arbitrary field-filling would violate,
@@ -186,6 +224,49 @@ def _resolve_type(ty, ns_prefixes=()):
 # The fuzzer can't safely construct these, so treat them as non-constructible.
 # (A future improvement could generate only invariant-respecting values.)
 _UNSAFE_TO_CONSTRUCT = ("UnionFind",)
+
+
+# ---------------------------------------------------------------------------
+# `Char → Bool` predicates.  rust-lean-models threads character predicates
+# (`is_whitespace`, `is_alphanumeric`, …) through most of its string API as a
+# first-class `Char → Bool` argument, and wraps one in the `Pattern` inductive.
+# The fuzzer represents a predicate value as a SUBSET of gen.py's char alphabet:
+# the predicate is "is this char in the subset?".  That has identical semantics
+# in a Lean lambda and a Python lambda, and is finite/serializable — so it can be
+# generated, emitted as a Lean literal, and materialized Python-side.  A
+# predicate is a legal PARAMETER type but never a RETURN type (a function value
+# can't be compared as an oracle result), which `harvest` enforces.
+# ---------------------------------------------------------------------------
+_PRED_TYPE = "Char → Bool"
+
+
+def _is_pred_type(ty):
+    """Is `ty` (whitespace-normalized) the char-predicate type `Char → Bool`?"""
+    return _norm_type(ty).replace(" ", "") == _PRED_TYPE.replace(" ", "")
+
+
+def _rand_pred(rng):
+    """A random `Char → Bool` predicate value: a sorted subset of gen.py's char
+    alphabet (the chars for which the predicate is true).  Serialized/materialized
+    as a `{"__pred__": [chars]}` tagged dict."""
+    alpha = gen.Gen._ALPHABET
+    chosen = sorted(c for c in alpha if rng.random() < 0.5)
+    return {"__pred__": chosen}
+
+
+def _pred_lean_lit(v):
+    """Lean literal for a predicate value: `(fun c => [chars].contains c)` — a
+    membership test over the char subset (`List Char`)."""
+    chars = "".join(v["__pred__"])
+    lst = "[" + ", ".join(f"'{c}'" for c in chars) + "]"
+    return f"(fun c => ({lst} : List Char).contains c)"
+
+
+def _pred_json(v):
+    """JSON for a predicate arg: the tagged subset, so `run_oracle.materialize`
+    can rebuild the same Python membership lambda the transpiled call expects."""
+    import json
+    return json.dumps(v)
 
 
 # ---------------------------------------------------------------------------
@@ -277,7 +358,9 @@ def _md_field(ty, md):
     """Minimal depth to construct a value of field type `ty`, given the per-user-
     type map `md`.  Containers/options are 0 (empty/none); products max their
     components; bare user types read `md` (default ∞ until computed)."""
-    ty = ty.strip()
+    ty = _deabbrev(ty)
+    if _is_pred_type(ty):
+        return 0               # a predicate value (char subset) is always finite
     if ty in gen.VALUE_TYPES or ty in _HARVESTABLE:
         return 0
     if _container(ty):
@@ -321,8 +404,11 @@ def _is_constructible(ty, stack=()):
     (b) have every constructor field constructible.  A field that refers back to
     a type already on `stack` is allowed — recursion is handled by the depth-
     bounded generator — so recursive types (`Expr`, `Trie`, `JsonValue`) are now
-    constructible, unlike before."""
-    ty = ty.strip()
+    constructible, unlike before.  A `Char → Bool` field (e.g. inside `Pattern`)
+    is constructible — a predicate value (char subset)."""
+    ty = _deabbrev(ty)
+    if _is_pred_type(ty):
+        return True
     if ty in _HARVESTABLE or ty in gen.VALUE_TYPES:
         return True
     c = _container(ty)
@@ -407,92 +493,25 @@ _HARVESTABLE = {"Nat", "Bool", "Int", "List Nat", "Option Nat", "Nat × Nat",
                 "String", "Char", "Array Nat",
                 "List Int", "List Bool", "List (List Nat)", "Float"}
 
-# `(a b : T)` binds two params of type T; `(x : T)` binds one.  We only accept
-# a param group whose type is harvestable.
-_PARAM_RE = re.compile(r"\(([^():]+):\s*([^()]+?)\s*\)")
-# Allow dotted def names (`Card.value`, `RPS.beats`) — struct/enum methods.
-_DEFNAME_RE = re.compile(r"^def\s+([A-Za-z_][A-Za-z0-9_'.]*)\s")
-_NS_RE = re.compile(r"^namespace\s+(\S+)")
-_END_RE = re.compile(r"^end\b")
-
 
 def _norm_type(t):
-    """Canonicalize a type annotation's whitespace so it matches `_HARVESTABLE`."""
+    """Canonicalize a type string's whitespace (the elaborated SIG types are
+    already well-formed; this just collapses runs of spaces)."""
     return re.sub(r"\s+", " ", t.strip())
 
 
-def _signature(text):
-    """From text starting at a `def`, return (name, sig_str) where `sig_str` is
-    everything between the name and the top-level `:=`, or None.  Scans with
-    paren/bracket-depth tracking so `:` and `:=` inside param types don't fool
-    us."""
-    nm = _DEFNAME_RE.match(text)
-    if not nm:
-        return None
-    name = nm.group(1)
-    i, depth = nm.end(), 0
-    while i < len(text):
-        c = text[i]
-        if c in "([{":
-            depth += 1
-        elif c in ")]}":
-            depth -= 1
-        elif depth == 0 and text.startswith(":=", i):
-            return name, text[nm.end():i]
-        i += 1
-    return None
-
-
-def _split_ret(sig):
-    """Split a signature `(params...) : RetType` at the top-level `:` separating
-    params from the return type.  Returns (header, ret) or None."""
-    depth = 0
-    for i, c in enumerate(sig):
-        if c in "([{":
-            depth += 1
-        elif c in ")]}":
-            depth -= 1
-        elif c == ":" and depth == 0:
-            return sig[:i], _norm_type(sig[i + 1:])
-    return None
-
-
-def _harvestable_type(ty, ns_prefixes):
-    """Resolve `ty` and return the resolved name if the fuzzer can generate values
-    of it (base-harvestable OR a constructible user type), else None."""
+def _harvestable_type(ty, ns_prefixes=()):
+    """Resolve `ty` (expanding abbrevs) and return the resolved name if the fuzzer
+    can generate AND serialize values of it — a base value type or a constructible
+    user type — else None.  Used for RETURN types (params also allow predicates,
+    via `_harvestable_param`)."""
+    ty = _norm_type(ty)
     if ty in _HARVESTABLE:
         return ty
     resolved = _resolve_type(ty, ns_prefixes)
     if resolved in _HARVESTABLE or _is_constructible(resolved):
         return resolved
     return None
-
-
-def _parse_sig(header, ns_prefixes=()):
-    """Parse the parameter section of a def header into a flat list of (resolved)
-    types, or return None if any param group's type isn't
-    harvestable/constructible (or params use a shape we don't model, e.g.
-    implicit `{α}` or typeclass `[...]`)."""
-    # Reject implicit/instance binders outright — they mean generics/typeclasses
-    # the value universe can't drive.
-    if "{" in header or "[" in header:
-        return None
-    ptypes = []
-    pos = 0
-    for m in _PARAM_RE.finditer(header):
-        # Everything between param groups must be whitespace (no bare/optional
-        # params we can't type).
-        if header[pos:m.start()].strip():
-            return None
-        pos = m.end()
-        names, ty = m.group(1).split(), _norm_type(m.group(2))
-        resolved = _harvestable_type(ty, ns_prefixes)
-        if resolved is None:
-            return None
-        ptypes.extend([resolved] * len(names))
-    if header[pos:].strip():
-        return None
-    return ptypes
 
 
 # Namespaces with KNOWN-OPEN transpiler bugs, excluded from harvesting so the
@@ -520,52 +539,46 @@ def _is_known_open(qual):
             or qual in _KNOWN_OPEN_FNS)
 
 
-def harvest(corpus_dir=CORPUS_DIR, include_known_open=False):
-    """Return a list of (qualified_name, [param_types], ret_type) for every
-    top-level corpus `def` whose signature is entirely in the value universe.
-    Functions in known-open namespaces (`_KNOWN_OPEN_NS`) are excluded unless
-    `include_known_open` (used to re-check whether a documented bug is fixed).
+def _harvestable_param(ty):
+    """Resolve a PARAMETER type from an elaborated signature to the form the
+    value machinery drives, or None if the fuzzer can't generate values of it.
+    Unlike a return type, a param may be a `Char → Bool` predicate (generated as
+    a char-subset membership test, materialized Python-side; never serialized) —
+    accepted here but not as a return type."""
+    ty = _norm_type(ty)
+    if _is_pred_type(ty):
+        return ty
+    return _harvestable_type(ty, ())
 
-    Deterministic: files and defs are returned in sorted/source order so a seed
-    selecting among them reproduces exactly."""
+
+def harvest(include_known_open=False):
+    """Return a list of (qualified_name, [param_types], ret_type) for every
+    user-written corpus `def` whose signature is entirely in the value universe.
+
+    Reads the ELABORATED signatures dumped by TypeInfo.lean (`### SIG`) rather
+    than parsing source, so it handles defs that omit type annotations
+    (`def char_indices s := …`) and is robust to formatting.  Types are already
+    fully qualified; abbrevs (`Str`) are expanded via `_resolve_type`.  A def is
+    harvestable iff every parameter type is drivable (a value type, a
+    constructible user type, or a `Char → Bool` predicate) and the RETURN type
+    is a serializable value type (predicates/functions can't be a return value).
+
+    Functions in known-open namespaces/names are excluded unless
+    `include_known_open`.  Deterministic: SIGs are returned in sorted-name order
+    so a seed selecting among them reproduces exactly."""
     funcs = []
-    for fname in sorted(os.listdir(corpus_dir)):
-        if not fname.endswith(".lean") or fname.startswith("CorpusTest"):
+    for name in sorted(_load_sigs()):
+        ptys, ret = _load_sigs()[name]
+        if not ptys:                       # nullary def — no inputs to fuzz
             continue
-        path = os.path.join(corpus_dir, fname)
-        with open(path) as fh:
-            text = fh.read()
-        ns = []
-        # Walk line-by-line for namespace tracking, but parse each `def` against
-        # the remaining text (defs span multiple lines).
-        lines = text.splitlines(keepends=True)
-        offset = 0
-        for line in lines:
-            stripped = line.strip()
-            nm = _NS_RE.match(stripped)
-            if nm:
-                ns.append(nm.group(1))
-            elif _END_RE.match(stripped):
-                if ns:
-                    ns.pop()
-            elif stripped.startswith("def "):
-                sg = _signature(text[offset:])
-                if sg:
-                    name, sig = sg
-                    parts = _split_ret(sig)
-                    if parts:
-                        header, ret_raw = parts
-                        # Namespace prefixes for resolving short type names: the
-                        # current `namespace` stack, plus a dotted def name's own
-                        # prefix (e.g. `Card.value` sees the `Card`/`Games` scope).
-                        ns_prefixes = _ns_prefixes(ns, name)
-                        ret = _harvestable_type(_norm_type(ret_raw), ns_prefixes)
-                        ptypes = _parse_sig(header, ns_prefixes) if ret else None
-                        if ptypes:  # ≥1 binder param, all types harvestable
-                            qual = ".".join(ns + [name]) if ns else name
-                            if include_known_open or not _is_known_open(qual):
-                                funcs.append((qual, ptypes, ret))
-            offset += len(line)
+        if include_known_open or not _is_known_open(name):
+            rret = _harvestable_type(_norm_type(ret), ())
+            if rret is None:
+                continue
+            rptys = [_harvestable_param(p) for p in ptys]
+            if any(p is None for p in rptys):
+                continue
+            funcs.append((name, rptys, rret))
     return funcs
 
 
@@ -591,7 +604,9 @@ _MAX_USER_LIST = 3
 
 
 def _rand_input(rng, ty, depth=_MAX_DEPTH):
-    ty = ty.strip()
+    ty = _deabbrev(ty)
+    if _is_pred_type(ty):
+        return _rand_pred(rng)
     if ty == gen.NAT:
         return rng.randint(0, _MAX_NAT)
     if ty == gen.PAIR:
@@ -621,7 +636,9 @@ def _lean_lit(ty, v):
     """Lean literal for `v` of type `ty`, dispatching base types to
     `gen.lean_lit`, compound-with-user types (containers / products) structurally,
     and user types to `_user_lean_lit`."""
-    ty = ty.strip()
+    ty = _deabbrev(ty)
+    if _is_pred_type(ty):
+        return _pred_lean_lit(v)
     if ty in gen.VALUE_TYPES:
         return gen.lean_lit(ty, v)
     c = _container(ty)
@@ -646,8 +663,11 @@ def _json(ty, v):
     Must byte-match what the Lean serializer (`_field_serializer` chain) emits and
     what `run_oracle.materialize`/`normalize` expect: base types as plain JSON,
     containers as JSON arrays (`Option` as value-or-null), products as 2-element
-    arrays, user-type values as `{"c":"<pyctor>","f":[<field json>...]}`."""
-    ty = ty.strip()
+    arrays, user-type values as `{"c":"<pyctor>","f":[<field json>...]}`.  A
+    predicate arg is the tagged `{"__pred__": [...]}` subset."""
+    ty = _deabbrev(ty)
+    if _is_pred_type(ty):
+        return _pred_json(v)
     if ty in gen.VALUE_TYPES:
         return gen.json_lit(ty, v)
     c = _container(ty)
@@ -700,7 +720,7 @@ def _field_serializer_expr(ty, var, depth=0):
     avoid shadowing in nested lambdas/matches.  Bound names use a `fx`/`fp`/`fq`
     prefix so they can never collide with a constructor arm's `a0`,`a1`,… binders
     (the field serializer is spliced into a `| .ctor a0 a1 => …` arm)."""
-    ty = ty.strip()
+    ty = _deabbrev(ty)
     if ty in _BASE_SERIALIZER:
         return f"({_BASE_SERIALIZER[ty]} {var})"
     c = _container(ty)
@@ -726,7 +746,7 @@ def _field_serializer_expr(ty, var, depth=0):
 def _referenced_user_types(ty, acc):
     """Add to `acc` every user type reachable from type string `ty` (through
     containers and products, not just bare positions)."""
-    ty = ty.strip()
+    ty = _deabbrev(ty)
     if ty in gen.VALUE_TYPES:
         return
     c = _container(ty)
@@ -841,9 +861,12 @@ def _corpus_block(seed, nfuncs, ninputs, funcs, tag=""):
     names = ", ".join("`" + q for (q, _, _) in chosen)
     rows, used_types = [], set()
     for (qual, ptypes, ret) in chosen:
-        for t in ptypes + [ret]:
-            if t not in gen.VALUE_TYPES:
-                used_types.add(t)
+        # Only the RETURN type needs a Lean JSON serializer — a param value is
+        # built as a Lean literal and separately materialized Python-side, never
+        # serialized.  (This matters for non-serializable param types like a
+        # `Char → Bool` predicate or a `Pattern` carrying one.)
+        if ret not in gen.VALUE_TYPES:
+            used_types.add(ret)
         for _ in range(ninputs):
             vals = [_rand_input(rng, t) for t in ptypes]
             lean_args = " ".join(f"({_lean_lit(t, v)})" for (t, v) in zip(ptypes, vals))
@@ -922,7 +945,9 @@ def emit_oracle_over(qual, ptypes, ret, input_rows):
     hand its discovered covering inputs back to the Lean oracle for differential
     validation.  Returns lean_src."""
     rows = []
-    used_types = {t for t in ptypes + [ret] if t not in gen.VALUE_TYPES}
+    # Only the return type needs a serializer (params are materialized Python-
+    # side); see `_corpus_block`.
+    used_types = {ret} - set(gen.VALUE_TYPES)
     for vals in input_rows:
         lean_args = " ".join(f"({_lean_lit(t, v)})" for (t, v) in zip(ptypes, vals))
         json_args = "[" + ",".join(_json(t, v) for (t, v) in zip(ptypes, vals)) + "]"
