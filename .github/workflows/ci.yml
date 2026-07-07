@@ -22,7 +22,7 @@ jobs:
       - name: Install Lean and build
         uses: leanprover/lean-action@v1
         with:
-          build-args: "LeanToPython"
+          build-args: "SnakeLean"
 
       - name: Comprehension regression tests
         run: |
