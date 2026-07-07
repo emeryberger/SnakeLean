@@ -384,6 +384,36 @@ NOT a batched-emission name collision, as first suspected.
   unchanged (`isUIntToNat`, both the emit and render paths); 5 tags added to
   `knownHandlerTags`.
 
+### F24. Elaborated-signature harvest + Char→Bool/Pattern values (bug batch)
+
+Switching the fuzzer's corpus harvester from regex source-parsing to Lean's
+**elaborated signatures** (`fuzz/TypeInfo.lean` `### SIG`) and adding `Char →
+Bool` predicate + `Pattern` values to the value universe made ~40 previously
+un-harvestable rust-lean-models functions (and ~40 nested corpus helpers)
+differentially testable for the first time.  That exposed a batch of transpiler
+bugs, all fixed with regression case (14):
+
+- **Partial application of a function to a combinator.** `List.map (f s) xs`
+  (a user fn `f` with one of two args supplied) emitted `f(s)` — a call missing
+  the final argument — instead of `(lambda _p0: f(s, _p0))`.  Fixed for both
+  local-fn and top-level-const combinator arguments (comparing *value* args
+  against *value* arity via a new `constValueArity`).
+- **Dependent `match _h : e with` / `if _h : c`.** The proof/hypothesis binder
+  LCNF-erases to `lcErased`; it was emitted as a spurious Python `def` param
+  and passed a spurious `None` call arg (arity mismatch: `_f() takes 1
+  positional argument but 2 were given`), and a nullary `none`-arm continuation
+  was returned uncalled.  Fixed: skip `lcErased` params (`isErasedType` /
+  `isSkippableParam`) in `emitFunParams`, drop `.erased`/`.type` args in
+  `emitArgs`, alias a zero-arg local-fn bind so the reference-vs-call decision
+  defers to the use site, and force a returned nullary thunk (`return f()`).
+- **`List.zipIdx`/`zipIdxTR` element order.** Emitted `list(enumerate(xs))` =
+  `(index, element)`, but Lean's `zipIdx` yields `(element, index)`; fixed to
+  `[(x, i) for i, x in enumerate(xs)]` (a silent wrong-value bug).
+- **Missing builtins.** `List.isSuffixOf`, `List.getD`, `Array.replicate`,
+  `List.flatMapTR`/`zipIdxTR`/`appendTR`, and point-free `List.append` in a
+  fold (`List.foldl List.append []`, i.e. `flatten`) — all previously fell
+  through to undefined snake-cased names.
+
 ### Custom inductive / structure types (Phase 3 fragment-reuse expansion)
 
 The fragment-reuse harvester now handles corpus functions whose parameters or

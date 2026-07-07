@@ -321,6 +321,20 @@ def pyFnName (name : Name) : EmitM String := do
   | some n => return n
   | none => return toPyFnName name
 
+/-- The number of EXPLICIT value parameters of a top-level constant — walking its
+    type's forall telescope and counting `.default` binders (implicit `{α}` type
+    params and `[inst]` typeclass args are LCNF-erased and not counted).  This is
+    the Python arity of the emitted `def`, used to tell a complete call from a
+    partial application (`charIndex_to_pos s` supplies 1 of 2 → not a full call). -/
+partial def constValueArity (name : Name) : EmitM Nat := do
+  match (← getEnv).find? name with
+  | some ci =>
+    let rec count : Expr → Nat
+      | .forallE _ _ body bi => (if bi.isExplicit then 1 else 0) + count body
+      | _ => 0
+    return count ci.type
+  | none => return 0
+
 /-- Alias one variable to another -/
 def aliasVar (from_ to_ : FVarId) : EmitM Unit :=
   modify fun s => { s with varAliases := s.varAliases.insert from_ to_ }
@@ -740,10 +754,13 @@ def emitArg (arg : Arg) : EmitM Unit := do
 def emitArgs (args : Array Arg) (sep : String := ", ") : EmitM Unit := do
   let mut first := true
   for arg in args do
-    -- Skip unit arguments
-    if let .fvar fvarId := arg then
-      if (← get).unitVars.contains fvarId then
-        continue
+    -- Skip unit arguments and LCNF-erased proof/type arguments.  The emitted
+    -- `def`s drop the matching unit/erased params (`emitFunParams`), so an
+    -- erased arg (e.g. the `_h` proof threaded by a dependent `match _h : e`)
+    -- must be dropped here too, or the call would have too many positionals.
+    match arg with
+    | .fvar fvarId => if (← get).unitVars.contains fvarId then continue
+    | .erased | .type _ => continue
     if !first then emit sep
     first := false
     emitArg arg
@@ -1375,9 +1392,12 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
           emit ")"
         emit "\n"
         return
-    -- Check for string append
-    if isStringAppend declName then
-      -- String append args: [type, inst, s1, s2] - use last two
+    -- Check for string / list append (both are Python `+`).  `List.append`
+    -- normally lowers through `HAppend.hAppend`, but the tail-recursive
+    -- `List.appendTR` (and a direct `List.append`) reach here by name.
+    if isStringAppend declName || declName == ``List.append
+        || declName == ``List.appendTR then
+      -- append args: [type, (inst), s1, s2] - use last two
       if args.size >= 2 then
         emitIndent
         emit s!"{varName} = "
@@ -1657,7 +1677,7 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
         emit s!"{varName} = [_y for {binder} in {xs} if (_y := {body}) is not None]\n"
         return
     -- List.bind (flatMap): [y for x in xs for y in f(x)]
-    if declName == ``List.flatMap then
+    if declName == ``List.flatMap || declName == ``List.flatMapTR then
       if args.size >= 2 then
         -- bind's function returns a sublist; inline it as the inner iterable.
         let (binder, body) ← fnCompParts args[args.size - 1]! "x"
@@ -1752,8 +1772,10 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
         emitArg args[args.size - 1]!
         emit "[:-1]\n"
         return
-    -- List.replicate / List.replicateTR n x -> [x] * n.  args: [type, n, x].
-    if declName == ``List.replicate || declName == ``List.replicateTR then
+    -- List.replicate / List.replicateTR / Array.replicate n x -> [x] * n
+    -- (Arrays map to Python lists).  args: [type, n, x].
+    if declName == ``List.replicate || declName == ``List.replicateTR
+        || declName == ``Array.replicate then
       if args.size >= 2 then
         emitIndent
         emit s!"{varName} = ["
@@ -1769,6 +1791,14 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
         let xs ← renderArg args[args.size - 1]!
         emitIndent
         emit s!"{varName} = ({xs}[:len({p})] == {p})\n"
+        return
+    -- List.isSuffixOf p xs -> (xs[len(xs)-len(p):] == p).  args: [type, inst, p, xs].
+    if declName == ``List.isSuffixOf then
+      if args.size >= 2 then
+        let p ← renderArg args[args.size - 2]!
+        let xs ← renderArg args[args.size - 1]!
+        emitIndent
+        emit s!"{varName} = ({xs}[len({xs}) - len({p}):] == {p})\n"
         return
     -- List.dropWhile p xs / List.takeWhile p xs — a prefix-based slice by the
     -- predicate.  args: [type, pred, xs].  Emit an itertools call (correct for
@@ -1804,13 +1834,14 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
         emitIndent
         emit s!"{varName} = list(zip({xs}, {ys}))\n"
         return
-    -- List.zipIdx (was List.enum) - enumerate with indices
-    if declName == ``List.zipIdx then
+    -- List.zipIdx / zipIdxTR - pairs each element with its index.  Lean yields
+    -- `(element, index)` pairs (NOT Python `enumerate`'s `(index, element)`), so
+    -- swap: `[(x, _i) for _i, x in enumerate(xs)]`.
+    if declName == ``List.zipIdx || declName == ``List.zipIdxTR then
       if args.size >= 1 then
+        let xs ← renderArg args[args.size - 1]!
         emitIndent
-        emit s!"{varName} = list(enumerate("
-        emitArg args[args.size - 1]!
-        emit "))\n"
+        emit s!"{varName} = [(_x, _i) for _i, _x in enumerate({xs})]\n"
         return
     -- List.set - update element at index.  Lean 4.31 lowers `List.set` to its
     -- tail-recursive `List.setTR` in LCNF (same `(…, xs, i, v)` value-arg shape),
@@ -1829,6 +1860,16 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
         emit "["
         emitArg args[args.size - 2]!
         emit "+1:]\n"
+        return
+    -- List.getD xs i d - element at index i, or default d if out of bounds.
+    -- args: [type, xs, i, d].
+    if declName == ``List.getD then
+      if args.size >= 3 then
+        let xs ← renderArg args[args.size - 3]!
+        let i ← renderArg args[args.size - 2]!
+        let d ← renderArg args[args.size - 1]!
+        emitIndent
+        emit s!"{varName} = ({xs}[{i}] if 0 <= {i} < len({xs}) else {d})\n"
         return
     -- List.contains / List.elem - check membership
     if declName == ``List.contains || declName == ``List.elem then
@@ -2125,6 +2166,14 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
         emitIndent
         emit s!"{varName} = (lambda a, b: a {op} b)\n"
         return
+      -- List/String append passed point-free (e.g. `List.foldl List.append [] xs`
+      -- to flatten): emit the 2-arg concat lambda, else it fell through to an
+      -- undefined `append_tr`/`append`.
+      if declName == ``List.append || declName == ``List.appendTR
+          || declName == ``HAppend.hAppend || isStringAppend declName then
+        emitIndent
+        emit s!"{varName} = (lambda a, b: a + b)\n"
+        return
     -- Option.isSome / isNone.  These map (in `stdlibFnToPython?`) to a `(lambda …)`
     -- value, which the bare-callable path above skips (it has parens/spaces), so
     -- without this they fall through to an undefined snake name (`is_some`).
@@ -2165,16 +2214,41 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
     --     the function object, not its value, silently corrupting downstream use.
     -- The discriminator is whether the const's Lean type is a function (pi) type.
     let mut anyVal := false
+    let mut valArgs := 0
     for a in args do
       match a with
-      | .fvar fv => if !(← get).unitVars.contains fv then anyVal := true
+      | .fvar fv => if !(← get).unitVars.contains fv then anyVal := true; valArgs := valArgs + 1
       | _ => pure ()
     emitIndent
     if anyVal then
+      -- Partial application of a top-level function passed point-free to a
+      -- combinator (`List.map (charIndex_to_pos s) xs`): supply the given args
+      -- and take the rest via a lambda, since Python has no currying.  Without
+      -- this it emitted `char_index_to_pos(s)` — a call missing the final arg.
+      let arity ← constValueArity declName
+      if valArgs < arity then
+        let remaining := arity - valArgs
+        let restParams := (List.range remaining).map (fun i => s!"_p{i}")
+        let restStr := ", ".intercalate restParams
+        let suppliedStr ← captureEmit (emitArgs args)
+        let sep := if suppliedStr.isEmpty || restParams.isEmpty then "" else ", "
+        emit s!"{varName} = (lambda {restStr}: {← pyFnName declName}({suppliedStr}{sep}{restStr}))\n"
+        return
       emit s!"{varName} = {← pyFnName declName}("
       emitArgs args
       emit ")\n"
     else
+      -- Point-free binary op / append passed to a combinator with only a type
+      -- arg present (so the `args.size == 0` block above was skipped): emit the
+      -- 2-arg lambda, else it falls through to an undefined snake name
+      -- (`add`/`append_tr`).  Mirrors the zero-arg handling above.
+      if let some op := natBinOp? declName then
+        emit s!"{varName} = (lambda a, b: a {op} b)\n"
+        return
+      if declName == ``List.append || declName == ``List.appendTR
+          || declName == ``HAppend.hAppend || isStringAppend declName then
+        emit s!"{varName} = (lambda a, b: a + b)\n"
+        return
       let isFnTyped := match env.find? declName with
         | some ci => ci.type.isForall
         | none => false
@@ -2217,15 +2291,33 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
         emit ")"
       emit "\n"
       return
-    -- Check for partial application or value assignment
-    if let some (_, totalParams) := st.localFnArities[fnVar]? then
-      -- If calling with fewer args than total params, it's a partial application
-      if args.size < totalParams then
-        -- Just assign the function reference
+    -- Check for partial application or value assignment.  Compare VALUE args
+    -- (`nonUnitArgs`) against the VALUE arity (`nonUnit`): unit/erased params and
+    -- args are dropped on both sides, so counting the raw totals would misjudge a
+    -- complete call as partial (e.g. an alt continuation `_alt(x)` whose Python
+    -- `def` is `_f(x)` but whose LCNF arity is `(x, _h-erased)`).
+    if let some (nonUnit, _) := st.localFnArities[fnVar]? then
+      -- Zero-arg bind of a local fn (`let _alt := f`): alias `_alt` TO `f` so the
+      -- reference-vs-call decision is deferred to the USE site (which resolves
+      -- through the alias) — a later `_alt(x)` calls it; a `.return _alt` of a
+      -- nullary thunk forces it.  Mirrors the non-local-fn alias path below.
+      if nonUnitArgs == 0 && args.all (fun a => match a with
+          | .fvar fv => st.unitVars.contains fv | _ => true) then
+        aliasVar decl.fvarId fnVar
+        return
+      -- Some VALUE args supplied but fewer than the value arity (and at least
+      -- one): a partial application.  Python has no currying, so capture them in
+      -- a `lambda` over the remaining params (e.g.
+      -- `List.map (charIndex_to_pos s) xs` → `(lambda _p0: char_index_to_pos(s, _p0))`).
+      if 0 < nonUnitArgs && nonUnitArgs < nonUnit then
+        let fnName ← getVarName fnVar
+        let remaining := nonUnit - nonUnitArgs
+        let restParams := (List.range remaining).map (fun i => s!"_p{i}")
+        let restStr := ", ".intercalate restParams
+        let suppliedStr ← captureEmit (emitArgs args)
+        let sep := if suppliedStr.isEmpty || restParams.isEmpty then "" else ", "
         emitIndent
-        emit s!"{varName} = "
-        emit (← getVarName fnVar)
-        emit "\n"
+        emit s!"{varName} = (lambda {restStr}: {fnName}({suppliedStr}{sep}{restStr}))\n"
         return
     else
       -- Not a known function - if 0 args, this is likely a value assignment
@@ -2310,6 +2402,21 @@ def isUnitType (e : Expr) : Bool :=
   | .const ``PUnit _ => true
   | .const ``Unit _ => true
   | _ => false
+
+/-- A parameter whose type LCNF erased to `lcErased` (`erasedExpr`) is a proof /
+    hypothesis binder — e.g. the `_h : ss = []` introduced by a dependent
+    `match _h : e with` or `if _h : c then`.  It carries no runtime value, so it
+    must be dropped from the emitted Python `def` params AND from call args (the
+    matching argument is `.erased`), keeping the function's Python arity right.
+    Without this, an Option/etc. cases continuation from a dependent match got an
+    extra `_h: Any` param but was called with a spurious `None`, or vice-versa —
+    an arity mismatch (`_f() takes 1 positional argument but 2 were given`). -/
+def isErasedType (e : Expr) : Bool :=
+  e == erasedExpr
+
+/-- A param that carries no runtime value: a unit or an LCNF-erased proof. -/
+def isSkippableParam (e : Expr) : Bool :=
+  isUnitType e || isErasedType e
 
 /-! ## Tail-call analysis
 
@@ -2605,6 +2712,12 @@ partial def emitCode (code : Code) : EmitM Unit := do
       emit "\n"
     else if let some b := (← get).boolVars[rfv]? then
       emit s!"return {if b then "True" else "False"}\n"
+    else if let some (0, _) := (← get).localFnArities[rfv]? then
+      -- Returning a NULLARY local continuation thunk (a zero-value-param `def`,
+      -- e.g. a dependent-match `none` arm whose only param was the erased `_h`):
+      -- the branch's value is the thunk's *result*, so FORCE it (call), not
+      -- return the function object.  (A thunk is always forced in LCNF.)
+      emit s!"return {← getVarName rfv}()\n"
     else
       emit s!"return {← getVarName fvarId}\n"
   | .unreach _ =>
@@ -2624,8 +2737,9 @@ partial def emitLocalFun (decl : FunDecl) : EmitM Unit := do
     if codeHasRecursion declName ((← get).inlineThunks) decl.value then
       modify fun s => { s with inlineThunks := s.inlineThunks.insert decl.fvarId decl }
       return
-  -- Count non-unit params for arity tracking
-  let nonUnitParams := decl.params.foldl (fun acc p => if isUnitType p.type then acc else acc + 1) 0
+  -- Count runtime params for arity tracking (unit + erased-proof params carry
+  -- no value and are dropped from the emitted `def`, so they don't count).
+  let nonUnitParams := decl.params.foldl (fun acc p => if isSkippableParam p.type then acc else acc + 1) 0
   let totalParams := decl.params.size
   -- Try to defer a single-parameter lambda whose body is a simple expression,
   -- so a consuming comprehension can inline it (e.g. `[x + 1 for x in xs]`
@@ -3060,9 +3174,9 @@ partial def emitAltBody (alt : Alt) : EmitM Unit := do
 partial def emitFunParams (params : Array Param) : EmitM Unit := do
   let mut first := true
   for p in params do
-    -- Skip PUnit/Unit parameters
-    if isUnitType p.type then
-      -- Still register the var as a unit var so calls skip it
+    -- Skip PUnit/Unit and LCNF-erased proof parameters (a `match _h : e with`
+    -- hypothesis) — register as a unit var so calls skip the matching arg too.
+    if isSkippableParam p.type then
       let _ ← registerVar p.fvarId p.binderName
       modify fun s => { s with unitVars := s.unitVars.insert p.fvarId }
       continue
@@ -3297,11 +3411,13 @@ def knownHandlerTags : List String := [
   "const.List.foldl", "const.List.foldrTR", "const.List.all",
   "const.List.any", "const.List.takeTR", "const.List.drop", "const.List.range",
   "const.List.find?", "const.List.findSome?", "const.List.eraseDups",
-  "const.List.zipIdx", "const.List.set", "const.List.contains", "const.List.elem",
+  "const.List.zipIdx", "const.List.zipIdxTR", "const.List.set",
+  "const.List.contains", "const.List.elem", "const.List.getD",
   "const.List.isEmpty", "const.List.mergeSort", "const.List.head?",
   "const.List.tail?", "const.List.getLast?", "const.List.dropLast",
-  "const.List.dropLastTR", "const.List.replicateTR", "const.List.isPrefixOf",
-  "const.List.dropWhile", "const.List.takeWhile",
+  "const.List.dropLastTR", "const.List.replicateTR", "const.Array.replicate",
+  "const.List.isPrefixOf", "const.List.isSuffixOf", "const.List.appendTR",
+  "const.List.flatMapTR", "const.List.dropWhile", "const.List.takeWhile",
   -- Option
   "const.Option.some", "const.Option.none", "const.Option.bind",
   "const.Option.map",

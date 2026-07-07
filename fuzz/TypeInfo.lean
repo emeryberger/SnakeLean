@@ -11,6 +11,11 @@
   regex over source) uses the real environment, so it is robust to formatting
   and to Lean version changes.
 
+  Type abbreviations (`abbrev Str := List Char`) are dumped as
+      ### ABBREV <AbbrevName>	<expansion>
+  so the fuzzer can expand a signature's `Str` to its drivable `List Char`
+  form (an abbrev is transparent, so a param typed `Str` is really `List Char`).
+
   Run:  lake env lean fuzz/TypeInfo.lean
 -/
 import Lean
@@ -41,6 +46,80 @@ def ctorFieldTypes (c : Name) (numFields : Nat) : MetaM (Array String) := do
       tys := tys.push (toString (← ppExpr (← inferType f)))
     return tys
 
+/-- All `Corpus.*` type abbreviations (`abbrev Str := List Char`) in the
+    environment, as (name, expansion) pairs.  An abbrev is a `def` marked
+    `@[reducible]`; we pretty-print its value (the RHS type). -/
+def corpusAbbrevs : MetaM (Array (Name × String)) := do
+  let env ← getEnv
+  let mut out := #[]
+  for (n, info) in env.constants.toList do
+    match info with
+    | .defnInfo di =>
+      if (`Corpus).isPrefixOf n && !n.isInternal
+          && (← getReducibilityStatus n) == .reducible then
+        -- Only nullary abbrevs (no leading params) — a parameterized abbrev
+        -- can't be substituted positionally into a signature by the fuzzer.
+        if di.type.isSort then
+          out := out.push (n, toString (← ppExpr di.value))
+    | _ => pure ()
+  return out
+
+/-- Is `t` a "value" type — i.e. telescoping it, every nested argument type and
+    the final codomain is a value (not a `Sort`/`Prop`)?  Keeps `Char → Bool`
+    (codomain `Bool`) but rejects `motive : T → Sort u` and proof types, so the
+    signature dump filters out compiler-generated recursors. -/
+partial def isValueType (t : Expr) : MetaM Bool :=
+  Meta.forallTelescopeReducing t fun bs cod => do
+    for b in bs do
+      unless (← isValueType (← inferType b)) do return false
+    if cod.isSort then return false
+    if (← Meta.isProp cod) then return false
+    return true
+
+/-- Elaborated signatures of every user-written `Corpus.*` function `def`, as
+    (name, param-type strings, return-type string).  Reading the ELABORATED type
+    (not the source) means the fuzzer harvester needs no source parsing at all —
+    it works for defs that omit type annotations (`def char_indices s := …`, of
+    which rust-lean-models has ~100) and is robust to formatting/Lean-version
+    changes.  Lean-generated helpers (`.match_1`, `.rec`, `.eq_def`, …) are
+    filtered via `isInternalDetail`; we also skip anything whose type lives in
+    `Prop`/`Sort` (proofs, recursors, motives), keeping only value functions. -/
+def corpusDefSigs : MetaM (Array (Name × Array String × String)) := do
+  let env ← getEnv
+  let mut out := #[]
+  for (n, info) in env.constants.toList do
+    match info with
+    | .defnInfo di =>
+      if !((`Corpus).isPrefixOf n) || n.isInternalDetail then continue
+      -- Keep only USER-WRITTEN defs: compiler-generated helpers (`.ctorIdx`,
+      -- `.toCtorIdx`, `deriving` output, …) have no source declaration range,
+      -- while real functions — including nested helpers like `.go`/`.sort` — do.
+      if (← findDeclarationRanges? n).isNone then continue
+      -- Skip abbrevs (dumped separately) and any def whose declared type is a
+      -- sort — those are type synonyms / not value-returning functions.
+      if di.type.isForall then
+        -- Reject if it takes a proof/type/motive argument or returns a non-value
+        -- (Prop/Sort).  A binder is drivable iff, telescoping its OWN type, every
+        -- nested argument and the final codomain is a value (not a Sort/Prop):
+        -- this keeps `Char → Bool` (codomain `Bool`) but rejects `motive : T →
+        -- Sort u` and proof arguments, filtering out compiler-generated
+        -- recursors (`recOn`/`casesOn`/`brecOn`) that `isInternalDetail` misses.
+        let ok ← forallTelescopeReducing di.type fun args ret => do
+          for a in args do
+            unless (← isValueType (← inferType a)) do return false
+          if ret.isSort then return false
+          if (← Meta.isProp ret) then return false
+          return true
+        if !ok then continue
+        let sig ← forallTelescopeReducing di.type fun args ret => do
+          let mut ptys := #[]
+          for a in args do
+            ptys := ptys.push (toString (← ppExpr (← inferType a)))
+          return (ptys, toString (← ppExpr ret))
+        out := out.push (n, sig.1, sig.2)
+    | _ => pure ()
+  return out
+
 #eval show MetaM Unit from do
   let env ← getEnv
   for n in (← corpusTypes) do
@@ -54,3 +133,7 @@ def ctorFieldTypes (c : Name) (numFields : Nat) : MetaM (Array String) := do
       let tys ← ctorFieldTypes c ci.numFields
       parts := parts.push s!"{c};{",".intercalate tys.toList}"
     IO.println s!"### TYPE\t{n}\t{" | ".intercalate parts.toList}"
+  for (n, expansion) in (← corpusAbbrevs) do
+    IO.println s!"### ABBREV\t{n}\t{expansion}"
+  for (n, ptys, ret) in (← corpusDefSigs) do
+    IO.println s!"### SIG\t{n}\t{",".intercalate ptys.toList}\t{ret}"
