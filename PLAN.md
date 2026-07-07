@@ -78,15 +78,22 @@ bugs)**:
   coverage, 86% k-path**, 50/146 handlers.
 33 transpiler bugs fixed total (F1–F33). See memory `campaign-clean-10k`.
 
+**✅ FOLLOW-UP ROUND (PRs #32/#33, 2026-07-07):**
+- **PR #32:** `Int → Bool` predicate generation (generalized the `Char→Bool`
+  machinery — a predicate value is a finite subset of a fixed element universe,
+  tagged with `ety`). Unlocked Cedar `setAll/setAny/setFilter` (harvest 535→538).
+  Also silenced the point-free `appendTR` self-coverage false-alarm.
+- **PR #33:** **F34** — whole-number `Float` literal (`(0:Float)` via
+  `instOfNatFloat`→`proj OfNat.0`) emitted Python int `0` not `0.0` (silent,
+  failed exact-bits oracle). Fixed via `floatLiteralVars` + `floatize`. Found by
+  the #32 verification sweep (`Geometry.angleBetween`). Regression case (19).
+- **RE-VERIFIED AT SCALE:** 5000-seed `--corpus --batch 25` sweep clean (0 bugs,
+  **538/538 functions**). **34 bugs fixed total (F1–F34).**
+
 **REMAINING FOLLOW-UPS (all lower-priority / deferred):**
-- **`Int → Bool` predicate gen** — would unlock Cedar's `setAll/setAny/setFilter`
-  (mirror the `Char→Bool` support with an Int subset/threshold predicate).
 - **Nested-Option faithfulness** (the one real gap) — `some none`/`none` collapse
   to Python `None`. Needs a sentinel `Some`/`Nothing` representation (`returns`
   lib or internal dataclasses). User deferred 2026-07-07 ("forget it for now").
-- **Cosmetic:** point-free `List.appendTR` shows a false "core-namespace
-  fallthrough" in the self-coverage report (correct code emitted in the else
-  branch after `markHandler`). Give it a proper handler tag to silence.
 - **Grammar-side custom-type generation / Mathlib corpus** — bigger fragment
   sources (see "New bug-finding directions" below).
 
