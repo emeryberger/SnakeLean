@@ -225,6 +225,27 @@ def countMatching (p : Int → Bool) (xs : List Int) : Nat := (xs.filter p).leng
 def floatZeroBranch (x : Float) : Float := if x == 0.0 then 0 else x
 def floatLitConst : Float := 5
 
+-- (20) Nested Option (`Option (Option α)`) faithfulness.  Python models a flat
+-- `Option α` as `α | None`, which collapses `some none` and `none` to a shared
+-- `None`.  With type-directed boxing, a NESTED option's `some` becomes
+-- `_Some(...)`, so `some none` (→ `_Some(None)`) stays distinct from `none`
+-- (→ `None`).  `classifyNested` returns a different Nat for each of the three
+-- shapes `none` / `some none` / `some (some n)` — pre-fix `some none` and `none`
+-- were indistinguishable and it returned the wrong tag.
+def classifyNested (o : Option (Option Nat)) : Nat :=
+  match o with
+  | none => 0
+  | some none => 1
+  | some (some n) => n + 100
+-- `nestedIndex xs i` reproduces the TicTacToe.validMoves pattern: indexing a
+-- `List (Option α)` with `xs[i]?` yields `Option (Option α)`; a found `none`
+-- element (`some none`) must differ from an out-of-bounds miss (`none`).
+def nestedIndex (xs : List (Option Nat)) (i : Nat) : Nat :=
+  match xs[i]? with
+  | none => 0            -- out of bounds
+  | some none => 1       -- in bounds, element is `none`
+  | some (some n) => n + 100
+
 end RegressionFixes
 #eval show CoreM Unit from do
   let code ← emitPythonForNames `RegressionFixes
@@ -282,5 +303,7 @@ end RegressionFixes
       ``RegressionFixes.usesMaxParam,
       ``RegressionFixes.countMatching,
       ``RegressionFixes.floatZeroBranch,
-      ``RegressionFixes.floatLitConst ]
+      ``RegressionFixes.floatLitConst,
+      ``RegressionFixes.classifyNested,
+      ``RegressionFixes.nestedIndex ]
   IO.println code

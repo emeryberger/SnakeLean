@@ -364,6 +364,21 @@ def _container(s):
     return None
 
 
+def _option_needs_box(ty):
+    """Mirror of the transpiler's `optionNeedsBox`: an `Option T` value needs the
+    `_Some` box iff `T` is itself an `Option` (so `some none` stays distinct from
+    `none`).  Applied to the corpus Option paths so a corpus function whose
+    signature carries a *nested* Option round-trips through the same boxed wire
+    form the transpiler emits.  (`Option (Option Nat)` is a `gen.VALUE_TYPE`, so
+    it never reaches these paths; this covers `Option (Option UserType)` and other
+    nested options built structurally.)"""
+    c = _container(_deabbrev(ty))
+    if c is None or c[0] != "Option":
+        return False
+    inner = _container(_deabbrev(c[1]))
+    return inner is not None and inner[0] == "Option"
+
+
 # Minimal term-depth: the height of the SMALLEST value of a type.  This is what
 # makes depth-bounded generation of recursive types (`Expr`, `JsonValue`, `Trie`)
 # terminate: with a remaining budget, we prefer constructors we can finish within
@@ -550,12 +565,6 @@ _KNOWN_OPEN_NS = ()
 # Individual functions with a KNOWN, DEFERRED faithfulness limitation, excluded
 # by exact qualified name (a signature-level exclusion can't reach them — the
 # issue is in the body / preconditions, not the types).
-#   * TicTacToe.validMoves indexes a `List (Option Player)` with `[i]?` and
-#     matches `some none`.  Python models `Option` as `None`, so the outer
-#     `some none` (empty cell) and the out-of-bounds `none` COLLAPSE to the same
-#     `None` — the classic nested-Option faithfulness gap.  A faithful fix needs
-#     a sentinel-based Option representation (a large redesign); deferred.  See
-#     CLAUDE.md "Known Limitations".
 #   * The DP / partition functions below panic on `getElem!` when called with
 #     inputs violating an INTER-ARGUMENT precondition the monomorphic fuzzer
 #     can't respect — e.g. `knapsack01 cap weights values` needs
@@ -571,8 +580,11 @@ _KNOWN_OPEN_NS = ()
 #     Python's stable `sorted`, so tie-broken outputs diverge (unspecified order).
 #   * polygonArea on a degenerate 1-point polygon returns `0` where the Float
 #     shoelace formula's `0.0` is expected (Int/Float zero representation).
+#   * TicTacToe.validMoves — NOW SUPPORTED (type-directed nested-Option boxing:
+#     a `List (Option Player)` indexed with `[i]?` yields `Option (Option Player)`,
+#     whose `some` is boxed as `_Some(...)` so `some none` (empty cell) stays
+#     distinct from an out-of-bounds `none`).  Re-included below.
 _KNOWN_OPEN_FNS = (
-    "Corpus.Games.TicTacToe.validMoves",
     "Corpus.Production.knapsack01",
     "Corpus.Production.lomutoPartition",
     "Corpus.Production.intervalScheduling",
@@ -667,7 +679,12 @@ def _rand_input(rng, ty, depth=_MAX_DEPTH):
     if c:
         kind, elem = c
         if kind == "Option":
-            return None if rng.random() < 0.3 else _rand_input(rng, elem, depth)
+            if rng.random() < 0.3:
+                return None
+            inner = _rand_input(rng, elem, depth)
+            # A nested Option boxes its `some` (`{"__some__": inner}`) so `some
+            # none` stays distinct from `none`; a flat Option stays bare.
+            return {"__some__": inner} if _option_needs_box(ty) else inner
         # List/Array: force empty at depth 0 so recursive elements terminate.
         n = 0 if depth <= 0 else rng.randint(0, _MAX_USER_LIST)
         return [_rand_input(rng, elem, depth - 1) for _ in range(n)]
@@ -693,7 +710,9 @@ def _lean_lit(ty, v):
         if kind == "Option":
             if v is None:
                 return f"(none : {ty})"
-            return f"(some ({_lean_lit(elem, v)}) : {ty})"
+            # A boxed nested Option carries `{"__some__": inner}`; unwrap it.
+            inner = v["__some__"] if _option_needs_box(ty) else v
+            return f"(some ({_lean_lit(elem, inner)}) : {ty})"
         # List / Array: annotate so an empty (or user-element) literal type-checks.
         open_, close_ = ("#[", "]") if kind == "Array" else ("[", "]")
         items = ", ".join(_lean_lit(elem, x) for x in v)
@@ -720,7 +739,11 @@ def _json(ty, v):
     if c:
         kind, elem = c
         if kind == "Option":
-            return "null" if v is None else _json(elem, v)
+            if v is None:
+                return "null"
+            if _option_needs_box(ty):
+                return '{"__some__":' + _json(elem, v["__some__"]) + "}"
+            return _json(elem, v)
         return "[" + ",".join(_json(elem, x) for x in v) + "]"
     p = _pair(ty)
     if p:
@@ -775,6 +798,11 @@ def _field_serializer_expr(ty, var, depth=0):
         x = f"fx{depth}"
         ser_x = _field_serializer_expr(elem, x, depth + 1)
         if kind == "Option":
+            # A nested Option boxes its `some` on the wire (`{"__some__": …}`) so
+            # it matches the transpiled `_Some`; a flat Option stays value-or-null.
+            if _option_needs_box(ty):
+                return (f'(match {var} with | none => "null" '
+                        f'| some {x} => "{{\\"__some__\\":" ++ {ser_x} ++ "}}")')
             return (f'(match {var} with | none => "null" '
                     f"| some {x} => {ser_x})")
         seq = f"({var}).toList" if kind == "Array" else f"({var})"

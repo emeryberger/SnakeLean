@@ -166,7 +166,8 @@ Color = red | green | blue
 | `Unit`, `PUnit` | skipped |
 | `List α` | `list[T]` |
 | `Array α` | `list[T]` |
-| `Option α` | `T \| None` |
+| `Option α` (flat) | `T \| None` |
+| `Option (Option α)` (nested) | `_Some(x) \| None` (boxed — see Known Limitation 8) |
 | `α × β` | `tuple[A, B]` |
 | `α → β` | `Callable[[A], B]` |
 | Custom inductive | `@dataclass` |
@@ -301,12 +302,20 @@ To add support for more builtin operations, modify:
    recursive (Lean overflows it too, so this matches Lean); mutual tail
    recursion is not yet optimized. Deep cases of these can still overflow the
    Python stack.
-8. **Nested `Option`** (`Option (Option α)`, or `(xs : List (Option α))[i]?`)
-   is unfaithful: Python models `Option` as `None`, so `some none` and `none`
-   collapse to the same `None` and a `match` that distinguishes them diverges
-   from Lean (e.g. `TicTacToe.validMoves`, excluded from the fuzz corpus via
-   `corpus_frags._KNOWN_OPEN_FNS`). A faithful fix needs a sentinel-based Option
-   representation (e.g. a `Nothing`/`Just` wrapper) rather than bare `None`.
+8. **Nested `Option` — FIXED** (type-directed `_Some` boxing). A flat `Option α`
+   still maps to the idiomatic `α | None`; but when the element is itself
+   nullable (`Option (Option α)`), `some` is boxed as `_Some(x)` so `some none`
+   (→ `_Some(None)`) stays distinct from `none` (→ `None`). The decision is
+   local to each Option site's LCNF type (`optionNeedsBox`), so the ~67 flat-
+   Option functions are unchanged. Covered producers: `some`-construction, the
+   Option `match` (`emitOptionCases` unwraps `.value`), `getElem?` (const +
+   `GetElem?` projection), `List.head?`/`getLast?`/`find?`. `TicTacToe.validMoves`
+   is now faithful and back in the fuzz corpus. The `_Some` box is emitted
+   unconditionally in the file header; the wire form is `{"__some__": inner}`
+   (`run_oracle`/`corpus_frags`/`gen` all round-trip it). Not yet boxed:
+   `findSome?`/`Option.map`/`Option.bind`/`filterMap` when they *return* a nested
+   option (rare — no corpus function does; the fuzzer's `Option (Option Nat)`
+   generation would surface any real case).
 
 ## Future Work: Mathlib Integration
 
