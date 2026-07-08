@@ -85,6 +85,12 @@ ALL_PRODUCTIONS = frozenset({
     "listlist.lit", "listlist.var", "listlist.map", "listlist.append",
     "listlist.cons", "listlist.reverse",
     "nat.listlistlen",  # observe a nested list's length back into Nat
+    # Invented custom inductive types (enums / structs / sums over base fields
+    # and earlier user types).  The grammar SYNTHESIZES the type + functions over
+    # it — reaching the transpiler's dataclass emission / construction / `match`
+    # lowering with shapes the fixed corpus doesn't contain.
+    "user.var", "user.mk", "user.if",
+    "nat.usermatch", "bool.usermatch", "int.usermatch",
 })
 
 
@@ -123,6 +129,16 @@ class Gen:
         # envelope is chosen is coverage-guided via `choose`, so mutation steers
         # toward not-yet-covered productions rather than sampling blindly.
         self.emi = emi
+        # Invented custom inductive types for THIS file (grammar-side custom-type
+        # generation).  Each is {"name": str, "ctors": [(ctor_name, [field_ty,…])]}
+        # where a field type is a base value type or a strictly-EARLIER invented
+        # type (so the type graph is a DAG — every value is finite, generation
+        # always terminates, and serializers can be emitted in definition order).
+        # Populated once, lazily, by `_ensure_types` at the first `gen_def`, so the
+        # rng-consumption order is fixed and a seed still fully determines the file.
+        self.user_types = []
+        self._type_map = {}          # name -> type dict (for O(1) lookup)
+        self._types_inited = False
 
     def pick(self, xs):
         return self.rng.choice(xs)
@@ -195,6 +211,8 @@ class Gen:
             e = self.gen_list_elem(env, depth, LISTBOOL, BOOL, "listbool")
         elif ty == LISTLISTNAT:
             e = self.gen_list_elem(env, depth, LISTLISTNAT, LISTNAT, "listlist")
+        elif ty in self._type_map:
+            e = self.gen_user(ty, env, depth)
         else:
             raise ValueError(ty)
         return self.maybe_envelope(ty, e)
@@ -298,6 +316,10 @@ class Gen:
             # Nat from an Option Nat via getD (default).
             alts.append(("opt.getD",
                          lambda: f"(({self.gen(OPTNAT, env, depth-1)}).getD {self.gen(NAT, env, depth-1)})"))
+            # Nat by matching on an invented user value (observes its ctor/fields).
+            if self.user_types:
+                alts.append(("nat.usermatch",
+                             lambda: self.gen_user_match(NAT, env, depth)))
         return self.choose(alts)
 
     def gen_bool(self, env, depth):
@@ -338,6 +360,9 @@ class Gen:
                          lambda: f"({self.gen(CHAR, env, depth-1)}).isDigit"))
             alts.append(("bool.charIsAlpha",
                          lambda: f"({self.gen(CHAR, env, depth-1)}).isAlpha"))
+            if self.user_types:
+                alts.append(("bool.usermatch",
+                             lambda: self.gen_user_match(BOOL, env, depth)))
         return self.choose(alts)
 
     def gen_list(self, env, depth):
@@ -426,6 +451,9 @@ class Gen:
                 b = self.gen(INT, env, depth - 1)
                 return f"(if {c} then {a} else {b})"
             alts.append(("int.if", int_if))
+            if self.user_types:
+                alts.append(("int.usermatch",
+                             lambda: self.gen_user_match(INT, env, depth)))
         return self.choose(alts)
 
     def gen_opt(self, env, depth):
@@ -579,6 +607,181 @@ class Gen:
                                    for _ in range(self.rng.randint(0, 3))) + "]"
         return str(self.rng.randint(0, 9))
 
+    # ---- invented custom inductive types ---------------------------------
+    # Field types an invented constructor may hold: base value types the PRELUDE
+    # serializers already cover, plus (added dynamically) strictly-earlier
+    # invented user types.  Kept to base types the `serializer_call` map handles
+    # (no Float/Array/pair fields — those need no extra machinery to add later).
+    _USER_FIELD_BASE = [NAT, BOOL, INT, LISTNAT, OPTNAT, STRING, CHAR]
+
+    def _ensure_types(self, prefix=""):
+        """Invent this file's custom inductive types ONCE (idempotent).
+
+        Each type's field types are base value types or STRICTLY-EARLIER invented
+        types, so the type graph is a DAG: every value is finite (generation
+        always terminates without a depth cap on the type structure) and the
+        Lean serializers can be emitted in definition order.  Constructor short
+        names are globally unique within the file (`<prefix>T{i}c{j}`) and never a
+        `toPyTypeName` "common" name, so the transpiled `@dataclass` names don't
+        collide and the oracle's `{"c":<short>}` maps back unambiguously.
+
+        Rng-consumed in a fixed order, called at the first `gen_def`, so the file
+        stays a pure function of the seed."""
+        if self._types_inited:
+            return
+        self._types_inited = True
+        ntypes = self.rng.randint(1, 3)
+        for i in range(ntypes):
+            tname = f"{prefix}T{i}"
+            # Field-type universe for THIS type: base types + earlier user types.
+            earlier = [t["name"] for t in self.user_types]
+            nctors = self.rng.randint(1, 3)
+            ctors = []
+            for j in range(nctors):
+                nfields = self.rng.randint(0, 3)
+                fields = []
+                for _ in range(nfields):
+                    # Bias toward base fields; earlier user types occasionally.
+                    if earlier and self.rng.random() < 0.25:
+                        fields.append(self.rng.choice(earlier))
+                    else:
+                        fields.append(self.rng.choice(self._USER_FIELD_BASE))
+                ctors.append((f"{tname}c{j}", fields))
+            ty = {"name": tname, "ctors": ctors}
+            self.user_types.append(ty)
+            self._type_map[tname] = ty
+
+    def _sig_types(self):
+        """The type universe a generated function's params/return draw from: the
+        base grammar types plus this file's invented user types."""
+        return LEAN_TYPES + [t["name"] for t in self.user_types]
+
+    def gen_user(self, name, env, depth):
+        """Generate a Lean expression of invented user type `name`: an in-scope
+        variable, a constructor application (fields recursively generated), or a
+        depth-bounded `if`."""
+        ty = self._type_map[name]
+        alts = []
+        for (vn, vt) in env:
+            if vt == name:
+                alts.append(("user.var", (lambda vn=vn: vn)))
+
+        def mk():
+            cname, fields = self.rng.choice(ty["ctors"])
+            if not fields:
+                return f"{name}.{cname}"
+            args = " ".join(f"({self.gen(ft, env, max(depth - 1, 0))})"
+                            for ft in fields)
+            return f"({name}.{cname} {args})"
+        alts.append(("user.mk", mk))
+        if depth > 0 and self.rng.random() >= 0.4:
+            def uif():
+                c = self.gen(BOOL, env, depth - 1)
+                a = self.gen_user(name, env, depth - 1)
+                b = self.gen_user(name, env, depth - 1)
+                return f"(if {c} then {a} else {b})"
+            alts.append(("user.if", uif))
+        return self.choose(alts)
+
+    def gen_user_match(self, result_ty, env, depth):
+        """A `match` on an invented-user-type scrutinee, each arm producing a
+        `result_ty` value — observes a user value's constructor + fields.  The
+        scrutinee is `gen_user` (an in-scope var of that type when available, else
+        a freshly constructed value)."""
+        tname = self.rng.choice([t["name"] for t in self.user_types])
+        scrut = self.gen_user(tname, env, max(depth - 1, 0))
+        arms = []
+        for (cname, fields) in self._type_map[tname]["ctors"]:
+            binders = [self.fresh(env) for _ in fields]
+            arm_env = env + list(zip(binders, fields))
+            body = self.gen(result_ty, arm_env, depth - 1)
+            pat = f"{tname}.{cname}" + ("".join(f" {b}" for b in binders))
+            arms.append(f"| {pat} => {body}")
+        return f"(match {scrut} with {' '.join(arms)})"
+
+    # ---- user-value serialization (Lean literal / JSON / oracle) ----------
+    def lit_for(self, ty, v):
+        """Lean literal for value `v` of type `ty`, routing user types to
+        `user_lean_lit` and base types to the module-level `lean_lit`."""
+        if ty in self._type_map:
+            return self.user_lean_lit(ty, v)
+        return lean_lit(ty, v)
+
+    def user_lean_lit(self, name, v):
+        cname = v["__ctor__"]
+        fields = dict(self._type_map[name]["ctors"])[cname]
+        if not fields:
+            return f"{name}.{cname}"
+        args = " ".join(f"({self.lit_for(ft, fv)})"
+                        for ft, fv in zip(fields, v["fields"]))
+        return f"({name}.{cname} {args})"
+
+    def json_for(self, ty, v):
+        """JSON for value `v` of type `ty` — the `{"c":<ctor>,"f":[…]}` shape the
+        transpiled `@dataclass` reduces to in `run_oracle.normalize`."""
+        if ty in self._type_map:
+            import json
+            cname = v["__ctor__"]
+            fields = dict(self._type_map[ty]["ctors"])[cname]
+            fj = ",".join(self.json_for(ft, fv)
+                          for ft, fv in zip(fields, v["fields"]))
+            return f'{{"c":{json.dumps(cname)},"f":[{fj}]}}'
+        return json_lit(ty, v)
+
+    def ser_for(self, ty, expr):
+        """Lean serializer call for a return value of type `ty`."""
+        if ty in self._type_map:
+            return f"jU_{ty} ({expr})"
+        return serializer_call(ty, expr)
+
+    def _field_ser(self, ft, var):
+        """Lean serializer expression for a constructor field of type `ft`."""
+        if ft in self._type_map:
+            return f"(jU_{ft} {var})"
+        return serializer_call(ft, var)
+
+    def emit_user_type_lean(self):
+        """Lean `inductive` declarations + `jU_<Type>` JSON serializers for this
+        file's invented types, in definition (dependency) order.  Empty when no
+        types were invented."""
+        if not self.user_types:
+            return ""
+        lines = []
+        for t in self.user_types:
+            name = t["name"]
+            lines.append(f"inductive {name} where")
+            for (cn, fields) in t["ctors"]:
+                if fields:
+                    binders = " ".join(f"(f{i} : {ft})"
+                                       for i, ft in enumerate(fields))
+                    lines.append(f"  | {cn} {binders}")
+                else:
+                    lines.append(f"  | {cn}")
+        # Serializers, defined in the same DAG order (a type's user-type fields
+        # precede it, so its `jU_*` is already defined).
+        for t in self.user_types:
+            name = t["name"]
+            lines.append(f"def jU_{name} : {name} → String")
+            for (cn, fields) in t["ctors"]:
+                if fields:
+                    bs = " ".join(f"a{i}" for i in range(len(fields)))
+                    fj = ' ++ "," ++ '.join(
+                        self._field_ser(ft, f"a{i}")
+                        for i, ft in enumerate(fields))
+                    lines.append(
+                        f'  | .{cn} {bs} => "{{\\"c\\":\\"{cn}\\",\\"f\\":[" '
+                        f'++ {fj} ++ "]}}"')
+                else:
+                    lines.append(f'  | .{cn} => "{{\\"c\\":\\"{cn}\\",\\"f\\":[]}}"')
+        return "\n".join(lines)
+
+    def _rand_user(self, name):
+        """A random value of invented user type `name`, as
+        `{"__ctor__": short_name, "fields": [values…]}`.  Terminates because the
+        type graph is a DAG (fields are base types or strictly-earlier types)."""
+        cname, fields = self.rng.choice(self._type_map[name]["ctors"])
+        return {"__ctor__": cname, "fields": [self.rand_value(ft) for ft in fields]}
+
     _counter = 0
 
     def fresh(self, env, offset=0):
@@ -596,12 +799,17 @@ class Gen:
         # `prefix` namespaces the function/param names so many seeds can be
         # packed into one Lean file (batching) without name clashes; empty for
         # the single-seed case.
+        # Invent this file's custom types before the first def (fixed rng order).
+        # The type names share the def prefix so a batched file's seeds never
+        # collide on a type/serializer name.
+        self._ensure_types(prefix)
+        sig_types = self._sig_types()
         nparams = self.rng.randint(1, 3)
         params = []
         for i in range(nparams):
-            pty = self.pick(LEAN_TYPES)
+            pty = self.pick(sig_types)
             params.append((f"{prefix}p{idx}_{i}", pty))
-        ret = self.pick(LEAN_TYPES)
+        ret = self.pick(sig_types)
         env = list(params)
         body = self.gen(ret, env, self.max_depth)
         name = f"{prefix}gen{idx}"
@@ -646,6 +854,8 @@ class Gen:
             num = self.rng.randint(-64, 64)
             den = self.rng.choice([1, 2, 4, 8])   # power-of-two denominator
             return num / den
+        if ty in self._type_map:
+            return self._rand_user(ty)
         raise ValueError(ty)
 
 
@@ -822,11 +1032,14 @@ def single_def_body(seed, ninputs, emi=0.0):
     # oracle.  Rebuilding just swaps the body text; the def name and call sites
     # are unchanged, so the frozen rows still call it correctly.
     frozen_rows = _oracle_rows(g, [(name, params, ret, src)], ninputs)
+    # Any invented types the def's signature / body / oracle rows depend on must
+    # be re-emitted in every rebuilt file (frozen alongside the rows).
+    type_decls = g.emit_user_type_lean()
 
     def rebuild(body):
         newdef = (name, params, ret,
                   f"def {name} {sig} : {ret} :=\n  {body}")
-        return _assemble([newdef], frozen_rows)
+        return _assemble([newdef], frozen_rows, type_decls)
 
     return orig_body, rebuild, [n for (n, _) in params]
 
@@ -837,15 +1050,17 @@ def _oracle_rows(g, defs, ninputs):
     for (name, params, ret, _) in defs:
         for _ in range(ninputs):
             vals = [g.rand_value(t) for (_, t) in params]
-            lean_args = " ".join(f"({lean_lit(t, v)})" for ((_, t), v) in zip(params, vals))
-            json_args = "[" + ",".join(json_lit(t, v) for ((_, t), v) in zip(params, vals)) + "]"
+            # `lit_for`/`json_for`/`ser_for` route base types to the module-level
+            # helpers and invented user types to the Gen's per-file emitters.
+            lean_args = " ".join(f"({g.lit_for(t, v)})" for ((_, t), v) in zip(params, vals))
+            json_args = "[" + ",".join(g.json_for(t, v) for ((_, t), v) in zip(params, vals)) + "]"
             # `json_args` is embedded inside a Lean string literal, so escape any
             # `"`/`\` it contains (JSON strings for String/Char args have quotes).
             # fuzz.py parses the row by splitting on the literal tab, then
             # json.loads() the field — which un-escapes back to the original.
             json_args_esc = _lean_str_escape(json_args)
             call = f"{name} {lean_args}" if params else name
-            ser = serializer_call(ret, call)
+            ser = g.ser_for(ret, call)
             rows.append(f'  IO.println ("ORACLE\\t{name}\\t{json_args_esc}\\t" ++ {ser})')
     return rows
 
@@ -872,9 +1087,14 @@ def _eval_block(defs, rows, tag=""):
     return block
 
 
-def _assemble(all_defs, all_rows):
-    """Build a single-`#eval` Lean file from def source blocks and oracle rows."""
+def _assemble(all_defs, all_rows, type_decls=""):
+    """Build a single-`#eval` Lean file from def source blocks and oracle rows.
+    `type_decls` (from `Gen.emit_user_type_lean`) holds any invented `inductive`
+    types + their `jU_*` serializers, emitted before the functions that use
+    them."""
     parts = [PRELUDE, ""]
+    if type_decls:
+        parts += [type_decls, ""]
     parts += [src for (_, _, _, src) in all_defs]
     parts.append("")
     parts += _eval_block(all_defs, all_rows)
@@ -891,7 +1111,7 @@ def emit_lean_file(seed, ndefs, ninputs, covered=None, emi=0.0):  # noqa: E302
     """
     g, defs = _gen_defs_for_seed(seed, ndefs, emi)
     setattr(emit_lean_file, "last_gen", g)
-    return _assemble(defs, _oracle_rows(g, defs, ninputs))
+    return _assemble(defs, _oracle_rows(g, defs, ninputs), g.emit_user_type_lean())
 
 
 def emit_batch_file(seeds, ndefs, ninputs, emi=0.0):
@@ -908,15 +1128,22 @@ def emit_batch_file(seeds, ndefs, ninputs, emi=0.0):
     entirely on the first bad def via the `sorry` axiom.)
 
     Returns (lean_src, {seed: (all_prods, covered, all_kpaths, kpaths)})."""
-    all_defs, blocks, cov = [], [], {}
+    all_defs, blocks, cov, type_decls = [], [], {}, []
     for seed in seeds:
         g, defs = _gen_defs_for_seed(seed, ndefs, emi, prefix=f"s{seed}_")
         all_defs += defs
+        # Each seed's invented types/serializers are prefixed `s{seed}_T…`, so
+        # they never clash across the batch; emit them all up front.
+        td = g.emit_user_type_lean()
+        if td:
+            type_decls.append(td)
         rows = _oracle_rows(g, defs, ninputs)
         blocks += _eval_block(defs, rows, tag=str(seed))
         cov[seed] = (frozenset(g.all_prods), frozenset(g.covered),
                      frozenset(g.all_kpaths), frozenset(g.kpaths))
     parts = [PRELUDE, ""]
+    parts += type_decls
+    parts.append("")
     parts += [src for (_, _, _, src) in all_defs]
     parts.append("")
     parts += blocks
