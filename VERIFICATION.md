@@ -505,6 +505,27 @@ returns the `Inhabited` default, Python raises), unstable `Array.qsort` tie orde
   `floatize`, appending `.0` to a bare integer literal.  All 44 Geometry
   functions now differentially agree.
 
+### F35. Polymorphic function's type parameter left in the Python signature
+
+- **Found by:** the round-trip differential harness (`roundtrip/run.sh` Option A),
+  `Corpus.Algorithms.reverse` on every input: `python=<raised TypeError:
+  reverse_go() missing 1 required positional argument> lean=[3,2,1]`.
+- **Kind:** runtime (a hard `TypeError` — the transpiled function can't be called
+  at all).
+- **Root cause:** a polymorphic function (`reverse.go {α} (xs acc : List α)`)
+  keeps its leading TYPE parameter `α : Type`.  `emitFunParams` emitted it as
+  `_: Any`, but in LCNF the matching call argument is a `.type` node the emitter
+  drops from *every* call (`emitArgs`/`emitTailStep` filter `.type`/`.erased`).
+  So the emitted `def reverse_go(_, xs, acc)` had three params while both the
+  wrapper's call and the self-tail-call passed only two (`reverse_go(xs_, acc_)`)
+  — one argument short.
+- **Fix:** treat a `Sort`-typed parameter (`isTypeParam`, `e.isSort`) as a
+  skippable param (`isSkippableParam`), so a type parameter is dropped from the
+  emitted signature *and* the tail-loop rebind list — aligning the signature with
+  the arguments callers actually pass.  (External callers were already fine:
+  `run_oracle.call` pads leading erased args.)  Round-trip battery went 108/112 →
+  **112/112**.  Regression case (20) `revAcc` in `RegressionFixes.lean`.
+
 ### Custom inductive / structure types (Phase 3 fragment-reuse expansion)
 
 The fragment-reuse harvester now handles corpus functions whose parameters or

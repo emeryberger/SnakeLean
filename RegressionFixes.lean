@@ -245,6 +245,17 @@ def nestedIndex (xs : List (Option Nat)) (i : Nat) : Nat :=
   | none => 0            -- out of bounds
   | some none => 1       -- in bounds, element is `none`
   | some (some n) => n + 100
+-- (21) Polymorphic tail-recursive helper: a leading TYPE parameter (`{α}`) must
+-- be dropped from the emitted Python signature — the LCNF call arg is a `.type`
+-- node the emitter drops, so an emitted `_: Any` param leaves both the wrapper's
+-- call AND the tail self-call one argument short (`… missing 1 required
+-- positional argument`).  `revAcc` reverses via an accumulator (self-tail-
+-- recursive → loop); pre-fix `rev_acc_go(xs_, acc_)` passed 2 args to a 3-param
+-- `def rev_acc_go(_, xs, acc)`.
+def revAcc.go {α : Type} : List α → List α → List α
+  | [], acc => acc
+  | x :: xs, acc => revAcc.go xs (x :: acc)
+def revAcc {α : Type} (xs : List α) : List α := revAcc.go xs []
 
 end RegressionFixes
 #eval show CoreM Unit from do
@@ -305,5 +316,6 @@ end RegressionFixes
       ``RegressionFixes.floatZeroBranch,
       ``RegressionFixes.floatLitConst,
       ``RegressionFixes.classifyNested,
-      ``RegressionFixes.nestedIndex ]
+      ``RegressionFixes.nestedIndex,
+      ``RegressionFixes.revAcc ]
   IO.println code
