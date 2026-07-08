@@ -76,6 +76,16 @@ def normalize(v):
         return _canon_float(_float_from_bits(v["__f__"]))
     if isinstance(v, float):
         return _canon_float(v)
+    # A transpiled nested-Option box: `_Some(inner)` (the dataclass emitted for
+    # `Option (Option α)` by the type-directed boxing).  Reduce it to the same
+    # `{"__some__": inner}` wire form the Lean `jOptOpt` serializer emits, so
+    # `some none` (→ `{"__some__": null}`) stays distinct from `none` (→ None).
+    # MUST precede the generic-dataclass path (its field is `value`, not
+    # `field_0`, and it is NOT a user inductive).
+    if _is_some_box(v):
+        return {"__some__": normalize(v.value)}
+    if isinstance(v, dict) and "__some__" in v and len(v) == 1:
+        return {"__some__": normalize(v["__some__"])}
     if isinstance(v, tuple):
         return [normalize(x) for x in v]
     if isinstance(v, list):
@@ -96,6 +106,14 @@ def normalize(v):
     if isinstance(v, dict) and "c" in v and "f" in v:
         return {"c": v["c"], "f": [normalize(f) for f in v["f"]]}
     return v
+
+
+def _is_some_box(v):
+    """A transpiled `_Some(...)` nested-Option box (dataclass named `_Some` with a
+    single `value` field), distinct from a user-inductive dataclass."""
+    import dataclasses
+    return (not isinstance(v, type) and dataclasses.is_dataclass(v)
+            and type(v).__name__ == "_Some")
 
 
 def _is_transpiled_dataclass(v):
@@ -121,6 +139,12 @@ def materialize(v, ns):
     (fields recursively materialized).  Lists recurse; scalars pass through."""
     if isinstance(v, dict) and "__f__" in v and len(v) == 1:
         return _float_from_bits(v["__f__"])   # tagged float arg -> exact float
+    if isinstance(v, dict) and "__some__" in v and len(v) == 1:
+        # A nested-Option `some` arg: rebuild the transpiled `_Some(inner)` box
+        # so the function's `.value` unwrap and `is None` test behave as compiled.
+        box = ns.get("_Some")
+        inner = materialize(v["__some__"], ns)
+        return box(inner) if box is not None else v
     if isinstance(v, dict) and "__pred__" in v:
         # An `α → Bool` predicate arg (`Char → Bool` / `Int → Bool`): the subset
         # of elements for which it is true.  Rebuild the same membership lambda

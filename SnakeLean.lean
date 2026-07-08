@@ -414,6 +414,28 @@ partial def collectArrowTypes (e : Expr) : List Expr × Expr :=
       (dom :: args, ret)
   | _ => ([], e)
 
+/-- The element type of an `Option T` LCNF type expression, or `none` if `e` is
+    not (syntactically) an `Option`.  Used to decide nested-Option boxing. -/
+def optionElem? (e : Expr) : Option Expr :=
+  match e with
+  | .app (.const ``Option _) arg => some arg
+  | _ => none
+
+/-- Does an `Option`-typed value of LCNF type `e` need the `_Some` box to stay
+    faithful?  Python models a *flat* `Option T` as `T | None`, which is
+    idiomatic and unambiguous — UNLESS `T` is itself nullable, i.e. `T` is an
+    `Option`.  Then `some none` and `none` both collapse to bare `None`, losing
+    the distinction Lean makes (the classic nested-Option faithfulness gap).  We
+    box `some` as `_Some(x)` exactly in that case, so `some none` → `_Some(None)`
+    stays distinct from `none` → `None`.  Only a *top-level* `Option` element
+    renders as bare `None` (an `Option` inside a `List`/`Prod` is inside a
+    list/tuple, never bare), so the trigger is precisely "element is an Option".
+    -/
+def optionNeedsBox (e : Expr) : Bool :=
+  match optionElem? e with
+  | some elem => (optionElem? elem).isSome
+  | none => false
+
 partial def toPyTypeHint (e : Expr) : EmitM String := do
   match e with
   | .const ``Nat _ => return "int"
@@ -1623,9 +1645,16 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
     if declName == ``Option.some then
       if args.size >= 1 then
         emitIndent
-        emit s!"{varName} = "
-        emitArg args[args.size - 1]!  -- Skip the type argument
-        emit "\n"
+        -- Nested Option needs the `_Some` box so `some none` (→ `_Some(None)`)
+        -- stays distinct from `none` (→ `None`); a flat `some x` stays bare `x`.
+        if optionNeedsBox decl.type then
+          emit s!"{varName} = _Some("
+          emitArg args[args.size - 1]!
+          emit ")\n"
+        else
+          emit s!"{varName} = "
+          emitArg args[args.size - 1]!  -- Skip the type argument
+          emit "\n"
         return
     if declName == ``Option.none then
       emitIndent
@@ -1698,6 +1727,20 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
       emitArgs valArgs
       emit ")\n"
       return
+    -- Nested-Option producers: `head?`/`getLast?` return `Option (element)`, so
+    -- over a `List (Option α)` they yield `Option (Option α)` — box the found
+    -- element (`_Some(...)`) so a present `none` element stays distinct from the
+    -- empty-list `none`.  Handled here (with `decl.type` in scope) rather than in
+    -- the type-blind `stdlibFnToPython?` map below.
+    if (declName == ``List.head? || declName == ``List.getLast?)
+        && optionNeedsBox decl.type then
+      let valArgs := args.filter (fun a => match a with | .fvar _ => true | _ => false)
+      if valArgs.size >= 1 then
+        let xs ← renderArg valArgs[valArgs.size - 1]!
+        let idx := if declName == ``List.head? then "0" else "-1"
+        emitIndent
+        emit s!"{varName} = (_Some({xs}[{idx}]) if {xs} else None)\n"
+        return
     -- Check for stdlib function mappings
     if let some pyFn := stdlibFnToPython? declName then
       -- Handle simple wrapper functions like len, list, etc.  A `pyFn` that is
@@ -1942,16 +1985,16 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
     -- `l[i]?` now lowers through the generic `getElem?`)
     if declName == ``getElem? then
       if args.size >= 2 then
+        let xs ← renderArg args[args.size - 2]!
+        let i ← renderArg args[args.size - 1]!
         emitIndent
-        emit s!"{varName} = "
-        emitArg args[args.size - 2]!  -- list
-        emit "["
-        emitArg args[args.size - 1]!  -- index
-        emit "] if 0 <= "
-        emitArg args[args.size - 1]!
-        emit " < len("
-        emitArg args[args.size - 2]!
-        emit ") else None\n"
+        -- `xs[i]?` over a `List (Option α)` yields `Option (Option α)` — box the
+        -- in-bounds element so a found `none` element (`some none` → `_Some(None)`)
+        -- stays distinct from an out-of-bounds miss (`none` → `None`).
+        if optionNeedsBox decl.type then
+          emit s!"{varName} = (_Some({xs}[{i}]) if 0 <= {i} < len({xs}) else None)\n"
+        else
+          emit s!"{varName} = ({xs}[{i}] if 0 <= {i} < len({xs}) else None)\n"
         return
     -- List.zip - pair up two lists elementwise (`List (α × β)`).
     if declName == ``List.zip then
@@ -2083,7 +2126,12 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
         let (binder, body) ← fnCompParts args[args.size - 2]! "x"
         let xs ← renderArg args[args.size - 1]!
         emitIndent
-        emit s!"{varName} = next(({binder} for {binder} in {xs} if {body}), None)\n"
+        -- Over a `List (Option α)` the result is `Option (Option α)`; box the
+        -- found element so a matched `none` differs from "nothing matched".
+        if optionNeedsBox decl.type then
+          emit s!"{varName} = next((_Some({binder}) for {binder} in {xs} if {body}), None)\n"
+        else
+          emit s!"{varName} = next(({binder} for {binder} in {xs} if {body}), None)\n"
         return
     -- List.findSome? - find first Some result of f
     if declName == ``List.findSome? then
@@ -2533,7 +2581,14 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
       if idx == 1 then
         markHandler "proj.GetElem?"
         emitIndent
-        emit s!"{varName} = (lambda xs, i: xs[i] if 0 <= i < len(xs) else None)\n"
+        -- The projected `getElem?` has type `Coll → Idx → Option Elem`; when
+        -- `Elem` is itself an `Option` the result is a nested Option, so box the
+        -- in-bounds element (`_Some(xs[i])`) to keep a found `none` distinct from
+        -- an out-of-bounds miss.  `decl.type` is that arrow — inspect its return.
+        if optionNeedsBox (getReturnType decl.type) then
+          emit s!"{varName} = (lambda xs, i: _Some(xs[i]) if 0 <= i < len(xs) else None)\n"
+        else
+          emit s!"{varName} = (lambda xs, i: xs[i] if 0 <= i < len(xs) else None)\n"
         return
       else if idx == 0 then
         -- Project 0 (valid?) is the validity predicate
@@ -3207,8 +3262,15 @@ partial def emitOptionCases (discr : String) (alts : Array Alt) : EmitM Unit := 
         someEmitted := true
         withIndent do
           if params.size > 0 then
-            let valName ← registerVar params[params.size - 1]!.fvarId params[params.size - 1]!.binderName
-            emitLn s!"{valName} = {discr}"
+            let p := params[params.size - 1]!
+            let valName ← registerVar p.fvarId p.binderName
+            -- If the payload is itself an `Option`, the discriminant is a boxed
+            -- nested Option (`_Some(inner) | None`); unwrap the box.  (The `none`
+            -- branch is unaffected — `none` is bare `None` in both schemes.)
+            if (optionElem? p.type).isSome then
+              emitLn s!"{valName} = {discr}.value"
+            else
+              emitLn s!"{valName} = {discr}"
           emitCode code
     | _ => pure ()
   if !someEmitted then
@@ -3428,6 +3490,17 @@ def emitFileHeader : EmitM Unit := do
   emitLn "import functools"
   emitLn "import math"
   emitLn "from typing import Any, Callable"
+  emitBlankLine
+  -- Box for a NESTED `Option` (`Option (Option α)`, …).  A flat `Option α` maps
+  -- to the idiomatic `α | None`, but that collapses `some none` and `none` to a
+  -- shared `None`.  When the element is itself nullable we wrap `some x` as
+  -- `_Some(x)`, so `some none` (→ `_Some(None)`) stays distinct from `none`
+  -- (→ `None`).  Emitted unconditionally (cheap, and referenced only by the
+  -- nested-Option paths).  `eq`/`frozen` so it compares structurally and matches
+  -- the differential oracle.
+  emitLn "@dataclass(frozen=True)"
+  emitLn "class _Some:"
+  withIndent do emitLn "value: Any"
   emitBlankLine
 
 def emitInductiveType (name : Name) : EmitM Unit := do

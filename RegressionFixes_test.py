@@ -206,6 +206,26 @@ check("float_zero_branch(3.5)", float_zero_branch(3.5), 3.5)
 check("float_lit_const() is float", isinstance(float_lit_const(), float), True)
 check("float_lit_const()", float_lit_const(), 5.0)
 
+# (20) Nested Option faithfulness: `some none` must differ from `none`.  A NESTED
+# `Option (Option Nat)` value is boxed — `_Some(x)` — so the three shapes are
+# distinct Python values (`None` / `_Some(None)` / `_Some(_Some(n))`).
+classify_nested = ns["classify_nested"]
+nested_index = ns["nested_index"]
+_Some = ns["_Some"]
+# Boxing depth follows Option-nesting: the OUTER `Option (Option Nat)` boxes
+# (`_Some`), the INNER `Option Nat` is flat (element `Nat` is non-nullable, so it
+# stays bare).  Hence `some (some 5)` -> `_Some(5)` (not `_Some(_Some(5))`), and
+# `some none` -> `_Some(None)` distinct from `none` -> `None`.
+check("classify_nested(none)", classify_nested(None), 0)
+check("classify_nested(some none)", classify_nested(_Some(None)), 1)
+check("classify_nested(some (some 5))", classify_nested(_Some(5)), 105)
+# nested_index: the board is a flat `List (Option Nat)` (elements bare int|None),
+# but xs[i]? yields a NESTED Option internally.  Out-of-bounds (0) must differ
+# from an in-bounds `none` element (1).
+check("nested_index([some 5, none], 0)", nested_index([5, None], 0), 105)
+check("nested_index([some 5, none], 1)", nested_index([5, None], 1), 1)   # in-bounds none
+check("nested_index([some 5, none], 9)", nested_index([5, None], 9), 0)   # out of bounds
+
 if failures:
     print("FAIL:")
     for f in failures:

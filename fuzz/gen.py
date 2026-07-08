@@ -37,11 +37,18 @@ STRING, CHAR, ARRAYNAT = ("String", "Char", "Array Nat")
 # (map/filter/foldr/append/reverse) over non-Nat elements and one nesting level.
 LISTINT, LISTBOOL, LISTLISTNAT = ("List Int", "List Bool", "List (List Nat)")
 FLOAT = "Float"
+# Nested Option — the faithfulness case that motivated type-directed `_Some`
+# boxing.  Python models a flat `Option α` as `α | None`, collapsing `some none`
+# and `none`; the transpiler boxes a nested option's `some` as `_Some(x)` so the
+# two stay distinct.  Generating/serializing values of this type drives that path
+# through the differential oracle (its JSON wire form is `{"__some__": inner}`
+# for `some`, `null` for `none`; `run_oracle` rebuilds the `_Some` box).
+OPTOPTNAT = "Option (Option Nat)"
 # `LEAN_TYPES` is the GRAMMAR's production universe — types the generator can both
 # pick as a signature type AND synthesize expressions of.  Float is deliberately
 # NOT here (the grammar doesn't invent Float functions).
 LEAN_TYPES = [NAT, BOOL, LISTNAT, PAIR, INT, OPTNAT, STRING, CHAR, ARRAYNAT,
-              LISTINT, LISTBOOL, LISTLISTNAT]
+              LISTINT, LISTBOOL, LISTLISTNAT, OPTOPTNAT]
 # `VALUE_TYPES` is the broader set the fuzzer can generate/serialize VALUES for
 # (used by `corpus_frags` to decide if a base type is drivable).  Adds Float,
 # which corpus fragments (Geometry's Point2D/3D etc.) need but the grammar can't
@@ -67,6 +74,9 @@ ALL_PRODUCTIONS = frozenset({
     "int.mul", "int.div", "int.mod", "int.if",
     # Option Nat
     "opt.none", "opt.some", "opt.var", "opt.getD", "opt.if", "opt.match",
+    # Option (Option Nat) — nested option (type-directed `_Some` boxing)
+    "optopt.none", "optopt.somenone", "optopt.some", "optopt.var", "optopt.if",
+    "nat.optoptmatch",
     # String
     "str.lit", "str.var", "str.append", "str.push", "str.mk", "str.if",
     "str.let",
@@ -211,6 +221,8 @@ class Gen:
             e = self.gen_list_elem(env, depth, LISTBOOL, BOOL, "listbool")
         elif ty == LISTLISTNAT:
             e = self.gen_list_elem(env, depth, LISTLISTNAT, LISTNAT, "listlist")
+        elif ty == OPTOPTNAT:
+            e = self.gen_optopt(env, depth)
         elif ty in self._type_map:
             e = self.gen_user(ty, env, depth)
         else:
@@ -320,6 +332,16 @@ class Gen:
             if self.user_types:
                 alts.append(("nat.usermatch",
                              lambda: self.gen_user_match(NAT, env, depth)))
+            # Nat by matching a NESTED option, distinguishing all three shapes —
+            # `none` / `some none` / `some (some n)` — which is exactly what the
+            # `_Some` box makes faithful (the three must give different results).
+            def oo_match():
+                scrut = self.gen(OPTOPTNAT, env, depth - 1)
+                fresh = self.fresh(env)
+                inner = self.gen(NAT, env + [(fresh, NAT)], depth - 1)
+                return (f"(match {scrut} with | none => 0 | some none => 1 "
+                        f"| some (some {fresh}) => ({inner} + 2))")
+            alts.append(("nat.optoptmatch", oo_match))
         return self.choose(alts)
 
     def gen_bool(self, env, depth):
@@ -479,6 +501,29 @@ class Gen:
                     some_e = self.gen(OPTNAT, env + [(fresh, NAT)], depth - 1)
                     return f"(match {n} with | none => {none_e} | some {fresh} => {some_e})"
                 alts.append(("opt.match", opt_match))
+        return self.choose(alts)
+
+    def gen_optopt(self, env, depth):
+        """Generate an `Option (Option Nat)` expression.  Includes the two
+        distinct nullary shapes — `none` and `some none` — that a faithful
+        transpiler must NOT collapse, so the differential oracle exercises the
+        `_Some` box directly."""
+        vs = self.vars_of(env, OPTOPTNAT)
+        alts = [
+            ("optopt.none", lambda: "(none : Option (Option Nat))"),
+            ("optopt.somenone", lambda: "(some none : Option (Option Nat))"),
+            ("optopt.some",
+             lambda: f"(some ({self.gen(OPTNAT, env, max(depth-1, 0))}) : Option (Option Nat))"),
+        ]
+        for v in vs:
+            alts.append(("optopt.var", (lambda v=v: v)))
+        if depth > 0 and self.rng.random() >= 0.4:
+            def oo_if():
+                c = self.gen(BOOL, env, depth - 1)
+                a = self.gen(OPTOPTNAT, env, depth - 1)
+                b = self.gen(OPTOPTNAT, env, depth - 1)
+                return f"(if {c} then {a} else {b})"
+            alts.append(("optopt.if", oo_if))
         return self.choose(alts)
 
     # A small ASCII alphabet for string/char literals — kept to letters+digits so
@@ -832,6 +877,17 @@ class Gen:
             return self.rng.randint(-12, 12)
         if ty == OPTNAT:
             return None if self.rng.random() < 0.3 else self.rng.randint(0, 12)
+        if ty == OPTOPTNAT:
+            # Three shapes, kept equally likely so `some none` (the box-critical
+            # case) is well-sampled: `none` → None; `some none` → {"__some__":
+            # None}; `some (some n)` → {"__some__": n}.  The `{"__some__": …}`
+            # tag is the wire form the transpiled `_Some` box round-trips through.
+            r = self.rng.random()
+            if r < 0.34:
+                return None
+            if r < 0.67:
+                return {"__some__": None}
+            return {"__some__": self.rng.randint(0, 12)}
         if ty == STRING:
             return "".join(self.rng.choice(self._ALPHABET)
                            for _ in range(self.rng.randint(0, 5)))
@@ -881,6 +937,12 @@ def lean_lit(ty, v):
         return f"({v} : Int)"
     if ty == OPTNAT:
         return "(none : Option Nat)" if v is None else f"(some {v} : Option Nat)"
+    if ty == OPTOPTNAT:
+        if v is None:
+            return "(none : Option (Option Nat))"
+        inner = v["__some__"]
+        inner_lit = "none" if inner is None else f"(some {inner})"
+        return f"(some {inner_lit} : Option (Option Nat))"
     if ty == STRING:
         return f'"{_lean_str_escape(v)}"'
     if ty == CHAR:
@@ -932,6 +994,8 @@ def serializer_call(ty, expr):
         return f"jInt ({expr})"
     if ty == OPTNAT:
         return f"jOpt ({expr})"
+    if ty == OPTOPTNAT:
+        return f"jOptOpt ({expr})"
     if ty == STRING:
         return f"jString ({expr})"
     if ty == CHAR:
@@ -966,6 +1030,12 @@ def jInt (n : Int) : String := toString n
 def jOpt : Option Nat → String
   | none => "null"
   | some n => toString n
+-- Nested option (`Option (Option Nat)`): a flat `null` for `none` would collapse
+-- with `some none`, so `some` is tagged `{"__some__": <inner>}` — the same wire
+-- form the transpiled `_Some` box produces, which `run_oracle` rebuilds.
+def jOptOpt : Option (Option Nat) → String
+  | none => "null"
+  | some inner => "{\"__some__\":" ++ jOpt inner ++ "}"
 -- JSON-escape a string so the oracle row is valid JSON that Python's
 -- `json.loads` parses back to the same value, matching `json.dumps`.  Besides
 -- quote/backslash/named controls, JSON forbids ALL raw control chars (<0x20) —

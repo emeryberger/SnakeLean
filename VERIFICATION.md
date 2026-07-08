@@ -529,6 +529,25 @@ internal invariant (`UnionFind`'s parent array must be acyclic) makes its
 `node`, …) are parent-prefixed (`Nim.mk` → `Nim_mk`), so the oracle serializer
 and `run_oracle.normalize` must match `toPyTypeName` — they now do.
 
+### Nested `Option` faithfulness — type-directed `_Some` boxing
+
+Not a fuzzer-found *bug* but a deliberate faithfulness fix (the last known gap).
+Python modelled every `Option α` as `α | None`, which is idiomatic for a flat
+option but collapses `some none` and `none` to a shared `None` when the element
+is itself nullable (`Option (Option α)`) — so a `match` distinguishing them
+diverged (e.g. `TicTacToe.validMoves`, indexing a `List (Option Player)` with
+`[i]?`). Now the transpiler boxes `some` as `_Some(x)` **exactly when** the
+element type is itself an `Option` (`optionNeedsBox`, a per-site LCNF-type test),
+so `some none → _Some(None)` stays distinct from `none → None` while the ~67
+flat-`Option` functions are byte-for-byte unchanged. Covered producers:
+`some`-construction, the Option `match` (unwraps `.value`), `getElem?` (both the
+`getElem?` const and the `GetElem?` projection lambda), and
+`List.head?`/`getLast?`/`find?`. `validMoves` is faithful again and back in the
+fuzz corpus. The fuzzer now generates `Option (Option Nat)` values (distinct
+`none`/`some none`/`some (some n)` shapes) and validates them against the oracle;
+the wire form `{"__some__": inner}` round-trips through `gen`, `corpus_frags`,
+and `run_oracle`. Regression case (20) in `RegressionFixes.lean`.
+
 ### Known-open
 
 None currently in `corpus_frags._KNOWN_OPEN_NS`.  (`List.get!`/`Array.get!` — the
