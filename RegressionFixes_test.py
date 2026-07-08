@@ -226,6 +226,16 @@ check("nested_index([some 5, none], 0)", nested_index([5, None], 0), 105)
 check("nested_index([some 5, none], 1)", nested_index([5, None], 1), 1)   # in-bounds none
 check("nested_index([some 5, none], 9)", nested_index([5, None], 9), 0)   # out of bounds
 
+# (21) Polymorphic tail-recursive helper: the leading TYPE parameter must be
+# dropped from the emitted signature, so both the wrapper's call and the tail
+# self-call have the right arity.  Pre-fix `rev_acc` raised
+# `TypeError: rev_acc_go() missing 1 required positional argument`.
+rev_acc = ns["rev_acc"]
+check("rev_acc([1,2,3])", rev_acc([1, 2, 3]), [3, 2, 1])
+check("rev_acc([])", rev_acc([]), [])
+check("rev_acc([7])", rev_acc([7]), [7])
+check("rev_acc(range 5)", rev_acc([1, 2, 3, 4, 5]), [5, 4, 3, 2, 1])
+
 if failures:
     print("FAIL:")
     for f in failures:

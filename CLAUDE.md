@@ -295,7 +295,9 @@ To add support for more builtin operations, modify:
 1. Pattern matching generates verbose code with inner functions (LCNF structure)
 2. Some unused intermediate variables may be emitted
 3. Variable names have numeric suffixes for uniqueness
-4. Generic type parameters are erased to `Any`
+4. Generic type parameters are dropped from the emitted signature (their LCNF
+   call argument is a `.type` node the emitter drops, so a runtime-erased type
+   param carries no value); remaining type annotations erase to `Any`
 5. No IO monad support (pure functions only)
 6. Some type class projections (e.g., `Max`, `Xor`) emit incorrect code
 7. Only *self*-tail recursion is loop-optimized. Non-tail recursion is left

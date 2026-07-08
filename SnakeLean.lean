@@ -2661,9 +2661,23 @@ def isUnitType (e : Expr) : Bool :=
 def isErasedType (e : Expr) : Bool :=
   e == erasedExpr
 
-/-- A param that carries no runtime value: a unit or an LCNF-erased proof. -/
+/-- A parameter whose type is a `Sort` (`Type u` / `Prop`) is a TYPE parameter of
+    a polymorphic function (e.g. the `α` of `reverse {α} (xs : List α)`).  In
+    LCNF the matching call argument is a `.type` / `.erased` node, which the
+    emitter drops from every call (`emitArgs`/`emitTailStep` filter those out).
+    So a type parameter carries no runtime value and MUST likewise be dropped
+    from the Python `def` signature and the tail-loop rebind list — otherwise the
+    signature has an extra leading param that no internal caller passes, and a
+    self-call (or the wrapper's call) is one argument short (`… missing 1 required
+    positional argument`).  `run_oracle.call` pads leading erased args for
+    external calls, so external callers are unaffected either way. -/
+def isTypeParam (e : Expr) : Bool :=
+  e.isSort
+
+/-- A param that carries no runtime value: a unit, an LCNF-erased proof, or a
+    polymorphic type parameter (its call argument is always dropped). -/
 def isSkippableParam (e : Expr) : Bool :=
-  isUnitType e || isErasedType e
+  isUnitType e || isErasedType e || isTypeParam e
 
 /-! ## Tail-call analysis
 
@@ -3463,7 +3477,7 @@ def emitDecl (decl : Decl) : EmitM Unit := do
     -- are what a tail self-call rebinds. emitFunParams already registered them.
     let mut pyParams : Array String := #[]
     for p in decl.params do
-      if !isUnitType p.type then
+      if !isSkippableParam p.type then
         pyParams := pyParams.push (← getVarName p.fvarId)
     withIndent do
       emitLn "while True:"
