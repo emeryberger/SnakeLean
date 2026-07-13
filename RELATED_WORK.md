@@ -31,6 +31,65 @@ README's Correctness section and [`VERIFICATION.md`](VERIFICATION.md).
 >
 > The empirical/formal material below remains *not* adopted.
 
+## TeTRIS — the closest prior work, and what we take from it
+
+**TeTRIS** [14] (Arafat & Nagy, ACSAC 2025) is, to our knowledge, the *first
+general-purpose fuzzer aimed specifically at source-to-source transpilers* — the
+only paper in the literature with the same target as this project. It is
+therefore the single most important comparison point for [PAPER_NOTES.md](PAPER_NOTES.md),
+and it is worth being precise about the overlap.
+
+**What it does.** Lift a seed program to a language-agnostic AST; apply six
+construct-level mutators (REPLACE-OPERATOR, REPLACE-LITERAL, RECAST-EXPLICIT,
+EXPAND-EXPRESSION, SWAP-STATEMENT, DELETE-STATEMENT); *repair* the resulting
+scope and type violations with a lightweight scope-tree + type-map resolver;
+re-render, transpile, and check three oracles — transpiler crash
+("intra-translation failure"), output that won't compile/run ("post-translation
+failure"), and differential runtime divergence. Evaluated on 7 transpilers
+(C2Rust, CxGo, C4Go, Zig Translate-C, Go2Hx, HxCpp, HxPy) against AFL++,
+Polyglot, AFL-Compiler-Fuzzer, and CSmith; 12 new bugs.
+
+**Where we already coincide.** Differential execution against the source
+semantics; a bug taxonomy that maps onto our `Failure` kinds; corpus/seed reuse
+(their "source construct dictionary" ≈ our LangFuzz-style `--corpus` fragment
+reuse [4]).
+
+**Where our setting is structurally stronger.** TeTRIS's central engineering
+effort — §4.3's scope-and-type resolution, which drags test-case validity from
+AFL++'s 2.26% to 71.63% — is *free* here, and exactly, because **Lean's
+elaborator is the scope-and-type resolver**: an ill-typed mutant simply fails to
+elaborate and is discarded. Lean is *also* the oracle, so unlike EMI [1] (which
+must preserve semantics precisely because C offers no ground truth) we may mutate
+a program *arbitrarily* and still recompute the expected output. We additionally
+have machinery TeTRIS lacks: HDD/C-Reduce term shrinking [5,6], k-path grammar
+coverage [3], and white-box *translation-rule* self-coverage (the emitter's
+`HANDLERS_FIRED` tags) rather than AFL/QEMU basic-block coverage of the
+transpiler binary.
+
+**Where they are ahead of us, concretely.** TeTRIS *mutates real seed programs*;
+we generate from a grammar or drive harvested corpus definitions **verbatim**.
+Nothing in our fuzzer perturbs real code. Two of their mutators name blind spots
+we demonstrably had:
+
+- **REPLACE-LITERAL** — our grammar only ever emits *small* integer literals, so
+  the >2^53 value domain was never sampled.
+- **REPLACE-OPERATOR** — our grammar emits `/` and `%` but never the *named*
+  `Int.tdiv` / `Int.tmod`, so those translation rules had no differential
+  coverage at all.
+
+Bug **F36** ([VERIFICATION.md](VERIFICATION.md)) sits precisely at the
+intersection of those two blind spots — truncated `Int` division routed through
+float64, silently wrong above 2^53 — and falls in TeTRIS's largest reported bug
+class (implicit int↔float conversion; their Figures 3 and 8). It survived two
+clean 5000-seed sweeps and is invisible to *every* coverage signal we have: the
+`inttdiv` handler tag fires, and grammar production coverage is 100%. Coverage
+proves the rule *ran*; it cannot prove it ran on a value that distinguishes two
+candidate semantics. **Adopting REPLACE-LITERAL (value-domain mutation) and
+REPLACE-OPERATOR (translation-rule substitution) is therefore the highest-value
+open work item.** RECAST-EXPLICIT (coercion insertion: `Nat→Int→Float`,
+`Int.toNat`, `UInt8.ofNat` wraparound) is next; our grammar has no `UInt` types
+at all, while the emitter explicitly warns that UInt arithmetic wraps mod 2^n.
+
 ## Formal-verification approaches
 
 This project validates the transpiler **empirically** (differential testing
@@ -107,3 +166,7 @@ unlike that lineage, adding systematic randomized differential testing on top.
     artifact: github.com/MetaRocq/rocq-verified-extraction) <https://doi.org/10.1145/3656379>
 13. A. Anand, A. Appel, G. Morrisett, et al. *CertiCoq: A verified compiler for
     Coq.* CoqPL 2017. <https://certicoq.org/>
+14. Y. Arafat, S. Nagy. *TeTRIS: General-purpose fuzzing for translation bugs in
+    source-to-source code transpilers.* ACSAC 2025.
+    <https://futures.cs.utah.edu/papers/25ACSAC.pdf>
+    (artifact: <https://github.com/FuturesLab/TeTRIS>)
