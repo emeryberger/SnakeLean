@@ -863,15 +863,20 @@ def emitArithBinary (kind a b : String) : String :=
     if isNonzeroLiteral b then s!"(({a} - {a} % abs({b})) // {b})"
     else s!"(({a} - {a} % abs({b})) // {b} if {b} != 0 else 0)"  -- Euclidean Int division (total)
   | "inttmod" =>
-    -- Truncated Int modulo (`Int.tmod`): result takes the sign of the dividend,
-    -- matching `math.fmod`.  Lean's `tmod _ 0 = _`, so guard zero.
-    if isNonzeroLiteral b then s!"int(math.fmod({a}, {b}))"
-    else s!"(int(math.fmod({a}, {b})) if {b} != 0 else {a})"
+    -- Truncated Int modulo (`Int.tmod`): magnitude of `abs a % abs b`, carrying
+    -- the sign of the dividend.  Computed in exact integer arithmetic: Lean `Int`
+    -- is arbitrary-precision, so routing through `math.fmod` (float64) would lose
+    -- precision above 2^53 and overflow past ~1e308.  Lean's `tmod _ 0 = _`.
+    let m := s!"(abs({a}) % abs({b}) * (1 if {a} >= 0 else -1))"
+    if isNonzeroLiteral b then m
+    else s!"({m} if {b} != 0 else {a})"
   | "inttdiv" =>
-    -- Truncated Int division (`Int.tdiv`): rounds toward zero.  Lean's
-    -- `tdiv _ 0 = 0`, so guard zero.
-    if isNonzeroLiteral b then s!"int({a} / {b})"
-    else s!"(int({a} / {b}) if {b} != 0 else 0)"
+    -- Truncated Int division (`Int.tdiv`): rounds toward zero, i.e. the magnitude
+    -- `abs a // abs b` signed by whether the operands agree.  Exact integer
+    -- arithmetic for the same reason as `inttmod`.  Lean's `tdiv _ 0 = 0`.
+    let q := s!"(abs({a}) // abs({b}) * (1 if ({a} < 0) == ({b} < 0) else -1))"
+    if isNonzeroLiteral b then q
+    else s!"({q} if {b} != 0 else 0)"
   | "floatdiv" =>
     -- Real division.  Lean Float `x/0` is `±inf` (`nan` for `0/0`), where Python
     -- raises ZeroDivisionError, so guard: reproduce the IEEE result via math.
