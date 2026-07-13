@@ -49,6 +49,40 @@ OPTOPTNAT = "Option (Option Nat)"
 # NOT here (the grammar doesn't invent Float functions).
 LEAN_TYPES = [NAT, BOOL, LISTNAT, PAIR, INT, OPTNAT, STRING, CHAR, ARRAYNAT,
               LISTINT, LISTBOOL, LISTLISTNAT, OPTOPTNAT]
+
+# ---- The VALUE domain (TeTRIS's REPLACE-LITERAL mutator) --------------------
+#
+# Every literal and every oracle input used to be *small* (`randint(0, 9)` /
+# `randint(-12, 12)`).  Bug F36 — truncated `Int` division routed through float64,
+# silently wrong above 2^53 — survived two clean 5000-seed campaigns because of
+# exactly that: the >2^53 regime was never sampled.  No coverage signal could see
+# the gap (the `inttdiv` rule *fired*, grammar production coverage was 100%): a
+# rule can run without running on a value that distinguishes two semantics.
+#
+# So we sample boundary values.  Lean's `Nat`/`Int` are arbitrary-precision; Python
+# `int` is too — but every place the transpiler reaches for a float (`int(a/b)`,
+# `math.fmod`, `**`) or for a machine word silently isn't.  These are the values
+# that tell those apart:
+#   2^53±1   float64's exact-integer limit — the F36 boundary
+#   2^31/32  and 2^63/64: machine-word edges (also where a UInt rule would wrap)
+#   1e308+   past float64's *range* entirely: a float path raises OverflowError
+#   255/256, 65535/65536: byte/short edges
+#
+# SAFETY: this is scoped to the GRAMMAR path on purpose.  Generated defs are
+# non-recursive straight-line arithmetic (no `range`/`replicate`/self-call
+# productions), so a huge value costs O(1) — it cannot drive iteration.  The
+# *corpus* path is different: it drives real algorithms (`fib`, `isPrime`,
+# `factorial`), where a 10^18 argument would hang.  Do NOT widen the value tables
+# in `input_search.py` / `corpus_frags.py` without a per-function bound.
+_NAT_BIG = [
+    255, 256, 65535, 65536,
+    2**31 - 1, 2**31, 2**32 - 1, 2**32,
+    2**53 - 1, 2**53, 2**53 + 1,          # float64 exact-integer boundary (F36)
+    2**63 - 1, 2**63, 2**64 - 1, 2**64,
+    10**18, 10**18 + 1,
+    10**30, 10**400,                      # past float64's range: OverflowError
+]
+_INT_BIG = _NAT_BIG + [-v for v in _NAT_BIG]
 # `VALUE_TYPES` is the broader set the fuzzer can generate/serialize VALUES for
 # (used by `corpus_frags` to decide if a base type is drivable).  Adds Float,
 # which corpus fragments (Geometry's Point2D/3D etc.) need but the grammar can't
@@ -101,6 +135,15 @@ ALL_PRODUCTIONS = frozenset({
     # lowering with shapes the fixed corpus doesn't contain.
     "user.var", "user.mk", "user.if",
     "nat.usermatch", "bool.usermatch", "int.usermatch",
+    # Boundary-value literals (TeTRIS's REPLACE-LITERAL).  Separate production
+    # labels, not just a wider `randint`, so that (a) coverage REPORTS whether the
+    # big-value domain was sampled and (b) the coverage-guided chooser actively
+    # SEEKS it — an uncovered production is preferred.  See `_NAT_BIG`.
+    "nat.biglit", "int.biglit",
+    # Named Int div/mod (TeTRIS's REPLACE-OPERATOR).  `/` and `%` lower to the
+    # Euclidean rules; `.tdiv`/`.tmod` round toward zero and are reachable ONLY by
+    # a named call, so they had no differential coverage at all.  See F36.
+    "int.tdiv", "int.tmod", "int.ediv", "int.emod",
 })
 
 
@@ -267,7 +310,8 @@ class Gen:
     def gen_nat(self, env, depth):
         vs = self.vars_of(env, NAT)
         # Leaf productions (always available).
-        alts = [("nat.lit", lambda: str(self.rng.randint(0, 9)))]
+        alts = [("nat.lit", lambda: str(self.rng.randint(0, 9))),
+                ("nat.biglit", lambda: str(self.rng.choice(_NAT_BIG)))]
         for v in vs:
             alts.append(("nat.var", (lambda v=v: v)))
         for (n, t) in env:
@@ -448,7 +492,8 @@ class Gen:
 
     def gen_int(self, env, depth):
         vs = self.vars_of(env, INT)
-        alts = [("int.lit", lambda: f"({self.rng.randint(-9, 9)} : Int)")]
+        alts = [("int.lit", lambda: f"({self.rng.randint(-9, 9)} : Int)"),
+                ("int.biglit", lambda: f"({self.rng.choice(_INT_BIG)} : Int)")]
         for v in vs:
             alts.append(("int.var", (lambda v=v: v)))
         # Int from a Nat (coercion).
@@ -466,6 +511,25 @@ class Gen:
                 ("int.mod", lambda: ibin("%")),
             ]
             alts.append(("int.neg", lambda: f"(-{self.gen(INT, env, depth-1)})"))
+
+            # NAMED div/mod (TeTRIS's REPLACE-OPERATOR: substitute an operator for
+            # a language-permitted alternative).  `/` and `%` above lower through
+            # `Int.instDiv`/`instMod` to the EUCLIDEAN rules; `.tdiv`/`.tmod` are a
+            # *different* rounding (toward zero) reached only by a NAMED call, and
+            # the grammar could not previously write one — so those two translation
+            # rules had zero differential coverage, which is half of why F36 hid.
+            # Deliberately UNGUARDED: all four are total in Lean (`x.tdiv 0 = 0`,
+            # `x.tmod 0 = x`), and the divide-by-zero rule needs testing too.
+            def inamed(fn):
+                a = self.gen(INT, env, depth - 1)
+                b = self.gen(INT, env, depth - 1)
+                return f"(({a}).{fn} ({b}))"
+            alts += [
+                ("int.tdiv", lambda: inamed("tdiv")),
+                ("int.tmod", lambda: inamed("tmod")),
+                ("int.ediv", lambda: inamed("ediv")),
+                ("int.emod", lambda: inamed("emod")),
+            ]
 
             def int_if():
                 c = self.gen(BOOL, env, depth - 1)
@@ -863,20 +927,37 @@ class Gen:
         return name, params, ret, src
 
     # ---- oracle input generation -----------------------------------------
+    # `BIG_INPUT_P` of every Nat/Int input is drawn from the boundary table rather
+    # than the small range.  Inputs matter as much as literals here: F36's trigger
+    # (a >2^53 operand reaching `Int.tdiv`) arrives through an ARGUMENT at least as
+    # often as through a literal.  Kept a minority so the small-value shapes that
+    # exercise list/option/match structure stay well-sampled.
+    BIG_INPUT_P = 0.2
+
+    def _rand_nat(self):
+        if self.rng.random() < self.BIG_INPUT_P:
+            return self.rng.choice(_NAT_BIG)
+        return self.rng.randint(0, 12)
+
+    def _rand_int(self):
+        if self.rng.random() < self.BIG_INPUT_P:
+            return self.rng.choice(_INT_BIG)
+        # deliberately include negatives — that's where Int div/mod bites
+        return self.rng.randint(-12, 12)
+
     def rand_value(self, ty):
         if ty == NAT:
-            return self.rng.randint(0, 12)
+            return self._rand_nat()
         if ty == BOOL:
             return self.rng.choice([True, False])
         if ty == LISTNAT:
-            return [self.rng.randint(0, 9) for _ in range(self.rng.randint(0, 5))]
+            return [self._rand_nat() for _ in range(self.rng.randint(0, 5))]
         if ty == PAIR:
-            return [self.rng.randint(0, 12), self.rng.randint(0, 12)]
+            return [self._rand_nat(), self._rand_nat()]
         if ty == INT:
-            # deliberately include negatives — that's where Int div/mod bites
-            return self.rng.randint(-12, 12)
+            return self._rand_int()
         if ty == OPTNAT:
-            return None if self.rng.random() < 0.3 else self.rng.randint(0, 12)
+            return None if self.rng.random() < 0.3 else self._rand_nat()
         if ty == OPTOPTNAT:
             # Three shapes, kept equally likely so `some none` (the box-critical
             # case) is well-sampled: `none` → None; `some none` → {"__some__":
@@ -887,16 +968,16 @@ class Gen:
                 return None
             if r < 0.67:
                 return {"__some__": None}
-            return {"__some__": self.rng.randint(0, 12)}
+            return {"__some__": self._rand_nat()}
         if ty == STRING:
             return "".join(self.rng.choice(self._ALPHABET)
                            for _ in range(self.rng.randint(0, 5)))
         if ty == CHAR:
             return self.rng.choice(self._ALPHABET)
         if ty == ARRAYNAT:
-            return [self.rng.randint(0, 9) for _ in range(self.rng.randint(0, 5))]
+            return [self._rand_nat() for _ in range(self.rng.randint(0, 5))]
         if ty == LISTINT:
-            return [self.rng.randint(-9, 9) for _ in range(self.rng.randint(0, 5))]
+            return [self._rand_int() for _ in range(self.rng.randint(0, 5))]
         if ty == LISTBOOL:
             return [self.rng.choice([True, False]) for _ in range(self.rng.randint(0, 5))]
         if ty == LISTLISTNAT:

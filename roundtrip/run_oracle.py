@@ -21,6 +21,14 @@ import json
 import re
 import sys
 
+# Lean's `Nat`/`Int` are arbitrary-precision, and the fuzzer deliberately samples
+# boundary values (up to 10^400 — see `gen._NAT_BIG`), which generated arithmetic
+# can multiply further.  CPython 3.11+ caps int<->str conversion at 4300 digits,
+# so `json.loads` of a perfectly legitimate oracle row would raise ValueError and
+# be misreported as a transpiler bug.  Lean has no such cap; lift ours.
+if hasattr(sys, "set_int_max_str_digits"):
+    sys.set_int_max_str_digits(0)  # 0 = unlimited
+
 
 def load(path):
     text = open(path).read()
