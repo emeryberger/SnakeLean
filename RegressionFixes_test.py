@@ -162,6 +162,21 @@ check("emod_by_name(5,0)", emod_by_name(5, 0), 5)
 check("tdiv_by_name(5,0)", tdiv_by_name(5, 0), 0)
 check("sort_le([3,1,2,1])", sort_le([3, 1, 2, 1]), [1, 1, 2, 3])
 check("all_contains([1,2],[1,2,3])", all_contains([1, 2], [1, 2, 3]), True)
+
+# (21) F36: truncated Int tdiv/tmod must use EXACT integer arithmetic.  They
+# used to go through float64 (`int(a/b)`, `math.fmod`), which silently loses
+# precision above 2^53 and overflows past ~1e308 — while Lean's `Int` is
+# arbitrary-precision.  The sign semantics above never caught it because the
+# grammar only ever generates small literals.
+_BIG = 10**18 + 1
+check("tdiv_by_name(10^18+1, 1)", tdiv_by_name(_BIG, 1), 1000000000000000001)
+check("tdiv_by_name(10^18+1, 3)", tdiv_by_name(_BIG, 3), 333333333333333333)
+check("tdiv_by_name(-(10^18+1), 3)", tdiv_by_name(-_BIG, 3), -333333333333333333)
+check("tmod_by_name(10^18+1, 7)", tmod_by_name(_BIG, 7), 2)
+check("tmod_by_name(-(10^18+1), 7)", tmod_by_name(-_BIG, 7), -2)
+# past the float64 range entirely: `int(a/b)` raised OverflowError here.
+check("tdiv_by_name(10^400, 1)", tdiv_by_name(10**400, 1), 10**400)
+check("tmod_by_name(10^400, 7)", tmod_by_name(10**400, 7), 10**400 % 7)
 check("all_contains([1,4],[1,2,3])", all_contains([1, 4], [1, 2, 3]), False)
 
 # (16) Option do-block bind, dependent `if _h : xs = []`.

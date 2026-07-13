@@ -526,6 +526,66 @@ returns the `Inhabited` default, Python raises), unstable `Array.qsort` tie orde
   `run_oracle.call` pads leading erased args.)  Round-trip battery went 108/112 →
   **112/112**.  Regression case (20) `revAcc` in `RegressionFixes.lean`.
 
+### F36. Truncated `Int` division/modulo lost precision through float64
+
+- **Found by:** *not* the fuzzer — by hand, reading `emitArithBinary` through the
+  lens of the TeTRIS bug taxonomy (ACSAC'25), whose largest bug class is implicit
+  int↔float conversion.  See [RELATED_WORK.md](RELATED_WORK.md#tetris).
+  · **Kind:** mismatch (silent wrong value), and `runtime` (`OverflowError`) at
+  magnitudes past the float64 range.
+- **Root cause:** `Int.tdiv` emitted `int(a / b)` and `Int.tmod` emitted
+  `int(math.fmod(a, b))`.  Both route through IEEE float64, but Lean's `Int` is
+  arbitrary-precision — so every operand above 2^53 silently rounds, and anything
+  past ~1e308 raises `OverflowError` instead of computing:
+
+  | expression | Lean | old Python |
+  |---|---|---|
+  | `Int.tdiv (10^18+1) 3` | `333333333333333333` | `333333333333333312` |
+  | `Int.tmod (10^18+1) 7` | `2` | `1` |
+  | `Int.tdiv (10^400) 1` | 401-digit int | `OverflowError` |
+
+  The neighbouring *Euclidean* handlers (`intdiv`/`intmod`, added for F12) were
+  already exact integer arithmetic; only the truncated pair was affected.
+- **Fix:** compute both in exact integer arithmetic — `tdiv` as the magnitude
+  `abs(a) // abs(b)` signed by whether the operands agree, `tmod` as
+  `abs(a) % abs(b)` carrying the sign of the dividend (zero-guards unchanged:
+  Lean's `tdiv _ 0 = 0`, `tmod _ 0 = _`).  Differentially verified 169/169 against
+  Lean over every sign combination × {0, ±1, ±2, ±3, ±7, ±(10^18+1), ±10^30}.
+  Regression case (21) in `RegressionFixes_test.py`.
+- **Why the fuzzer missed it — and the lesson.** Two independent blind spots, each
+  matching a TeTRIS mutator we don't have:
+  1. **Magnitude.** `gen.py` only ever generates *small* integer literals, so the
+     >2^53 regime was never sampled.  `input_search.py` already has an
+     `_INT_INTERESTING` boundary-value table — but it drives *inputs* to harvested
+     corpus functions, not the *literals* the grammar emits.  (TeTRIS's
+     REPLACE-LITERAL.)
+  2. **Named operators.** The grammar emits `/` and `%` (the `Int.instDiv`/
+     `instMod` path, which is exact).  It never emits the *named* `Int.tdiv` /
+     `Int.tmod`, so those handlers had no differential coverage at all — existing
+     regression case (15) pinned their *sign* semantics but not magnitude.
+     (TeTRIS's REPLACE-OPERATOR, which swaps an operator for any language-permitted
+     alternative — including named functions.)
+
+  Both blind spots are invisible to *coverage*: the handler self-coverage tags
+  report `inttdiv` as fired, and grammar production coverage is 100%.  Coverage
+  says the rule ran; it cannot say it ran on a value that distinguishes the two
+  semantics.
+- **Both mutators are now implemented** (`fuzz/gen.py`): `nat.biglit`/`int.biglit`
+  (boundary values — 2^53±1, 2^31/32, 2^63/64, 10^18, 10^400 — in *both* the
+  literal and the oracle-input domains) and `int.tdiv`/`tmod`/`ediv`/`emod` (named
+  operators, unguarded since all four are total in Lean).  A/B against the unfixed
+  transpiler:
+
+  | transpiler | mutators | F36 detection |
+  |---|---|---|
+  | buggy | original | **0 detections in 2 × 5000 seeds** |
+  | buggy | + value domain, + named rules | **15 failing seeds / 300** |
+  | fixed | + value domain, + named rules | 0 / 300; 100% production coverage |
+
+  Neither mutator raises code coverage (production coverage was already 100%); the
+  entire gain is in the value and rule-selection domains.  See
+  [PAPER_NOTES.md](PAPER_NOTES.md) §2.
+
 ### Custom inductive / structure types (Phase 3 fragment-reuse expansion)
 
 The fragment-reuse harvester now handles corpus functions whose parameters or
