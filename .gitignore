@@ -1,38 +1,34 @@
-# Lean build artifacts
-.lake/
-lake-packages/
-build/
-*.olean
 
-# Python
-*_out.py
 __pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-env/
-venv/
-.venv/
-.env
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# OS
 .DS_Store
-Thumbs.db
-
-# round-trip harness generated output
-roundtrip/gen*.txt
-roundtrip/*.err
-
+.env
+.idea/
+.lake/
+.Python
+.venv/
+.vscode/
+*_out.py
+*.olean
+*.py[cod]
+*.so
+*.swo
+*.swp
+*~
+*$py.class
 # fuzzer generated reproducers
-fuzz/repro/
-
 # fuzzer TypeInfo cache (regenerated from Corpus/*.lean)
+# IDE
+# Lean build artifacts
+# OS
+# Python
+# round-trip harness generated output
+build/
+env/
+fuzz/.emp_harvest.txt
 fuzz/.typeinfo.json
+fuzz/repro/
+lake-packages/
+roundtrip/*.err
+roundtrip/gen*.txt
+Thumbs.db
+venv/

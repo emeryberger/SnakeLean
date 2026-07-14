@@ -90,6 +90,67 @@ open work item.** RECAST-EXPLICIT (coercion insertion: `Nat→Int→Float`,
 `Int.toNat`, `UInt8.ofNat` wraparound) is next; our grammar has no `UInt` types
 at all, while the emitter explicitly warns that UInt arithmetic wraps mod 2^n.
 
+## EMP / theorem-harvested differential testing — where it sits
+
+`fuzz/emp.py` harvests machine-checked equations from Lean's environment, transpiles
+**both sides**, and requires the two Python programs to agree (see
+[PAPER_NOTES.md](PAPER_NOTES.md) §2b). "EMP" (Equivalence Modulo *Proofs*) is our
+coinage, by analogy to EMI [1]. A prior-art search found **no published work doing
+exactly this**, but the novelty is **narrow, not wide**, and two neighbours must be
+addressed head-on rather than elided.
+
+### Why this is not Isabelle's `code_test` [15]
+
+The closest existing artifact by a wide margin. Lochbihler's `code_test` command
+compiles Boolean HOL terms — typically instances of proved lemmas — through Isabelle's
+code generator into six backends (PolyML, MLton, SML/NJ, GHC, OCaml, Scala) and checks
+each evaluates to `True`; a failure indicts the code generator or its unverified
+serialisation. Same conceptual family: *the logic knows the answer; run the generated
+code and see if it agrees.* Three differences we can defend:
+
+1. Its test cases are **hand-written closed ground terms**. Ours are **automatically
+   harvested** from the existing theorem corpus — zero authoring cost, and the corpus
+   grows with the imports.
+2. Its check is **unary** ("this ground term evaluates to `True`"). Ours compiles
+   **both sides as two separate programs** and compares them, so nothing but the
+   transpiler is in the trusted base — no reference interpreter, no target-language
+   `=`.
+3. It never **instantiates quantified theorems**. A library theorem is
+   `∀ xs ys, (xs ++ ys).length = xs.length + ys.length`; we monomorphize it, eta-expand
+   it, and drive it with generated inputs, turning one lemma into many tests.
+
+The honest statement: a reviewer *can* say "that is `code_test` with a scraper and a
+generator bolted on," and the answer is that the scraper and the generator are the
+contribution. We have since adopted its best idea in return — see `@[csimp]` below.
+
+### Why this is not EMI [1,2]
+
+EMI derives its equivalent variants **dynamically**: profile the program, delete code
+unexecuted on that input. The equivalence therefore holds only *modulo the profiled
+input*, is justified by a dynamic argument rather than a proof, and needs the original
+program's output as a reference. Ours hold **on all inputs, by machine-checked proof**,
+and need no reference at all. Hermes/Athena and GLFuzz likewise rely on **hand-authored**
+semantics-preserving rules; **PTE** [16] encodes compiler-testing axioms written by hand
+from the language spec; **EET** [17] is the database analogue with a hand-written rewrite
+set; **MR-Scout** [18] mines metamorphic relations automatically but from *existing unit
+tests* (heuristic, unsound). The axis that separates us from all of them is the same one:
+our equivalences are **sound by construction and already exist**.
+
+### The duality worth stating
+
+QuickSpec [19] and Ruler [20] use **testing to discover equations**. We use **proved
+equations to obtain tests**. Same relation, opposite direction.
+
+### What we took from the neighbours
+
+`@[csimp]` is Lean's *checked* compiler-rewrite attribute: each entry carries a proof
+`f = g` swapping a reference implementation for the efficient one the compiler actually
+emits. It is, literally, a curated database of proved program-equivalence pairs sitting
+in the compiler's own attribute table — precisely the corpus this technique wants, and
+(as far as the search found) **nobody has used it as a test corpus**. `fuzz/Theorems.lean`
+now harvests it as a priority source. (`@[implemented_by]` is the *unchecked* sibling —
+Lean trusts it — which makes it a bug-hunting target rather than an oracle.)
+
 ## Formal-verification approaches
 
 This project validates the transpiler **empirically** (differential testing
@@ -170,3 +231,26 @@ unlike that lineage, adding systematic randomized differential testing on top.
     source-to-source code transpilers.* ACSAC 2025.
     <https://futures.cs.utah.edu/papers/25ACSAC.pdf>
     (artifact: <https://github.com/FuturesLab/TeTRIS>)
+15. A. Lochbihler. *Fast machine words in Isabelle/HOL.* ITP 2018.
+    (introduces `code_test`: run proved lemmas through the code generator on six
+    backends) <https://www.andreas-lochbihler.de/pub/lochbihler2018itp.pdf> ·
+    <https://isabelle.in.tum.de/library/HOL/HOL-Library/Code_Test.html>
+16. G. Dong, J. Sun, R. Schumi, B. Wang, X. Wang. *PTE: Axiomatic semantics based
+    compiler testing.* arXiv:2401.01036, 2024. <https://arxiv.org/abs/2401.01036>
+17. Z.-M. Jiang, J. Ba, et al. *Detecting logic bugs in database engines via equivalent
+    expression transformation.* OSDI 2024.
+    <https://www.usenix.org/system/files/osdi24-jiang.pdf>
+18. C. Xu, V. Terragni, H. Zhu, J. Wu, S.-C. Cheung. *MR-Scout: Automated synthesis of
+    metamorphic relations from existing test cases.* TOSEM.
+    <https://arxiv.org/pdf/2304.07548>
+19. K. Claessen, N. Smallbone, J. Hughes. *QuickSpec: Guessing formal specifications
+    using testing.* TAP 2010.
+20. C. Nandi et al. *Rewrite rule inference using equality saturation.* OOPSLA 2021.
+    <https://homes.cs.washington.edu/~djg/papers/oopsla2021.pdf>
+21. Z. Paraskevopoulou, C. Hriţcu, M. Dénès, L. Lampropoulos, B. C. Pierce.
+    *Foundational property-based testing.* ITP 2015. (QuickChick; executes properties
+    by *extracting* them — so a failing proved lemma would indict extraction, but this
+    is never the stated purpose) <https://github.com/QuickChick/QuickChick>
+22. A. D. Brucker, B. Wolff. *On theorem prover-based testing.* Formal Aspects of
+    Computing 25(5), 2013. (HOL-TestGen: derives tests from a hand-written
+    specification, not from the existing lemma corpus)

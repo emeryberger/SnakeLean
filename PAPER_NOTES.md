@@ -96,6 +96,21 @@ The **proof**, not Lean's evaluator, is the oracle.
     theorem List.map_map : (xs.map f).map g = xs.map (g ∘ f)
       ⇒  transpile both sides.  Any disagreement is a transpiler bug, by construction.
 
+**Novelty: narrow, not wide.** A prior-art search found no published work harvesting a
+proof assistant's equational corpus this way, but the claim must be stated carefully.
+Isabelle's **`code_test`** [15] already runs proved lemmas through the code generator
+on six backends — the same conceptual family — differing in that its cases are
+hand-written closed ground terms, its check is unary ("evaluates to `True`") rather
+than a two-program comparison, and it never instantiates quantified theorems. EMI [1],
+Hermes, GLFuzz, **PTE** [16] and **EET** [17] all do "two equivalent programs must
+agree" with **hand-authored or dynamically-inferred** equivalences; **MR-Scout** [18]
+mines relations automatically but from *unit tests* (unsound). The defensible claim is
+the **conjunction**: the theorem library as a zero-authoring-cost, sound-by-construction
+corpus; *both* sides compiled by the SUT (no reference interpreter in the trusted base);
+and *quantified* theorems instantiated with generated inputs. Any writeup needs an
+explicit "why this isn't `code_test`" and "why this isn't EMI" paragraph — those are the
+two attacks. See [RELATED_WORK.md](RELATED_WORK.md).
+
 Three properties, none available to a C/Go/Rust transpiler fuzzer:
 
 1. **No evaluator in the loop.** Harvest once; each identity is then a reusable,
@@ -110,7 +125,17 @@ Three properties, none available to a C/Go/Rust transpiler fuzzer:
 
 This inverts EMI [1]. EMI must *invent* semantics-preserving mutations, from a handful
 of hand-written envelopes, precisely because C has no ground truth. We *harvest
-thousands of proven ones*, and the supply grows for free with the imports.
+thousands of proven ones*, and the supply grows for free with the imports. It also
+inverts QuickSpec [19] / Ruler [20], which use *testing to discover equations*; we use
+*proved equations to obtain tests*.
+
+**`@[csimp]` is the purest source, and it is untouched.** Lean's checked
+compiler-rewrite attribute carries, for each entry, a proof `f = g` swapping a reference
+implementation for the efficient one the compiler actually emits — literally a curated
+database of proved program-equivalence pairs sitting in the compiler's own attribute
+table. The prior-art search found no work using it as a test corpus; we now harvest it
+as a priority source. (Its unchecked sibling `@[implemented_by]`, which Lean simply
+trusts, is a bug-hunting *target* rather than an oracle.)
 
 **Truth is not enough — the identity must DISCRIMINATE.** `Nat.zero_sub : 0 - n = 0`
 instantly catches truncated `Nat` subtraction emitted as a plain `-`.
@@ -137,11 +162,50 @@ rule for a construct; it then emits an undefined name and the program dies with
 lumping the two together buries the signal — 20 of 40 identities are gaps. The gold is
 a mismatch between two sides that *both transpiled cleanly*.
 
-**Honest limits.** (i) EMP uses **small values**: identities call the real stdlib, so a
-boundary value on a *size* parameter makes `List.range n` build a 10^18-element list.
-Composing EMP with §2's value domain needs per-parameter size analysis. (ii) Harvesting
-is only as good as its filter — conditional equations (`n ≤ m → …`) are currently
-dropped rather than tested under their hypothesis.
+**Scale.** The full pool: **~2,085 identities** harvested, 817 tested, **1,768 (85%)
+discriminating**, 1,268 set aside as gaps.
+
+**The source round-trip is what makes it trustworthy.** The harvester first built each
+side by abstracting the theorem's `Expr` and `addDecl`-ing it. Those definitions are
+well-typed, but their LCNF shape is **not one the elaborator produces from source**, and
+several transpiler rules are shape-sensitive pattern matches on instance structure:
+`Nat.sub_eq` synthesized to a point-free `HSub.hSub` and emitted a plain `-`, where
+source-written `n - m` carries `instSubNat` and correctly emits `max(0, n-m)`. EMP was
+reporting bugs that *cannot occur in real code*. Phase 1 now pretty-prints each side as
+Lean **source** and phase 2 **re-elaborates** it (`pp.explicit := false` is what does the
+work — implicit and instance arguments are re-inferred on the way in), so the elaborator
+decides the term shape. Flags fell **25 → 9 → 0**, and mutation testing confirms no loss
+of sensitivity: an injected off-by-one in `List.take` is still caught at once, via
+`List.take_left`.
+
+**Yield: five distinct emitter defects** — F37/F38 (index update out of range), F40
+(`Option.toList`, which surfaced through *ten* proven identities at once), F41
+(dependent `xs[i]` returned the bounds-check boolean, in a rule that had **never fired**
+in the corpus), and F42 — which is the one worth the paper's space:
+
+> **F42: EMP caught a bug we introduced *while fixing* F37/F38.** Seeing `#eval` print
+> `Error: index out of bounds` for `Array.set!`, we concluded it panics and made it
+> raise. But `panic!` in Lean prints a message and **returns the default** — it is not an
+> exception. Lean proves the point outright:
+> `Array.set!_eq_setIfInBounds : xs.set! i v = xs.setIfInBounds i v`.
+> Our regression case asserted the wrong behaviour and *passed*. The differential oracle
+> could not have found this, because we had misread the oracle. **A proof caught an error
+> that a plausible reading of the evaluator's output produced.** The panic message is a
+> side effect; the theorem is the semantics.
+
+**Honest limits.**
+1. **A flag is a lead, not a finding** — confirm it from a hand-written definition. Every
+   bug above was confirmed that way. Four harness defects surfaced along the road (Lean's
+   100-error file cap killing the `#eval`; recursion depth on a long `do` block; the
+   pretty-printer eliding long terms as `⋯`; a failed elaboration leaving `sorryAx` in
+   the environment), each of which manufactured plausible-looking "bugs."
+2. **Small values only**: identities call the real stdlib, so a boundary value on a
+   *size* parameter makes `List.range n` build a 10^18-element list. Composing EMP with
+   §2's value domain needs per-parameter size analysis.
+3. **Conditional equations are dropped**, not tested under their hypothesis — that is
+   most of the 41,615. Noncomputable identities (`Bool.not'`, anything through
+   `Classical.choice`) are filtered: Lean emits no code for them, so they are untestable
+   rather than violated.
 
 ## 3. Extraction has never been fuzzed
 

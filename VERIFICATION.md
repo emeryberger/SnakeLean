@@ -630,6 +630,100 @@ returns the `Inhabited` default, Python raises), unstable `Array.qsort` tie orde
   else chr(0)`. Verified against Lean on 12 boundary cases (0, 'A', D7FF, D800, DBFF,
   DFFF, E000, 10FFFF, 110000, 110001, 2^31, 2^32) — all agree. Regression case (24).
 
+### F40. `Option.toList` / `Option.toArray` fell through to the generic `list`
+
+- **Found by:** EMP's first full-pool run (2153 identities), via `Option.toList_some`,
+  `Option.toList_none`, `Option.toList.eq_1`, `Option.length_toList`, and six more —
+  one defect, ten proven identities.
+  · **Kind:** runtime (`TypeError`).
+- **Root cause:** there was **no rule at all** for `Option.toList`/`toArray`; they fell
+  through to the generic `list`. A flat `Option α` is a bare `α | None` in Python, so
+  `list(5)` raises `TypeError: 'int' object is not iterable` and `list(None)` raises
+  too — where Lean gives `[5]` and `[]`.
+- **Fix:** `(lambda o: [] if o is None else [o])`. The lambda form is also correct under
+  nested-Option boxing (a `_Some(x)` passes through as the element, keeping `some none`
+  distinct from `none`), and works applied *and* point-free. Regression case (25).
+
+### F41. Dependent `xs[i]` returned the bounds-check boolean, not the element
+
+- **Found by:** EMP, via `Array.getElem_push_eq : (a.push x)[a.size] = x` (plus
+  `Array.getD_getElem?` and `List.getD_getElem?`, same root cause).
+  · **Kind:** mismatch (silent — `True` where an element was expected).
+- **Root cause:** a class-shape confusion. `class GetElem coll idx elem valid` has
+  **exactly one field — the getter**; `valid` is a class *parameter*, not a field.
+  (`GetElem?` is the separate class whose fields are `getElem?` / `getElem!`.) The
+  emitter treated projection 0 of `GetElem` as the validity predicate and emitted
+  `(lambda xs, i: 0 <= i < len(xs))`, so a *dependent* index — `xs[i]` carrying a proof
+  that `i` is in bounds — evaluated to the **bounds check** rather than the element:
+  `(a.push x)[a.size]` gave `True` instead of `x`.
+- **Fix:** projection 0 on a plain `GetElem` is the getter, `(lambda xs, i: xs[i])`.
+  The validity proof is runtime-irrelevant and erased by LCNF, so it takes just
+  `(xs, i)`. Verified against Lean (`(#[1,2,3].push 7)[3] = 7`). Regression case (26).
+- **Note:** the old `proj.GetElem.valid` rule had *never fired* in the corpus — it sat
+  in the never-fired list. It was dead, wrong code that only a dependent index reaches,
+  and the corpus contains none. EMP reaches it because the theorem library is full of
+  dependent indexing.
+
+### F42 (self-inflicted). `Array.set!` must NOT raise — `panic!` returns a value
+
+- **Found by:** EMP, via the proven `Array.set!_eq_setIfInBounds`.
+  · **Kind:** runtime (a raised `IndexError` where Lean returns a value).
+- **Root cause:** **the F37/F38 fix introduced this.** Seeing `#eval #[1,2].set! 5 9`
+  print `Error: index out of bounds`, we concluded `set!` panics and emitted a bare
+  `xs[i]` so Python would raise. But `panic!` in Lean *prints a message and returns the
+  default* — it is not an exception. Lean proves the point outright:
+
+  ```
+  Array.set!_eq_setIfInBounds : xs.set! i v = xs.setIfInBounds i v
+  ```
+
+  and `#eval (#[1,2].set! 5 9)` does return `#[1, 2]`. So `set!`'s **value** semantics
+  are the no-op, and raising diverged from Lean.
+- **Fix:** `Array.set!` shares the guarded no-op emission with `List.set` /
+  `setIfInBounds`. Regression case (23) corrected.
+- **Why this one matters beyond itself:** a *proof* caught an error that a plausible
+  reading of the evaluator's output had produced. The panic message is a side effect;
+  the theorem is the semantics. This is the clearest argument for EMP that we have —
+  the differential oracle could not have found it, because our own regression case
+  asserted the wrong behaviour and passed.
+
+### EMP fidelity: the source round-trip (FIXED)
+
+EMP originally built each side by taking the theorem's `lhs`/`rhs` `Expr`, abstracting
+the binders, and `addDecl`-ing the result. Those definitions are well-typed and compile
+— but their **LCNF shape is not one the elaborator ever produces from source**, and
+several transpiler rules are *shape-sensitive* pattern matches on instance structure.
+The result was a flood of false positives, e.g.:
+
+| identity | synthesized emission | from ordinary Lean source |
+|---|---|---|
+| `Nat.sub_eq` | `(lambda a, b: a - b)` — plain `-` | `max(0, n - m)` ✓ |
+| `List.replicate_zero` | `[0] * None`, then the list is *called* | `[x] * 0` ✓ |
+
+`n - m` written in source always carries its `instSubNat`, so the `natsub` rule fires; a
+point-free `HSub.hSub` need not. EMP was reporting bugs that cannot occur in real code.
+
+**Fixed by a source round-trip.** `fuzz/Theorems.lean` (phase 1) now *pretty-prints*
+each side as Lean source — `fun p0 p1 => (p0 - p0 % p1) / p1` — and `fuzz/emp.py` (phase
+2) assembles those into a Lean file and **re-elaborates** them, so the ELABORATOR, not
+the harvester, decides the term shape. `pp.explicit := false` is what does the work:
+implicit and instance arguments are re-inferred on the way back in.
+
+Effect on the full pool: flags **25 → 9**, and every previous artifact is gone.
+Sensitivity was verified by mutation testing — injecting an off-by-one into `List.take`
+(`xs[:n]` → `xs[:n+1]`) is still caught immediately, via `List.take_left`. Of the 9
+survivors, F41 and F42 are real; the rest were a driver parsing gap (a point-free def is
+emitted as an assignment, not a `def`).
+
+Four harness defects surfaced on the way, each now guarded: Lean stops a file after 100
+errors (killing the `#eval` before it ran); a several-hundred-statement `do` block
+exceeds the default recursion depth; the pretty-printer silently elides long terms as
+`⋯`, which cannot be re-elaborated; and a def that fails to elaborate remains in the
+environment as `sorryAx`, so transpiling it would emit nonsense.
+
+**The rule that survives:** an EMP flag is a *lead*. Confirm it from a hand-written
+definition before believing it — F37/F38, F40, F41 and F42 were all confirmed that way.
+
 ### Custom inductive / structure types (Phase 3 fragment-reuse expansion)
 
 The fragment-reuse harvester now handles corpus functions whose parameters or
