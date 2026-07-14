@@ -205,6 +205,14 @@ def isNilDep (xs : List Nat) : Nat := if _h : xs = [] then 0 else xs.length
 --       (`max_`).
 def arrSet (xs : Array Nat) (i v : Nat) : Array Nat := xs.set! i v
 def arrGetD (xs : Array Nat) (i d : Nat) : Nat := xs.getD i d
+-- (23) F37/F38: the three index-update forms differ OUT OF RANGE, and the emitted
+-- slice `xs[:i] + [v] + xs[i+1:]` matched none of them — it silently APPENDED.
+--   List.set / setIfInBounds : out of range ⇒ unchanged;  Array.set! : ⇒ panics.
+def arrSetIf (xs : Array Nat) (i v : Nat) : Array Nat := xs.setIfInBounds i v
+-- (24) F39: `Char.ofNat` is TOTAL in Lean (invalid ⇒ '\0').  Python's `chr` raises
+-- above 0x10FFFF, and — worse — silently returns a SURROGATE for D800–DFFF, which
+-- Lean does not consider a valid Char.
+def charOf (n : Nat) : Nat := (Char.ofNat n).toNat
 def arrModify (xs : Array Nat) (i : Nat) : Array Nat := xs.modify i (· + 10)
 def arrFold (xs : Array Nat) : Nat := xs.foldl (· + ·) 0
 def zipIdxList (xs : List Nat) : List (Nat × Nat) := xs.zipIdx
@@ -306,6 +314,8 @@ end RegressionFixes
       ``RegressionFixes.optDo,
       ``RegressionFixes.isNilDep,
       ``RegressionFixes.arrSet,
+      ``RegressionFixes.arrSetIf,
+      ``RegressionFixes.charOf,
       ``RegressionFixes.arrGetD,
       ``RegressionFixes.arrModify,
       ``RegressionFixes.arrFold,

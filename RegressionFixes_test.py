@@ -163,7 +163,7 @@ check("tdiv_by_name(5,0)", tdiv_by_name(5, 0), 0)
 check("sort_le([3,1,2,1])", sort_le([3, 1, 2, 1]), [1, 1, 2, 3])
 check("all_contains([1,2],[1,2,3])", all_contains([1, 2], [1, 2, 3]), True)
 
-# (21) F36: truncated Int tdiv/tmod must use EXACT integer arithmetic.  They
+# (22) F36: truncated Int tdiv/tmod must use EXACT integer arithmetic.  They
 # used to go through float64 (`int(a/b)`, `math.fmod`), which silently loses
 # precision above 2^53 and overflows past ~1e308 — while Lean's `Int` is
 # arbitrary-precision.  The sign semantics above never caught it because the
@@ -250,6 +250,40 @@ check("rev_acc([1,2,3])", rev_acc([1, 2, 3]), [3, 2, 1])
 check("rev_acc([])", rev_acc([]), [])
 check("rev_acc([7])", rev_acc([7]), [7])
 check("rev_acc(range 5)", rev_acc([1, 2, 3, 4, 5]), [5, 4, 3, 2, 1])
+
+# (23) F37/F38: index update OUT OF RANGE.  The emitted slice
+# `xs[:i] + [v] + xs[i+1:]` is correct in range but silently APPENDS out of range
+# ([1,2].set 5 9 gave [1,2,9]; Lean gives [1,2]).  The three forms differ:
+#   List.set, Array.setIfInBounds : out of range => UNCHANGED
+#   Array.set!                    : out of range => PANICS (IndexError here)
+# The in-range checks above ((8), (17)) all passed throughout — only the index's
+# value domain was untested.  Found by EMP via `Array.getD_getElem?_setIfInBounds`,
+# a proven identity that forces the out-of-range case.
+arr_set_if = ns["arr_set_if"]
+check("set_at([1,2,3], 5, 9)  OOB", set_at([1, 2, 3], 5, 9), [1, 2, 3])
+check("set_at([1,2,3], 3, 9)  OOB", set_at([1, 2, 3], 3, 9), [1, 2, 3])
+check("set_at([], 0, 9)       OOB", set_at([], 0, 9), [])
+check("set_at([1,2,3], 2, 9)  in-range", set_at([1, 2, 3], 2, 9), [1, 2, 9])
+check("arr_set_if([1,2,3], 5, 9) OOB", arr_set_if([1, 2, 3], 5, 9), [1, 2, 3])
+check("arr_set_if([1,2,3], 1, 9) in-range", arr_set_if([1, 2, 3], 1, 9), [1, 9, 3])
+try:
+    arr_set([1, 2, 3], 5, 9)
+    failures.append("arr_set OOB: expected IndexError (Lean's set! panics), got a value")
+except IndexError:
+    pass
+
+# (24) F39: Char.ofNat is TOTAL in Lean — an invalid codepoint gives '\0'.  Python's
+# `chr` raises above 0x10FFFF, and SILENTLY returns a surrogate for D800-DFFF (which
+# Lean does not accept as a Char).  The silent case is the dangerous one.
+char_of = ns["char_of"]
+check("char_of(65) 'A'", char_of(65), 65)
+check("char_of(0xD7FF) last valid before surrogates", char_of(0xD7FF), 0xD7FF)
+check("char_of(0xD800) surrogate -> '\\0'", char_of(0xD800), 0)
+check("char_of(0xDFFF) surrogate -> '\\0'", char_of(0xDFFF), 0)
+check("char_of(0xE000) valid again", char_of(0xE000), 0xE000)
+check("char_of(0x10FFFF) max valid", char_of(0x10FFFF), 0x10FFFF)
+check("char_of(0x110000) OOB -> '\\0'", char_of(0x110000), 0)
+check("char_of(2^32) OOB -> '\\0'", char_of(2**32), 0)
 
 if failures:
     print("FAIL:")

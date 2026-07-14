@@ -586,6 +586,50 @@ returns the `Inhabited` default, Python raises), unstable `Array.qsort` tie orde
   entire gain is in the value and rule-selection domains.  See
   [PAPER_NOTES.md](PAPER_NOTES.md) §2.
 
+### F37/F38. Index update out of range: `List.set` appended, `Array.set!` didn't panic
+
+- **Found by:** **EMP** (`fuzz/emp.py`) on its first run, via the proven identity
+  `Array.getD_getElem?_setIfInBounds` — which *forces* the out-of-range case, because
+  the theorem's content is precisely the bounds condition.
+  · **Kind:** mismatch (silent wrong value).
+- **Root cause:** all three index-update forms shared one emission,
+  `xs[:i] + [v] + xs[i+1:]`. That is correct **in range** and matches none of them
+  out of range, where it silently *appends*: `[1,2].set 5 9` gave `[1,2,9]`; Lean
+  gives `[1,2]`. The three forms actually differ:
+
+  | Lean | out of range |
+  |---|---|
+  | `List.set` / `List.setTR` | list UNCHANGED |
+  | `Array.setIfInBounds` | list UNCHANGED (hence the name) |
+  | `Array.set!` | PANICS |
+
+- **Fix:** guard the slice (`… if i < len(xs) else xs`; the index is a `Nat`, so only
+  the upper bound can fail). `Array.set!` gets its own rule ending in a bare `xs[i]`,
+  whose `IndexError` stands in for Lean's panic — the same convention `getElem!`
+  already uses. Regression case (23).
+- **Why nothing else caught it:** every existing check — regression cases (8) and (17),
+  the corpus, the round-trip battery — only ever set an **in-range** index. The
+  translation rule was covered; the index's *value domain* was not. Third instance of
+  the F36 lesson.
+
+### F39. `Char.ofNat` raised, and silently produced surrogates
+
+- **Found by:** the grammar fuzzer, once boundary values (F36's fix) reached
+  `Corpus.Strings.fromAsciiCodes`.
+  · **Kind:** runtime (`ValueError`) **and** mismatch (silent — the surrogate case).
+- **Root cause:** `Char.ofNat` emitted a bare Python `chr`. But `Char.ofNat` is
+  **total** in Lean — an invalid codepoint yields `default`, i.e. `'\0'`. Python's
+  `chr` agrees on neither end:
+  - `chr(2**31)` → `ValueError`, where Lean gives `'\0'`;
+  - `chr(0xD800)` → **succeeds**, returning a surrogate, where Lean gives `'\0'`.
+    Lean's `Nat.isValidChar` is `n < 0x110000 ∧ (n < 0xD800 ∨ 0xDFFF < n)` — the
+    surrogate range D800–DFFF is not a valid `Char`, though Python will build one.
+    This is the *silent* half, and the more dangerous one.
+- **Fix:** reproduce `isValidChar` exactly at all three emission sites (applied,
+  point-free, and the stdlib map): `chr(n) if (n < 0xD800 or 0xDFFF < n < 0x110000)
+  else chr(0)`. Verified against Lean on 12 boundary cases (0, 'A', D7FF, D800, DBFF,
+  DFFF, E000, 10FFFF, 110000, 110001, 2^31, 2^32) — all agree. Regression case (24).
+
 ### Custom inductive / structure types (Phase 3 fragment-reuse expansion)
 
 The fragment-reuse harvester now handles corpus functions whose parameters or
