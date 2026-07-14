@@ -213,6 +213,11 @@ def arrSetIf (xs : Array Nat) (i v : Nat) : Array Nat := xs.setIfInBounds i v
 -- above 0x10FFFF, and — worse — silently returns a SURROGATE for D800–DFFF, which
 -- Lean does not consider a valid Char.
 def charOf (n : Nat) : Nat := (Char.ofNat n).toNat
+-- (25) F40: `Option.toList`/`toArray` had NO rule and fell through to the generic
+-- `list`.  A flat `Option α` is a bare `α | None` in Python, so `list(5)`/`list(None)`
+-- each raise TypeError where Lean gives `[5]`/`[]`.
+def optToList (o : Option Nat) : List Nat := o.toList
+def optToArray (o : Option Nat) : Array Nat := o.toArray
 def arrModify (xs : Array Nat) (i : Nat) : Array Nat := xs.modify i (· + 10)
 def arrFold (xs : Array Nat) : Nat := xs.foldl (· + ·) 0
 def zipIdxList (xs : List Nat) : List (Nat × Nat) := xs.zipIdx
@@ -316,6 +321,8 @@ end RegressionFixes
       ``RegressionFixes.arrSet,
       ``RegressionFixes.arrSetIf,
       ``RegressionFixes.charOf,
+      ``RegressionFixes.optToList,
+      ``RegressionFixes.optToArray,
       ``RegressionFixes.arrGetD,
       ``RegressionFixes.arrModify,
       ``RegressionFixes.arrFold,

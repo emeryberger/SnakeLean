@@ -285,6 +285,15 @@ check("char_of(0x10FFFF) max valid", char_of(0x10FFFF), 0x10FFFF)
 check("char_of(0x110000) OOB -> '\\0'", char_of(0x110000), 0)
 check("char_of(2^32) OOB -> '\\0'", char_of(2**32), 0)
 
+# (25) F40: Option.toList/toArray fell through to the generic `list`, so `list(5)` and
+# `list(None)` both raised TypeError where Lean gives [5] and [].
+opt_to_list = ns["opt_to_list"]
+opt_to_array = ns["opt_to_array"]
+check("opt_to_list(some 5)", opt_to_list(5), [5])
+check("opt_to_list(none)", opt_to_list(None), [])
+check("opt_to_array(some 5)", opt_to_array(5), [5])
+check("opt_to_array(none)", opt_to_array(None), [])
+
 if failures:
     print("FAIL:")
     for f in failures:

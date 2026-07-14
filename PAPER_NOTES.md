@@ -96,6 +96,21 @@ The **proof**, not Lean's evaluator, is the oracle.
     theorem List.map_map : (xs.map f).map g = xs.map (g ∘ f)
       ⇒  transpile both sides.  Any disagreement is a transpiler bug, by construction.
 
+**Novelty: narrow, not wide.** A prior-art search found no published work harvesting a
+proof assistant's equational corpus this way, but the claim must be stated carefully.
+Isabelle's **`code_test`** [15] already runs proved lemmas through the code generator
+on six backends — the same conceptual family — differing in that its cases are
+hand-written closed ground terms, its check is unary ("evaluates to `True`") rather
+than a two-program comparison, and it never instantiates quantified theorems. EMI [1],
+Hermes, GLFuzz, **PTE** [16] and **EET** [17] all do "two equivalent programs must
+agree" with **hand-authored or dynamically-inferred** equivalences; **MR-Scout** [18]
+mines relations automatically but from *unit tests* (unsound). The defensible claim is
+the **conjunction**: the theorem library as a zero-authoring-cost, sound-by-construction
+corpus; *both* sides compiled by the SUT (no reference interpreter in the trusted base);
+and *quantified* theorems instantiated with generated inputs. Any writeup needs an
+explicit "why this isn't `code_test`" and "why this isn't EMI" paragraph — those are the
+two attacks. See [RELATED_WORK.md](RELATED_WORK.md).
+
 Three properties, none available to a C/Go/Rust transpiler fuzzer:
 
 1. **No evaluator in the loop.** Harvest once; each identity is then a reusable,
@@ -110,7 +125,17 @@ Three properties, none available to a C/Go/Rust transpiler fuzzer:
 
 This inverts EMI [1]. EMI must *invent* semantics-preserving mutations, from a handful
 of hand-written envelopes, precisely because C has no ground truth. We *harvest
-thousands of proven ones*, and the supply grows for free with the imports.
+thousands of proven ones*, and the supply grows for free with the imports. It also
+inverts QuickSpec [19] / Ruler [20], which use *testing to discover equations*; we use
+*proved equations to obtain tests*.
+
+**`@[csimp]` is the purest source, and it is untouched.** Lean's checked
+compiler-rewrite attribute carries, for each entry, a proof `f = g` swapping a reference
+implementation for the efficient one the compiler actually emits — literally a curated
+database of proved program-equivalence pairs sitting in the compiler's own attribute
+table. The prior-art search found no work using it as a test corpus; we now harvest it
+as a priority source. (Its unchecked sibling `@[implemented_by]`, which Lean simply
+trusts, is a bug-hunting *target* rather than an oracle.)
 
 **Truth is not enough — the identity must DISCRIMINATE.** `Nat.zero_sub : 0 - n = 0`
 instantly catches truncated `Nat` subtraction emitted as a plain `-`.
@@ -137,11 +162,28 @@ rule for a construct; it then emits an undefined name and the program dies with
 lumping the two together buries the signal — 20 of 40 identities are gaps. The gold is
 a mismatch between two sides that *both transpiled cleanly*.
 
-**Honest limits.** (i) EMP uses **small values**: identities call the real stdlib, so a
-boundary value on a *size* parameter makes `List.range n` build a 10^18-element list.
-Composing EMP with §2's value domain needs per-parameter size analysis. (ii) Harvesting
-is only as good as its filter — conditional equations (`n ≤ m → …`) are currently
-dropped rather than tested under their hypothesis.
+**Scale.** The full pool: **2,153 identities** harvested, 824 tested, **1,832 (85%)
+discriminating**, 1,329 set aside as gaps. Yield so far: F37/F38 and F40 — four
+distinct emitter defects, one of which (`Option.toList`) surfaced through **ten**
+different proven identities at once.
+
+**Honest limits.**
+1. **Precision is currently poor, and the cause is ours.** The harvester builds each
+   side by abstracting the theorem's `Expr` and `addDecl`-ing it. Those definitions are
+   well-typed, but their LCNF shape is **not one the elaborator produces from source**,
+   and several transpiler rules are shape-sensitive pattern matches on instance
+   structure. `Nat.sub_eq` synthesizes to a point-free `HSub.hSub` and emits a plain
+   `-`, where source-written `n - m` carries `instSubNat` and correctly emits
+   `max(0, n-m)`. So EMP reports a bug that cannot occur in real code. **A flag is a
+   lead, not a finding, until confirmed from a hand-written definition.** The fix is to
+   route the harvest through the elaborator — emit generated Lean *source* and
+   re-elaborate, as `gen.py` and `corpus_frags.py` already do. This is the top open
+   item; until it lands, the 85%-discriminating figure overstates usable yield.
+2. **Small values only**: identities call the real stdlib, so a boundary value on a
+   *size* parameter makes `List.range n` build a 10^18-element list. Composing EMP with
+   §2's value domain needs per-parameter size analysis.
+3. **Conditional equations are dropped**, not tested under their hypothesis — that is
+   most of the 41,615.
 
 ## 3. Extraction has never been fuzzed
 

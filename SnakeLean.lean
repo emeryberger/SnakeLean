@@ -613,6 +613,16 @@ def stdlibFnToPython? (name : Name) : Option String :=
   | ``Array.toList => some "list"
   | ``List.toArray => some "list"  -- Python lists are arrays
 
+  -- `Option.toList` / `Option.toArray`: `some a ↦ [a]`, `none ↦ []`.  These had NO
+  -- rule and fell through to the generic `list`, which is wrong in both directions:
+  -- a flat `Option α` is a bare `α | None` in Python, so `list(5)` and `list(None)`
+  -- each raise TypeError where Lean gives `[5]` and `[]`.  The lambda form also stays
+  -- correct under nested-Option boxing: a boxed `_Some(x)` is passed through as the
+  -- element, keeping `some none` distinct from `none`.  (Found by EMP via
+  -- `Option.toList_some` / `Option.toList_none` / `Option.toList.eq_1`.)
+  | ``Option.toList | ``Option.toArray =>
+    some "(lambda o: [] if o is None else [o])"
+
   -- Nat/Int operations
   | ``Nat.succ => some "(lambda n: n + 1)"
   | ``Nat.pred => some "(lambda n: max(0, n - 1))"

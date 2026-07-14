@@ -630,6 +630,49 @@ returns the `Inhabited` default, Python raises), unstable `Array.qsort` tie orde
   else chr(0)`. Verified against Lean on 12 boundary cases (0, 'A', D7FF, D800, DBFF,
   DFFF, E000, 10FFFF, 110000, 110001, 2^31, 2^32) — all agree. Regression case (24).
 
+### F40. `Option.toList` / `Option.toArray` fell through to the generic `list`
+
+- **Found by:** EMP's first full-pool run (2153 identities), via `Option.toList_some`,
+  `Option.toList_none`, `Option.toList.eq_1`, `Option.length_toList`, and six more —
+  one defect, ten proven identities.
+  · **Kind:** runtime (`TypeError`).
+- **Root cause:** there was **no rule at all** for `Option.toList`/`toArray`; they fell
+  through to the generic `list`. A flat `Option α` is a bare `α | None` in Python, so
+  `list(5)` raises `TypeError: 'int' object is not iterable` and `list(None)` raises
+  too — where Lean gives `[5]` and `[]`.
+- **Fix:** `(lambda o: [] if o is None else [o])`. The lambda form is also correct under
+  nested-Option boxing (a `_Some(x)` passes through as the element, keeping `some none`
+  distinct from `none`), and works applied *and* point-free. Regression case (25).
+
+### EMP fidelity: synthesized definitions are not source-shaped (open)
+
+The full-pool run flagged 25 further identities. **All the ones checked are false
+positives of the harness, not transpiler bugs**, and the cause is worth recording
+because it bounds what EMP can currently claim.
+
+`fuzz/Theorems.lean` builds each side by taking the theorem's `lhs`/`rhs` `Expr`,
+abstracting the binders, and `addDecl`-ing the result. Those definitions are well-typed
+and compile — but their **LCNF shape is not one the elaborator ever produces from
+source**, and several of the transpiler's rules are *shape-sensitive* pattern matches on
+instance structure. Two examples, both flagged, both impossible from real code:
+
+| identity | synthesized emission | from ordinary Lean source |
+|---|---|---|
+| `Nat.sub_eq` | `(lambda a, b: a - b)` — plain `-` | `max(0, n - m)` ✓ |
+| `List.replicate_zero` | `[0] * None`, then the list is *called* | `[x] * 0` ✓ |
+
+`n - m` written in source always carries its `instSubNat`, so the `natsub` rule fires;
+in a point-free `HSub.hSub` it does not. Eta-expanding point-free equations (added to
+reach `Bool.and' = and` and friends) makes this worse, not better: the binders arrive
+untyped (`_y : Any`).
+
+**The fix is to route the harvest through the elaborator** — emit generated Lean
+*source* for each side and re-elaborate it, exactly as `fuzz/gen.py` and
+`fuzz/corpus_frags.py` already do — so EMP only ever tests source-shaped terms. Until
+then, EMP's precision is poor: treat a flag as a lead, and **confirm it from a
+hand-written definition** before believing it. F37/F38 and F40 were all confirmed that
+way.
+
 ### Custom inductive / structure types (Phase 3 fragment-reuse expansion)
 
 The fragment-reuse harvester now handles corpus functions whose parameters or

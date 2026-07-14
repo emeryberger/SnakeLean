@@ -70,12 +70,27 @@ class Ident:
         return self.tags.get("L", set()) ^ self.tags.get("R", set())
 
 
-def harvest(force=False):
-    """Run the Lean harvester and parse its ### THM / ### SIDE blocks."""
-    out = subprocess.run(
-        ["lake", "env", "lean", "fuzz/Theorems.lean"],
-        cwd=ROOT, capture_output=True, text=True, timeout=1800,
-    ).stdout
+CACHE = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".emp_harvest.txt")
+
+
+def harvest(max_cands=40, use_cache=True):
+    """Run the Lean harvester and parse its ### THM / ### SIDE blocks.
+
+    The harvest scans the whole environment and transpiles both sides of every
+    candidate — minutes, not seconds.  Cache the raw stream so re-testing (different
+    input counts, a rebuilt transpiler) is instant.  The cache is keyed on nothing:
+    delete `.emp_harvest.txt` after changing the transpiler or the harvester.
+    """
+    if use_cache and os.path.exists(CACHE):
+        out = open(CACHE).read()
+    else:
+        env = dict(os.environ, EMP_MAX=str(max_cands))
+        out = subprocess.run(
+            ["lake", "env", "lean", "fuzz/Theorems.lean"],
+            cwd=ROOT, capture_output=True, text=True, timeout=7200, env=env,
+        ).stdout
+        with open(CACHE, "w") as f:
+            f.write(out)
 
     # Lean writes its diagnostics into the same stream.  Blocks are therefore
     # explicitly delimited (`### SIDE` … `### END`) and we accumulate ONLY between the
@@ -181,11 +196,14 @@ def main():
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--show-ranking", action="store_true",
                     help="list identities by discriminating power")
+    ap.add_argument("--max", type=int, default=40, dest="max_cands",
+                    help="identities to harvest (0 = the whole pool)")
     args = ap.parse_args()
     rng = random.Random(args.seed)
 
-    print("harvesting proven equations from the Lean environment ...", flush=True)
-    idents = harvest()
+    print(f"harvesting proven equations from the Lean environment "
+          f"(max={args.max_cands or 'ALL'}) ...", flush=True)
+    idents = harvest(args.max_cands)
     print(f"harvested {len(idents)} identities (both sides transpiled)\n")
 
     bugs, gaps, tested = [], [], 0

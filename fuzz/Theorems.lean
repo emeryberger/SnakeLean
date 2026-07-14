@@ -88,23 +88,34 @@ partial def monomorphize (ty : Expr) : MetaM (Option Expr) := do
 def analyze (thm : Name) (ty : Expr) : MetaM (Option Cand) := do
   let some mono ← monomorphize ty | return none
   forallTelescope mono fun xs body => do
-    -- Every remaining binder must be a value parameter of a supported type.
-    let mut ptys := #[]
-    for x in xs do
-      let xty ← inferType x
-      if ← Meta.isProp xty then return none
-      let some t := tyName? (← whnf xty) | return none
-      ptys := ptys.push t
-    -- Body must be `@Eq α lhs rhs` at a supported α.
+    -- Body must be `@Eq α lhs rhs`.
     let body ← whnf body
     unless body.isAppOfArity ``Eq 3 do return none
     let args := body.getAppArgs
-    let some ret := tyName? (← whnf args[0]!) | return none
-    let lhs ← mkLambdaFVars xs args[1]!
-    let rhs ← mkLambdaFVars xs args[2]!
-    -- Reject trivial reflexive identities: both sides the same program.
-    if ← withReducible <| isDefEq lhs rhs then return none
-    return some { thm, params := ptys, ret, lhs, rhs }
+    -- ETA-EXPAND a function-typed equation.  Many library theorems are stated
+    -- POINT-FREE (`Bool.and' = and`, `Option.toList = …`), i.e. `α` is itself a
+    -- function type.  Taken literally, each side is then a bare function VALUE with
+    -- no value parameters, and the driver — which calls the emitted def with
+    -- arguments — reported spurious arity errors.  Applying both sides to fresh
+    -- binders turns a point-free identity into an ordinary testable one; the equation
+    -- stays valid by funext.  (For a non-function `α`, `ys` is empty and this is a
+    -- no-op.)
+    forallTelescope (← whnf args[0]!) fun ys cod => do
+      -- Every binder — from the theorem AND from eta-expansion — must be a value
+      -- parameter of a type the driver can generate.
+      let binders := xs ++ ys
+      let mut ptys := #[]
+      for b in binders do
+        let bty ← inferType b
+        if ← Meta.isProp bty then return none
+        let some t := tyName? (← whnf bty) | return none
+        ptys := ptys.push t
+      let some ret := tyName? (← whnf cod) | return none
+      let lhs ← mkLambdaFVars binders (mkAppN args[1]! ys)
+      let rhs ← mkLambdaFVars binders (mkAppN args[2]! ys)
+      -- Reject trivial reflexive identities: both sides the same program.
+      if ← withReducible <| isDefEq lhs rhs then return none
+      return some { thm, params := ptys, ret, lhs, rhs }
 
 /-- Add a side as a real definition so the transpiler can compile it from LCNF.
     Building the `Expr` directly avoids any pretty-print / re-elaborate round-trip. -/
@@ -141,13 +152,24 @@ def inScope (n : Name) : Bool :=
     emissions so each carries its own `HANDLERS_FIRED` set). -/
 def run (maxCands : Nat) : MetaM Unit := do
   let env ← getEnv
+  -- PRIORITY SOURCE: Lean's own `@[csimp]` table.  Each entry is a PROVED `f = g`
+  -- between a reference implementation and the efficient one the compiler actually
+  -- substitutes — i.e. a curated database of program-equivalence pairs sitting in the
+  -- compiler's attribute table, exactly the corpus this technique wants.  (Isabelle's
+  -- `code_test` runs proved lemmas through the code generator; this is the analogous
+  -- source, harvested rather than hand-written.)  These bypass the namespace filter:
+  -- a csimp pair is a program pair by construction, whatever it is named.
+  let csimpThms := (Lean.Compiler.CSimp.ext.getState env).thmNames.toList
+  let names : List Name :=
+    csimpThms ++ (env.constants.toList.filterMap fun (n, ci) =>
+      if ci.isTheorem && !n.isInternal && inScope n
+         && ci.type.getForallBody.isAppOf ``Eq then some n else none)
   let mut i := 0
   let mut found := 0
-  for (n, ci) in env.constants.toList do
+  for n in names do
     if found ≥ maxCands then break
-    unless ci.isTheorem && !n.isInternal && inScope n do continue
-    -- cheap pre-filter before the expensive analysis
-    unless ci.type.getForallBody.isAppOf ``Eq do continue
+    let some ci := env.find? n | continue
+    unless ci.isTheorem do continue
     let c? ← try analyze n ci.type catch _ => pure none
     let some c := c? | continue
     let lname := Name.mkSimple s!"empL{i}"
@@ -172,4 +194,9 @@ def run (maxCands : Nat) : MetaM Unit := do
 
 end EMP
 
-#eval show CoreM Unit from EMP.run 40 |>.run'
+-- How many identities to harvest.  `EMP_MAX=0` means "the whole pool" (the environment
+-- holds ~19.5k equations at computable types; the in-scope, unconditional, definable
+-- subset is far smaller).  The driver sets this.
+#eval show CoreM Unit from do
+  let n := (← IO.getEnv "EMP_MAX").bind (·.toNat?) |>.getD 40
+  EMP.run (if n == 0 then 1000000 else n) |>.run'
