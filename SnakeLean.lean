@@ -556,7 +556,10 @@ def stdlibFnToPython? (name : Name) : Option String :=
   | ``Char.toUpper => some "(lambda c: c.upper())"
   | ``Char.toLower => some "(lambda c: c.lower())"
   | ``Char.toNat => some "ord"
-  | ``Char.ofNat => some "chr"
+  -- NOT bare `chr`: `Char.ofNat` is total in Lean (out-of-range ⇒ `'\0'`), where
+  -- `chr` raises above 0x10FFFF and silently yields a surrogate in D800–DFFF.
+  | ``Char.ofNat =>
+    some "(lambda n: chr(n) if (n < 0xD800 or 0xDFFF < n < 0x110000) else chr(0))"
 
   -- Float operations -> Python `math` (bit-identical: both are IEEE-754 float64
   -- and both route transcendentals through the platform libm).
@@ -883,6 +886,23 @@ def emitArithBinary (kind a b : String) : String :=
     if isNonzeroLiteral b then s!"({a} / {b})"
     else s!"({a} / {b} if {b} != 0.0 else math.copysign(math.inf, {a}) if {a} != 0.0 else math.nan)"
   | _        => s!"({a} - {b})"
+
+/-- `Char.ofNat n` is TOTAL in Lean: an out-of-range `n` yields `default` (`'\0'`),
+    it does not fail.  Python's `chr` matches on neither end of that:
+
+      `chr(2**31)`   raises `ValueError` where Lean gives `'\0'`;
+      `chr(0xD800)`  SUCCEEDS, returning a surrogate, where Lean gives `'\0'`
+                     — a silent wrong value, which is the worse of the two.
+
+    Lean's `Nat.isValidChar n` is `n < 0x110000 ∧ (n < 0xD800 ∨ 0xDFFF < n)`: the
+    surrogate range D800–DFFF is *not* a valid `Char`, though Python will happily
+    build one.  Reproduce the predicate exactly. -/
+def charOfNatPy (n : String) : String :=
+  s!"(chr({n}) if ({n} < 0xD800 or 0xDFFF < {n} < 0x110000) else chr(0))"
+
+/-- The same rule as a first-class callable (`s.map Char.ofNat`). -/
+def charOfNatLambda : String :=
+  "(lambda n: chr(n) if (n < 0xD800 or 0xDFFF < n < 0x110000) else chr(0))"
 
 /-! ## Expression Emission -/
 
@@ -2022,27 +2042,36 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
         emitIndent
         emit s!"{varName} = [(_x, _i) for _i, _x in enumerate({xs})]\n"
         return
-    -- List.set - update element at index.  Lean 4.31 lowers `List.set` to its
-    -- tail-recursive `List.setTR` in LCNF (same `(…, xs, i, v)` value-arg shape),
-    -- so recognize both spellings.
-    -- List/Array functional index update.  `Array.set!`/`setIfInBounds` update
-    -- an `Array` (a Python list) at an index, returning a new list — same
-    -- non-mutating slice form as `List.set` (Arrays map to lists).
+    -- Functional index update.  Lean 4.31 lowers `List.set` to its tail-recursive
+    -- `List.setTR` in LCNF (same `(…, xs, i, v)` value-arg shape), so recognize both
+    -- spellings.  Arrays map to Python lists, so the Array variants share the slice
+    -- form — but the three differ in their OUT-OF-BOUNDS behaviour, and the slice
+    -- `xs[:i] + [v] + xs[i+1:]` matches NONE of them unguarded: at `i >= len(xs)` it
+    -- silently APPENDS (`[1,2].set 5 9` gave `[1,2,9]`, Lean gives `[1,2]`).
+    --   List.set / List.setTR   : out of range ⇒ list UNCHANGED
+    --   Array.setIfInBounds     : out of range ⇒ list UNCHANGED (hence the name)
+    --   Array.set!              : out of range ⇒ PANICS
+    -- The index is a `Nat`, so it is never negative and only the upper bound needs
+    -- checking.  (Found by EMP — the proven identity
+    -- `Array.getD_getElem?_setIfInBounds` forces the out-of-range case.)
     if declName == ``List.set || declName == ``List.setTR
-        || declName == ``Array.set! || declName == ``Array.setIfInBounds then
+        || declName == ``Array.setIfInBounds then
       if args.size >= 3 then
+        let xs ← renderArg args[args.size - 3]!
+        let i ← renderArg args[args.size - 2]!
+        let v ← renderArg args[args.size - 1]!
         emitIndent
-        emit s!"{varName} = "
-        emitArg args[args.size - 3]!  -- list
-        emit "[:"
-        emitArg args[args.size - 2]!  -- index
-        emit "] + ["
-        emitArg args[args.size - 1]!  -- new value
-        emit "] + "
-        emitArg args[args.size - 3]!
-        emit "["
-        emitArg args[args.size - 2]!
-        emit "+1:]\n"
+        emit s!"{varName} = ({xs}[:{i}] + [{v}] + {xs}[{i}+1:] if {i} < len({xs}) else {xs})\n"
+        return
+    if declName == ``Array.set! then
+      if args.size >= 3 then
+        let xs ← renderArg args[args.size - 3]!
+        let i ← renderArg args[args.size - 2]!
+        let v ← renderArg args[args.size - 1]!
+        emitIndent
+        -- Out of range, Lean's `set!` panics; the bare `{xs}[{i}]` raises IndexError,
+        -- the same stand-in for a Lean panic that `getElem!` already uses.
+        emit s!"{varName} = ({xs}[:{i}] + [{v}] + {xs}[{i}+1:] if {i} < len({xs}) else {xs}[{i}])\n"
         return
     -- List.getD / Array.getD xs i d - element at index i, or default d if out of
     -- bounds.  args: [type, xs, i, d].
@@ -2244,10 +2273,9 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
     -- Char.ofNat / Nat.chr
     if declName == ``Char.ofNat then
       if args.size >= 1 then
+        let n ← renderArg args[args.size - 1]!
         emitIndent
-        emit s!"{varName} = chr("
-        emitArg args[args.size - 1]!
-        emit ")\n"
+        emit s!"{varName} = {charOfNatPy n}\n"
         return
     -- Char.utf8Size c -> number of bytes in the char's UTF-8 encoding (1..4).
     -- Without this it fell through to an undefined `utf8size(...)`.
@@ -2354,7 +2382,7 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
         return
       if declName == ``Char.ofNat then
         emitIndent
-        emit s!"{varName} = chr\n"
+        emit s!"{varName} = {charOfNatLambda}\n"
         return
       -- Char method-style predicates/converters passed as bare function values
       -- (e.g. `s.toList.map Char.toUpper`): emit the matching Python lambda.

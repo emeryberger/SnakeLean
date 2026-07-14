@@ -81,6 +81,68 @@ Neither mutator raises code coverage: production coverage was already 100%. The
 gain is entirely in the *value* domain and the *rule-selection* domain — the two
 axes coverage does not measure.
 
+## 2b. EMP: Equivalence Modulo Proofs
+
+The oracle in §1 is free but *sequential*: every candidate program pays for a Lean
+elaboration. A proof assistant offers a second, stronger oracle that costs nothing at
+test time.
+
+Lean's environment contains **19,468 machine-checked equations at computable types**
+(plus 311 `@[implemented_by]` pairs Lean's own compiler trusts) — with no Mathlib
+imported. Each is a proof that **two different programs are the same program**.
+Harvest them, transpile *both sides*, and require the two Python programs to agree.
+The **proof**, not Lean's evaluator, is the oracle.
+
+    theorem List.map_map : (xs.map f).map g = xs.map (g ∘ f)
+      ⇒  transpile both sides.  Any disagreement is a transpiler bug, by construction.
+
+Three properties, none available to a C/Go/Rust transpiler fuzzer:
+
+1. **No evaluator in the loop.** Harvest once; each identity is then a reusable,
+   Lean-free differential test. This removes the throughput bottleneck of §7.
+2. **It pits translation rules against each other.** The Lean-as-oracle harness can
+   only catch a rule that disagrees with *Lean*. EMP catches a rule that disagrees
+   with *another rule* — `List.map_map` forces the fused-comprehension lowering and
+   the two-pass lowering to agree — which is where bugs hide whose two lowerings are
+   each individually plausible.
+3. **The identities are total.** `Nat.div_eq_sub_mod_div` holds at `n = 0` *because
+   it is a theorem*. Edge cases arrive as a consequence of the proof, not of guessing.
+
+This inverts EMI [1]. EMI must *invent* semantics-preserving mutations, from a handful
+of hand-written envelopes, precisely because C has no ground truth. We *harvest
+thousands of proven ones*, and the supply grows for free with the imports.
+
+**Truth is not enough — the identity must DISCRIMINATE.** `Nat.zero_sub : 0 - n = 0`
+instantly catches truncated `Nat` subtraction emitted as a plain `-`.
+`Nat.div_eq_sub_mod_div` cannot: its subtraction never goes negative, so both sides
+agree under the bug. A proven identity is useless unless its two sides exercise the
+rule *differently* — §2's lesson, one level up. That yields an automatic filter we are
+uniquely able to compute: **transpile both sides, diff their `HANDLERS_FIRED` tag
+sets, keep the identities whose sides fire different rules**, and rank them by which
+rules they distinguish. It ranks 19,468 candidates by discriminating power and aims
+them at the rules that are never otherwise exercised. In the current run, **34 of 40**
+harvested identities are discriminating.
+
+**Result.** On its first run, over 40 harvested identities, EMP found **two real
+transpiler bugs** (F37/F38): all three index-update forms shared one emission, and out
+of range it silently *appended* (`[1,2].set 5 9` → `[1,2,9]`; Lean gives `[1,2]`),
+while `Array.set!` — a function that panics in Lean — quietly returned a value. The
+identity that exposed it, `Array.getD_getElem?_setIfInBounds`, *is* the bounds
+condition, so it cannot avoid testing the out-of-range case. Every existing check had
+only ever set an in-range index.
+
+**Triage is load-bearing.** A `fallthrough.*` tag is the emitter *admitting* it has no
+rule for a construct; it then emits an undefined name and the program dies with
+`NameError`. That is a transpiler **gap** (the F821 class), not a mistranslation, and
+lumping the two together buries the signal — 20 of 40 identities are gaps. The gold is
+a mismatch between two sides that *both transpiled cleanly*.
+
+**Honest limits.** (i) EMP uses **small values**: identities call the real stdlib, so a
+boundary value on a *size* parameter makes `List.range n` build a 10^18-element list.
+Composing EMP with §2's value domain needs per-parameter size analysis. (ii) Harvesting
+is only as good as its filter — conditional equations (`n ≤ m → …`) are currently
+dropped rather than tested under their hypothesis.
+
 ## 3. Extraction has never been fuzzed
 
 SnakeLean is an **extractor**: it compiles definitions in a dependently typed logic
@@ -148,7 +210,8 @@ two shipped bugs. The lazy choice of equality hides real defects.
 | Mutation | boundary-value + named-rule substitution (§2); EMI envelopes [1,2]; LangFuzz-style corpus fragment reuse [4] |
 | Shrinking | grid minimization + HDD/C-Reduce term reduction [5,6] |
 | Coverage | grammar production/k-path; per-translation-rule; transpiled-Python line/branch/path |
-| Results | **36 bugs found and fixed**; 3807/3807 exhaustive + 112/112 curated cases agree |
+| EMP | `fuzz/Theorems.lean` + `fuzz/emp.py` — harvest proven equations, transpile both sides, require agreement (§2b) |
+| Results | **39 bugs found and fixed**; 3807/3807 exhaustive + 112/112 curated cases agree |
 
 ## 6. Related work
 
@@ -179,6 +242,15 @@ reuse, which we use.
   instrument said "tested".
 
 ## 8. Open work, in order of expected yield
+
+0. **Scale EMP.** It currently harvests 40 identities as a proof of concept; the pool
+   is 19,468, and Mathlib multiplies it. Rank by discriminating power (the tag-set
+   diff) and run the whole pool. Also: test *conditional* equations under their
+   hypothesis (decidable ones can simply be checked before comparing), which is most
+   of the 41,615.
+0b. **Per-parameter size analysis**, which unblocks composing EMP with the boundary
+   value domain (§2). Today a large value on a size parameter hangs the stdlib call, so
+   the two strongest techniques cannot yet be combined.
 
 1. **Coercion insertion** (`Nat→Int→Float`, `Int.toNat`, `UInt8.ofNat` wraparound).
    The grammar has **no `UInt` types at all**, while the emitter carries an explicit
