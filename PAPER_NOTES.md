@@ -162,28 +162,50 @@ rule for a construct; it then emits an undefined name and the program dies with
 lumping the two together buries the signal — 20 of 40 identities are gaps. The gold is
 a mismatch between two sides that *both transpiled cleanly*.
 
-**Scale.** The full pool: **2,153 identities** harvested, 824 tested, **1,832 (85%)
-discriminating**, 1,329 set aside as gaps. Yield so far: F37/F38 and F40 — four
-distinct emitter defects, one of which (`Option.toList`) surfaced through **ten**
-different proven identities at once.
+**Scale.** The full pool: **~2,085 identities** harvested, 817 tested, **1,768 (85%)
+discriminating**, 1,268 set aside as gaps.
+
+**The source round-trip is what makes it trustworthy.** The harvester first built each
+side by abstracting the theorem's `Expr` and `addDecl`-ing it. Those definitions are
+well-typed, but their LCNF shape is **not one the elaborator produces from source**, and
+several transpiler rules are shape-sensitive pattern matches on instance structure:
+`Nat.sub_eq` synthesized to a point-free `HSub.hSub` and emitted a plain `-`, where
+source-written `n - m` carries `instSubNat` and correctly emits `max(0, n-m)`. EMP was
+reporting bugs that *cannot occur in real code*. Phase 1 now pretty-prints each side as
+Lean **source** and phase 2 **re-elaborates** it (`pp.explicit := false` is what does the
+work — implicit and instance arguments are re-inferred on the way in), so the elaborator
+decides the term shape. Flags fell **25 → 9 → 0**, and mutation testing confirms no loss
+of sensitivity: an injected off-by-one in `List.take` is still caught at once, via
+`List.take_left`.
+
+**Yield: five distinct emitter defects** — F37/F38 (index update out of range), F40
+(`Option.toList`, which surfaced through *ten* proven identities at once), F41
+(dependent `xs[i]` returned the bounds-check boolean, in a rule that had **never fired**
+in the corpus), and F42 — which is the one worth the paper's space:
+
+> **F42: EMP caught a bug we introduced *while fixing* F37/F38.** Seeing `#eval` print
+> `Error: index out of bounds` for `Array.set!`, we concluded it panics and made it
+> raise. But `panic!` in Lean prints a message and **returns the default** — it is not an
+> exception. Lean proves the point outright:
+> `Array.set!_eq_setIfInBounds : xs.set! i v = xs.setIfInBounds i v`.
+> Our regression case asserted the wrong behaviour and *passed*. The differential oracle
+> could not have found this, because we had misread the oracle. **A proof caught an error
+> that a plausible reading of the evaluator's output produced.** The panic message is a
+> side effect; the theorem is the semantics.
 
 **Honest limits.**
-1. **Precision is currently poor, and the cause is ours.** The harvester builds each
-   side by abstracting the theorem's `Expr` and `addDecl`-ing it. Those definitions are
-   well-typed, but their LCNF shape is **not one the elaborator produces from source**,
-   and several transpiler rules are shape-sensitive pattern matches on instance
-   structure. `Nat.sub_eq` synthesizes to a point-free `HSub.hSub` and emits a plain
-   `-`, where source-written `n - m` carries `instSubNat` and correctly emits
-   `max(0, n-m)`. So EMP reports a bug that cannot occur in real code. **A flag is a
-   lead, not a finding, until confirmed from a hand-written definition.** The fix is to
-   route the harvest through the elaborator — emit generated Lean *source* and
-   re-elaborate, as `gen.py` and `corpus_frags.py` already do. This is the top open
-   item; until it lands, the 85%-discriminating figure overstates usable yield.
+1. **A flag is a lead, not a finding** — confirm it from a hand-written definition. Every
+   bug above was confirmed that way. Four harness defects surfaced along the road (Lean's
+   100-error file cap killing the `#eval`; recursion depth on a long `do` block; the
+   pretty-printer eliding long terms as `⋯`; a failed elaboration leaving `sorryAx` in
+   the environment), each of which manufactured plausible-looking "bugs."
 2. **Small values only**: identities call the real stdlib, so a boundary value on a
    *size* parameter makes `List.range n` build a 10^18-element list. Composing EMP with
    §2's value domain needs per-parameter size analysis.
 3. **Conditional equations are dropped**, not tested under their hypothesis — that is
-   most of the 41,615.
+   most of the 41,615. Noncomputable identities (`Bool.not'`, anything through
+   `Classical.choice`) are filtered: Lean emits no code for them, so they are untestable
+   rather than violated.
 
 ## 3. Extraction has never been fuzzed
 

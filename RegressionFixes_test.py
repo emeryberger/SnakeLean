@@ -266,11 +266,13 @@ check("set_at([], 0, 9)       OOB", set_at([], 0, 9), [])
 check("set_at([1,2,3], 2, 9)  in-range", set_at([1, 2, 3], 2, 9), [1, 2, 9])
 check("arr_set_if([1,2,3], 5, 9) OOB", arr_set_if([1, 2, 3], 5, 9), [1, 2, 3])
 check("arr_set_if([1,2,3], 1, 9) in-range", arr_set_if([1, 2, 3], 1, 9), [1, 9, 3])
-try:
-    arr_set([1, 2, 3], 5, 9)
-    failures.append("arr_set OOB: expected IndexError (Lean's set! panics), got a value")
-except IndexError:
-    pass
+# Array.set! out of range PANICS in Lean — but `panic!` prints a message and RETURNS
+# THE DEFAULT; it is not an exception.  Lean proves it outright:
+#   Array.set!_eq_setIfInBounds : xs.set! i v = xs.setIfInBounds i v
+# so its VALUE semantics are the no-op.  An earlier version of this fix made it raise
+# IndexError; EMP caught that regression via exactly that theorem.
+check("arr_set([1,2,3], 5, 9) OOB", arr_set([1, 2, 3], 5, 9), [1, 2, 3])
+check("arr_set([1,2,3], 1, 9) in-range", arr_set([1, 2, 3], 1, 9), [1, 9, 3])
 
 # (24) F39: Char.ofNat is TOTAL in Lean — an invalid codepoint gives '\0'.  Python's
 # `chr` raises above 0x10FFFF, and SILENTLY returns a surrogate for D800-DFFF (which
@@ -287,6 +289,11 @@ check("char_of(2^32) OOB -> '\\0'", char_of(2**32), 0)
 
 # (25) F40: Option.toList/toArray fell through to the generic `list`, so `list(5)` and
 # `list(None)` both raised TypeError where Lean gives [5] and [].
+# (26) F41: dependent getElem returned the bounds-check boolean, not the element.
+push_get_last = ns["push_get_last"]
+check("push_get_last([1,2,3], 7)", push_get_last([1, 2, 3], 7), 7)
+check("push_get_last([], 5)", push_get_last([], 5), 5)
+
 opt_to_list = ns["opt_to_list"]
 opt_to_array = ns["opt_to_array"]
 check("opt_to_list(some 5)", opt_to_list(5), [5])

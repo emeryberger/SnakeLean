@@ -2064,24 +2064,20 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
     -- The index is a `Nat`, so it is never negative and only the upper bound needs
     -- checking.  (Found by EMP — the proven identity
     -- `Array.getD_getElem?_setIfInBounds` forces the out-of-range case.)
+    -- `Array.set!` belongs here too.  Out of range it *panics* — but `panic!` in Lean
+    -- prints a message and RETURNS THE DEFAULT; it is not an exception.  Lean proves
+    -- the point outright: `Array.set!_eq_setIfInBounds : xs.set! i v = xs.setIfInBounds
+    -- i v`.  So its VALUE semantics are the no-op, and an earlier version of this rule
+    -- that raised `IndexError` was wrong.  (EMP caught that regression via exactly that
+    -- theorem — the fix for F37/F38 introduced it.)
     if declName == ``List.set || declName == ``List.setTR
-        || declName == ``Array.setIfInBounds then
+        || declName == ``Array.setIfInBounds || declName == ``Array.set! then
       if args.size >= 3 then
         let xs ← renderArg args[args.size - 3]!
         let i ← renderArg args[args.size - 2]!
         let v ← renderArg args[args.size - 1]!
         emitIndent
         emit s!"{varName} = ({xs}[:{i}] + [{v}] + {xs}[{i}+1:] if {i} < len({xs}) else {xs})\n"
-        return
-    if declName == ``Array.set! then
-      if args.size >= 3 then
-        let xs ← renderArg args[args.size - 3]!
-        let i ← renderArg args[args.size - 2]!
-        let v ← renderArg args[args.size - 1]!
-        emitIndent
-        -- Out of range, Lean's `set!` panics; the bare `{xs}[{i}]` raises IndexError,
-        -- the same stand-in for a Lean panic that `getElem!` already uses.
-        emit s!"{varName} = ({xs}[:{i}] + [{v}] + {xs}[{i}+1:] if {i} < len({xs}) else {xs}[{i}])\n"
         return
     -- List.getD / Array.getD xs i d - element at index i, or default d if out of
     -- bounds.  args: [type, xs, i, d].
@@ -2633,11 +2629,18 @@ partial def emitLetValue (decl : LetDecl) : EmitM Unit := do
         else
           emit s!"{varName} = (lambda xs, i: xs[i] if 0 <= i < len(xs) else None)\n"
         return
-      else if idx == 0 then
-        -- Project 0 (valid?) is the validity predicate
-        markHandler "proj.GetElem.valid"
+      else if idx == 0 && !containsSubstr typeStr "GetElem?" then
+        -- `class GetElem coll idx elem valid` has exactly ONE field — the GETTER
+        --   getElem : (xs : coll) → (i : idx) → valid xs i → elem
+        -- `valid` is a class PARAMETER, not a field.  Projection 0 on a plain `GetElem`
+        -- is therefore `getElem`, and emitting the validity predicate here returned the
+        -- BOUNDS-CHECK BOOLEAN in place of the element: `(a.push x)[a.size]` evaluated
+        -- to `True` instead of `x`.  (`GetElem?` is the class whose fields are
+        -- `getElem?`/`getElem!`, handled above and below.)  The validity proof is
+        -- runtime-irrelevant and erased by LCNF, so the getter takes just `(xs, i)`.
+        markHandler "proj.GetElem.get"
         emitIndent
-        emit s!"{varName} = (lambda xs, i: 0 <= i < len(xs))\n"
+        emit s!"{varName} = (lambda xs, i: xs[i])\n"
         return
       else if idx == 2 then
         -- Project 2 (`getElem!`) is panic-on-out-of-bounds indexing (`xs[i]!`).
@@ -3748,7 +3751,7 @@ def knownHandlerTags : List String := [
   "const.Prod.mk", "const.Bool.true", "const.Bool.false", "const.getElem?",
   "const.bne", "const.xor",
   -- Structural (proj / cases / whole-decl) handlers
-  "proj.GetElem?", "proj.GetElem.valid", "proj.GetElem!", "proj.Max", "proj.Min",
+  "proj.GetElem?", "proj.GetElem.get", "proj.GetElem!", "proj.Max", "proj.Min",
   "proj.Char.val", "proj.Prod", "proj.field",
   "cases.Bool", "cases.Nat", "cases.Decidable", "cases.Option", "cases.List",
   "struct.inductive", "struct.tailLoop"

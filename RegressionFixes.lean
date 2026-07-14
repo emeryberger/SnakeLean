@@ -216,6 +216,11 @@ def charOf (n : Nat) : Nat := (Char.ofNat n).toNat
 -- (25) F40: `Option.toList`/`toArray` had NO rule and fell through to the generic
 -- `list`.  A flat `Option α` is a bare `α | None` in Python, so `list(5)`/`list(None)`
 -- each raise TypeError where Lean gives `[5]`/`[]`.
+-- (26) F41: `class GetElem` has ONE field — the GETTER; `valid` is a class PARAMETER,
+-- not a field.  Projection 0 was emitted as the validity predicate, so a dependent
+-- `xs[i]` returned the BOUNDS-CHECK BOOLEAN instead of the element: `(a.push x)[a.size]`
+-- evaluated to `True` rather than `x`.  Found by EMP (`Array.getElem_push_eq`).
+def pushGetLast (a : Array Nat) (x : Nat) : Nat := (a.push x)[a.size]
 def optToList (o : Option Nat) : List Nat := o.toList
 def optToArray (o : Option Nat) : Array Nat := o.toArray
 def arrModify (xs : Array Nat) (i : Nat) : Array Nat := xs.modify i (· + 10)
@@ -321,6 +326,7 @@ end RegressionFixes
       ``RegressionFixes.arrSet,
       ``RegressionFixes.arrSetIf,
       ``RegressionFixes.charOf,
+      ``RegressionFixes.pushGetLast,
       ``RegressionFixes.optToList,
       ``RegressionFixes.optToArray,
       ``RegressionFixes.arrGetD,
